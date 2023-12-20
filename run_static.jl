@@ -609,7 +609,7 @@ elseif solutionmethod == "fragip"
             iptime = [ip_time]
            )
 
-	CSV.write(resultsfilename, df)
+	CSV.write(resultsfilename, df, append=true)
 
 elseif solutionmethod == "dext"
 
@@ -686,6 +686,57 @@ elseif (solutionmethod == "fragmvg") || (solutionmethod == "fragsvg")
 
 	fragmvgip_obj, z_fmip, fragmvgip_time = solvefragmentip(opt_gap, orderArcSet, orderArcSet_space, A_plus_i, A_minus_i, numeffshifts)
 	println("MVG IP objective = ", fragmvgip_obj)
+	println("Time = ", fragmvgip_time)
+
+	df = DataFrame(experiment_id = [experiment_id],
+			instance = [ex],
+			lambda = [lambda],
+			horizon = [horizon],
+			tstep = [tstep],
+			week = [weekstart],
+			driverfactor = [driverfactor],
+			numdrivers = [length(drivers)],
+			method = [solutionmethod],
+			k = [k],
+			iteration = ["IP"],
+			objective = [fragmvgip_obj],
+			milesobj = [0],
+			delayobj = [0],
+			bound = [0],
+			rmptime = [0],
+			pptime = [0],
+			pptime_par = [0],
+			iptime = [fragmvgip_time],
+			mvgtime_full = [fulltime]
+		)
+
+	CSV.write(resultsfilename, df, append=true)
+
+elseif (solutionmethod == "dextmvg") 
+
+    include("scripts/multiarcgeneration/magdriverextension.jl")
+
+	driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours = initializejourneymodel(maxnightsaway)
+    y_set, w_set = Dict(), Dict() #initializeconstraintsets()
+	fulltimestart = time()
+	mvg_obj, smp, x_smp, y_smp, z_smp, w_smp, convergedOrderArcSet, smptime, pptime, pptime_par = dextmultivariablegeneration!(orderArcSet, orderArcSet_space, A_plus_i, A_minus_i, orderArcSet_full, homeArcSet, A_minus_d, A_plus_d, availableDrivers, A_minus_i_full, A_plus_i_full)
+	fulltime = time() - fulltimestart
+	#fragmentmultivariablegeneration!(orderArcSet, orderArcSet_space, A_plus_i, A_minus_i, orderArcSet_full, homeArcSet, A_minus_d, A_plus_d, availableDrivers, A_minus_i_full, A_plus_i_full)
+	#fragmentmultivariablegeneration!(orderArcSet, orderArcSet_space, A_plus_i, A_minus_i, orderArcSet_full, homeArcSet, A_minus_d, A_plus_d, availableDrivers, y_set, w_set, 0, [], [], [], A_minus_i_full, A_plus_i_full)
+	println("MVG objective = ", mvg_obj)
+	println("Time = ", smptime + pptime_par)
+
+	for i in orders
+		orderArcSet[i] = convergedOrderArcSet[i]
+		orderArcSet_space[i] = intersect(orderArcSet_space_full[i], convergedOrderArcSet[i])
+		for n in 1:extendednumnodes
+			A_plus_i[i,n] = intersect(A_plus_i_full[i,n], convergedOrderArcSet[i])
+			A_minus_i[i,n] = intersect(A_minus_i_full[i,n], convergedOrderArcSet[i])
+		end
+	end
+
+    fragmvgip_obj, z_ip, fragmvgip_time, ip_bound = solvedriverextensionmodel(0, opt_gap, orderArcSet, orderArcSet_space, A_plus_i, A_minus_i, numeffshifts)
+    println("MVG IP objective = ", fragmvgip_obj)
 	println("Time = ", fragmvgip_time)
 
 	df = DataFrame(experiment_id = [experiment_id],
