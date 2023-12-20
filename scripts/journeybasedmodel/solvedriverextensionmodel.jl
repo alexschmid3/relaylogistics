@@ -18,12 +18,14 @@ function solvedriverextensionmodel(lprelax_flag, opt_gap, orderArcSet, orderArcS
     end
     @variable(ip, w[a in A_space] >= 0)
 	@variable(ip, ordtime[orders])
-	@variable(ip, maxhours <= maxweeklydriverhours)
+	@variable(ip, maxhours)
 
 	#Objective
 	@objective(ip, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) 
 	+ sum(sum(c[a]*x[i,a] for a in orderArcSet[i]) for i in orders) + sum(c[a]*(y[a] ) for a in A_hasdriver) + sum(u[a]*w[a] for a in A_space) 
 	+ lambda2 * maxhours)
+
+	@constraint(ip, maxhours <= maxweeklydriverhours)
 
 	#Order constraints
 	@constraint(ip, orderFlowBalance[i = orders, n in setdiff([n2 for n2 in 1:numnodes], union(Origin[i], Destination[i]))], sum(x[i,a] for a in A_minus_i[i,n]) - sum(x[i,a] for a in A_plus_i[i,n]) == 0)
@@ -80,3 +82,12 @@ function solvedriverextensionmodel(lprelax_flag, opt_gap, orderArcSet, orderArcS
 	
 end
 
+#=
+for d in drivers, l = driverHomeLocs[d], s = drivershift[d]
+	for f in 1:numfragments[l,s]
+		if value(z[d,f]) > 1e-4
+			println("$d = ", fragworkinghours[l,s,f] * value(z[d,f]) )
+		end
+	end
+end
+=#

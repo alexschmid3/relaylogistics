@@ -13,6 +13,9 @@ include("scripts/journeybasedmodel/solvedriverextensionmodel.jl")
 include("scripts/journeybasedmodel/lpipbasis.jl")
 include("scripts/multiarcgeneration/fragmentmultivariablegeneration.jl")
 include("scripts/columngeneration/fragmentcolumngeneration.jl")
+include("scripts/journeybasedmodel/initializejourneymodel.jl")
+include("scripts/journeybasedmodel/solvedriverextensionmodel.jl")
+include("scripts/journeybasedmodel/solvejourneymodel.jl")
 
 #-------------------------------------FOUR INSTANCES------------------------------------#  
 
@@ -563,10 +566,6 @@ elseif solutionmethod == "fragar"
 
 elseif solutionmethod == "fragip"
 
-    include("scripts/journeybasedmodel/initializejourneymodel.jl")
-    include("scripts/journeybasedmodel/solvedriverextensionmodel.jl")
-    include("scripts/journeybasedmodel/solvejourneymodel.jl")
-
 	driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours = initializejourneymodel(maxnightsaway)
     lp_obj, z_lp, lp_time, lp_bound = solvejourneymodel(1, opt_gap, orderArcSet_full, orderArcSet_space_full, A_plus_i_full, A_minus_i_full, numeffshifts)
 
@@ -788,8 +787,6 @@ elseif (solutionmethod == "vanderbeck")
 	#fragmvgip_obj, z_fmip, fragmvgip_time = solvefragmentip(opt_gap, orderArcSet, orderArcSet_space, A_plus_i, A_minus_i, numeffshifts)
 
 elseif solutionmethod == "basisip"
-
-	include("scripts/fragmentlpandip_nobap.jl")
 	
 	driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts = createfragmentsets(maxnightsaway)
 	fraglp_obj, z_flp, x_flp, fraglp_time = solvefragmentlp(opt_gap, orderArcSet_full, orderArcSet_space_full, A_plus_i_full, A_minus_i_full, numeffshifts)
@@ -850,8 +847,6 @@ elseif solutionmethod == "basisip"
 	CSV.write(resultsfilename, df, append=true)
 
 elseif solutionmethod == "dextbasis"
-
-	include("scripts/fragmentlpandip_nobap.jl")
 	
     driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours = initializejourneymodel(maxnightsaway)
     lp_obj, z_lp, lp_time, lp_bound, x_lp = solvedriverextensionmodel(1, opt_gap, orderArcSet_full, orderArcSet_space_full, A_plus_i_full, A_minus_i_full, numeffshifts)
@@ -876,7 +871,6 @@ elseif solutionmethod == "dextbasis"
 
 	CSV.write(resultsfilename, df)
 	
-	include("scripts/lpipbasis.jl")
 	orderArcSet_red, orderArcSet_space_red, A_plus_i_red, A_minus_i_red = getnonzeroarcs(x_lp, orderArcSet_full,A_plus_i_full, A_minus_i_full)
 
 	ip_obj, z_ip, ip_time, ip_bound = solvedriverextensionmodel(0, opt_gap, orderArcSet_red, orderArcSet_space_red, A_plus_i_red, A_minus_i_red, numeffshifts)

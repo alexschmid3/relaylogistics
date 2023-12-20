@@ -199,7 +199,7 @@ function initializejourneymodel(maxnightsaway)
 								if !(t1 in T_off[s]) & (l1 != l2)
 									fragdrivinghours[l,s,fragindex] += t2-t1
 									fragworkinghours[l,s,fragindex] += t2-t1
-								elseif !(t1 in T_off[s]) & (l1 == l2)
+								elseif !(t1 in T_off[s]) & (l1 == l2) & !(l1 == l)
 									fragworkinghours[l,s,fragindex] += t2-t1
 								end
 							end	
