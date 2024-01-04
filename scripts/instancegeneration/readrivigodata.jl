@@ -1005,13 +1005,13 @@ function readobjectivecosts(filename, numarcs, numlocs, hubsReverseLookup, nodes
 		end
 	end
 
-	c = []
+	c = [0.0 for a in 1:numarcs]
 
 	for i in 1:numarcs
 		oloc = nodesLookup[arcLookup[i][1]][1]
 		dloc = nodesLookup[arcLookup[i][2]][1]
 				
-		push!(c, distances[oloc, dloc])
+		c[i] += distances[oloc, dloc]
 
 	end
 	
@@ -1262,7 +1262,7 @@ end
 
 #---------------------------------------------------------------------------------------#
 
-function createdrivershifts(shiftlength, tstep, drivershifttstep)
+function createdrivershifts(drivers, shiftlength, tstep, drivershifttstep, alltimeswithinview)
 
 	#Driver shifts
 	T_off_Monday8am = []	
@@ -1470,6 +1470,19 @@ function createdrivershifts_nonrelay(shiftlength, tstep, drivershifttstep)
 
 	return T_off_Monday8am, T_off, drivershift, T_off_0, T_off_constr, numshifts, T_on_0
 
+end
+
+#---------------------------------------------------------------------------------------#
+
+function calcobjectivecosts(hubdistancesfilename)
+	
+	c = readobjectivecosts(hubdistancesfilename, numarcs, numlocs, hubsReverseLookup, nodesLookup, arcLookup)
+	u = [0.0 for a in 1:numarcs]
+	for a in 1:numarcs
+		u[a] = taxicostpct*c[a]  
+	end
+
+	return c, u
 end
 
 #---------------------------------------------------------------------------------------#

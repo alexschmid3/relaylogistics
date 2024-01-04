@@ -19,8 +19,10 @@ include("scripts/journeybasedmodel/solvejourneymodel.jl")
 
 #-------------------------------------FOUR INSTANCES------------------------------------#  
 
+inittime = time()
+
 loclist = [20, 40, 60, 66, 66]
-driverlist = [70, 300, 1600, 3316, 1600]
+driverlist = [70-20, 300-140, 1600, 3316, 1600]
 trucklist = [60, 230, 1200, 2495, 1200]
 seedlist = [202481, 155702, 731761, 963189, 731762]
 weekstartlist = [DateTime(2019, 7, 21, 8), DateTime(2019, 7, 14, 8), DateTime(2019, 7, 7, 8), DateTime(2019, 6, 30, 8), DateTime(2019, 7, 7, 8)]
@@ -28,13 +30,19 @@ weekstartlist = [DateTime(2019, 7, 21, 8), DateTime(2019, 7, 14, 8), DateTime(20
 ordercapslist = [3, 6, 18, 10000, 18]  #Cap on the number of orders introduced in each 6 hour increment in the online problem (6 hrs doesn't depend on tstep or timedelta to ensure consistent instance when these parameters are adjusted)
 								       #Order caps is technically an online parameter, but we use it in the static version as well to ensure the orders included in the instance are the same in the static and online version
 
+hubdistancesfilename = "data/hubdistances.csv"
+traveltimesfilename = "data/traveltimes_outliers.csv"
+hubdataisbfilename = "data/hub_data_isb_connect.csv"
+vntdataisbfilename = "data/vnt_data_isb_connect_clean.csv"
+lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
+
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters 
-experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+experiment_id = 9 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 paramsfilename = "data/newmodel.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
-ex = expparms[experiment_id, 2]		
+ex = 1 #expparms[experiment_id, 2]		
 solutionmethod = expparms[experiment_id, 3]		
 weekstart = expparms[experiment_id, 4]
 horizon = expparms[experiment_id, 5] * 24
@@ -152,298 +160,80 @@ fullzsolutionfilename = string(csvfoldername, runid, "/z_soln.csv")
 convergencedatafilename = string(csvfoldername, "convergence_exp", runid, ".csv")
 #convergencefilename = string(csvfoldername, "convergence_exp", experiment_id,".csv")
 
-#----------------------------IMPORT VISUALIZATIONS IF NEEDED----------------------------# 
+#---------------------------------IMPORT FINAL SCRIPTS----------------------------------# 
 
 if maketimespacevizfiles + makespatialvizfiles + makeadvancedvizfiles + vizflag >= 1
 	include("scripts/networkvisualization.jl")
 end
-
-#------------------------------CREATE FOLDERS FOR OUTPUTS-------------------------------# 
-
-#Create output folders
-if !(isdir("outputs"))
-	mkdir("outputs")
-	mkdir("outputs/static")
-	#mkdir("outputs/static/figures")
-elseif !(isdir("outputs/static/"))
-	mkdir("outputs/static/")
-	#mkdir("outputs/static/figures")
-elseif !(isdir("outputs/static/figures"))
-	mkdir("outputs/static/figures")
-	#mkdir("outputs/static/figures")
-end
-
-#if !(isdir(string(csvfoldername, runid)))
-#	mkdir(string(csvfoldername, runid))
-#end
-
-#Create visualization folders
-if maketimespacevizfiles + makespatialvizfiles + makeadvancedvizfiles + vizflag >= 1
-	if !(isdir("visualizations"))
-		mkdir("visualizations")
-		mkdir("visualizations/static")
-		mkdir(vizfoldername)
-	elseif !(isdir("visualizations/static/"))
-		mkdir("visualizations/static/")
-		mkdir(vizfoldername)
-	elseif !(isdir(vizfoldername))
-		mkdir(vizfoldername)
-	end
-
-	#Create subfolders
-	subfoldernames = []
-	if maketimespacevizfiles == 1
-		push!(subfoldernames, "TimeSpaceNetworkMaps")
-	end
-	if makespatialvizfiles == 1
-		push!(subfoldernames, "SpatialNetworkMaps")
-	end
-	if makeadvancedvizfiles + vizflag >= 1
-		push!(subfoldernames, "DriverMaps")
-		push!(subfoldernames, "SpatialOrderMaps")
-		push!(subfoldernames, "OrderMaps")
-	end
-
-	for sf in subfoldernames
-		fullfoldername = string(vizfoldername, "/", sf)
-		if !(isdir(fullfoldername))
-			mkdir(fullfoldername)
-		end
-	end
-end
-
-#-----------------------------------HELPER FUNCTIONS------------------------------------# 
-
-#Removing item from list
-function remove!(a, item)
-    deleteat!(a, findall(x->x==item, a))
-end
-
-#Print a description of arc a, format: "(startloc, starttime) ==> (endloc, endtime)"
-function arcDesc(a)
-	println(nodesLookup[arcLookup[a][1]], " ==> ", nodesLookup[arcLookup[a][2]])
-end
-
-inittime = time()
+include("scripts/directoryinitialization.jl")
+include("scripts/helper.jl")
 
 #-----------------------------------GENERATE INSTANCE-----------------------------------# 
 
 #Initialize currentdatetime
 currentdatetime = weekstart
-solvedpheuristically_flag_now = solvedpheuristically_flag
-
-#====================================================#
 
 #Create node and arc networks
 timeperiods = horizon / tstep + 1
 maxviztimeperiods = timeperiods 
-hubCoords, hubsLookup, hubsReverseLookup, hubsTravelTimeIndex, numlocs = readlocations("data/hub_data_isb_connect.csv", maxlocs)
+hubCoords, hubsLookup, hubsReverseLookup, hubsTravelTimeIndex, numlocs = readlocations(hubdataisbfilename, maxlocs)
 nodes, nodesLookup, N_0, N_end, numnodes = timespacentwk(numlocs, tstep, horizon)
 m_0, m_end = truckdistribution(numtrucks, numlocs, N_0, N_end)
-prearcs, arcLength, arcLength_raw = readarcs("data/traveltimes_outliers.csv", "data/hubdistances.csv", tstep, numlocs, hubsTravelTimeIndex, roundup_flag, excludeoutliers_flag, hubsReverseLookup, googlemapstraveltimes_flag)
+prearcs, arcLength, arcLength_raw = readarcs(traveltimesfilename, hubdistancesfilename, tstep, numlocs, hubsTravelTimeIndex, roundup_flag, excludeoutliers_flag, hubsReverseLookup, googlemapstraveltimes_flag)
 arcs, arcLookup, A_plus, A_minus, A_space, A_plus_time, A_minus_time, A_minus_space, A_plus_space, numarcs, truetraveltime = arccreation(prearcs, horizon, tstep, numnodes, nodes, numlocs)
+c, u = calcobjectivecosts(hubdistancesfilename)
 
-#====================================================#
-
-#Objective coefficients
-c = readobjectivecosts("data/hubdistances.csv", numarcs, numlocs, hubsReverseLookup, nodesLookup, arcLookup)
-u = Dict()
-for a in 1:numarcs
-	u[a] = taxicostpct*c[a]  
-end
-
-#Cluster pitstops by distance for DP
-clusteredpitstops = clusterpitstops(prearcs, dp_pitstopclusterradius)
-
-#====================================================#
-
-#Initial orders
+#Initialize orders
 orderwindowstart, orderwindowend = weekstart, weekstart + Dates.Hour(horizon) - Dates.Second(1)
-includeorderidlist = generateorderlist("data/lh_data_isb_connect_clean.csv", "data/vnt_data_isb_connect_clean.csv", iterationordercap, numlocs)
-numorders, originloc, destloc, available, duedate, usedorderidlist, psseq, orderOriginalStartLoc, ordersinprogress = pullorders_initrivigoroutes("data/lh_data_isb_connect_clean.csv", "data/vnt_data_isb_connect_clean.csv", 10000, orderwindowstart, orderwindowend, tstep, horizon, prearcs, numlocs, tstepforordercreation, includeorderidlist)
+includeorderidlist = generateorderlist(lhdataisbfilename, vntdataisbfilename, iterationordercap, numlocs)
+numorders, originloc, destloc, available, duedate, usedorderidlist, psseq, orderOriginalStartLoc, ordersinprogress = pullorders_initrivigoroutes(lhdataisbfilename, vntdataisbfilename, 10000, orderwindowstart, orderwindowend, tstep, horizon, prearcs, numlocs, tstepforordercreation, includeorderidlist)
 orders = [i for i in 1:numorders]
 highestorderindex = numorders
 Origin, Destination = formatorders(numorders, originloc, destloc, available, duedate, tstep)
 N_flow_i = flowbalancenodesets_i(orders, numnodes, Origin, Destination)
-orderOriginalStartTime = Dict()
-for i in orders
-	orderOriginalStartTime[i] = nodesLookup[Origin[i][1]][2]
-end
 
-orderintransit_flag = Dict()
-for i in orders
-	orderintransit_flag[i] = 0
-end
+#Derive additional sets needed for various algorithms
+include("scripts/instancegeneration/completeinstance.jl")
+orderOriginalStartTime, orderintransit_flag = findorderstartsandtransits()
+loctruckcounter, trucksintransit = findtrucksintransit()
+m_0 = adjust_m_0(m_0, loctruckcounter)
+driversintransit, drivers, driverStartNodes, driverEndNodes, driverHomeLocs, assignedDrivers, N_flow_t, N_flow_d, alltimeswithinview, T_off_Monday8am, T_off, drivershift, T_off_0, T_off_constr, numshifts, T_on_0 = getdriverandshiftinfo()
+distbetweenlocs, shortesttriptimes, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr = findtraveltimesanddistances()
+nodesLookup, arcLookup, A_minus, A_plus, c, Destination, extendednodes, extendednumnodes, extendedarcs, extendednumarcs = extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c, Destination)
+arcLookup, nodesLookup, arcfinishtime, dummyarc, allarcs = calcarcfinishtimes()
 
-#Reserve trucks for the in transit orders
-placeholder, loctruckcounter, trucksintransit = Dict(), zeros(numlocs), []
-for i in ordersinprogress
-	currentloc, availtime = originloc[i][1], available[i][1]
-	try
-		placeholder[currentloc, availtime] += 1
-	catch
-		placeholder[currentloc, availtime] = 1
-	end
-end
-for item in placeholder
-	currentloc, availtime, ttltrucks = item[1][1], item[1][2], item[2]
-	push!(trucksintransit, (currentloc, availtime, ttltrucks))
-	loctruckcounter[currentloc] += ttltrucks
-end
+#----------------------------------CREATE ARC SETS-----------------------------------# 
 
-#Modify m_0 if needed to accomodate the trucks that are already in transit
-#Note: THIS IS CHANGING THE INITIAL STATE OF THE INSTANCE
-truckexcess = m_0 - loctruckcounter
-for l in 1:numlocs
-	if loctruckcounter[l] > m_0[l]
-		addltrucks = loctruckcounter[l] - m_0[l]
-		for j in 1:addltrucks
-			extraindex = argmax(truckexcess)
-			truckexcess[extraindex] -= 1
-			m_0[extraindex] -= 1
-			m_0[l] += 1
-		end
-	end
-end
+include("scripts/instancegeneration/initializearcsets.jl")
+include("scripts/multiarcgeneration/initializeorderarcsets.jl")
+primaryarcs, extendedtimearcs, orderarcs, driverarcs, hasdriverarcs = initializearcsets(A_space, A_plus, A_minus)
+R_off = findreturnhomearcsets(driverarcs)
+magarcs = initializeorderarcsets(k)
+driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours = initializejourneymodel(maxnightsaway)
 
-#====================================================#
+# ----------------------------------- START HERE ----------------------------------- #
+# ASK YOURSELF: COULD WE DO THE SAME TRICKS WITH LP HEURISTICS THOUGH?
+# ----------------------------------- START HERE ----------------------------------- #
+#=
+if solutionmethod == "lp"
 
-#Driver information
-driversintransit = []
-drivers, driverStartNodes, driverEndNodes, driverHomeLocs, assignedDrivers = readdrivers("data/pilots.csv", maxdrivers, numlocs, nodes, horizon)
-N_flow_t, N_flow_d = flowbalancenodesets_td(drivers, numnodes, driverStartNodes, N_0, N_end)
+	include("scripts/journeybasedmodel/solvejourneymodel.jl")
+	lp_obj, z_lp, lp_time, lp_bound = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts)
+	ip_obj, z_ip, ip_time, ip_bound = solvejourneymodel(0, opt_gap, orderarcs, numeffshifts)
 
-#Driver shifts
-alltimeswithinview = 2*horizon
-T_off_Monday8am, T_off, drivershift, T_off_0, T_off_constr, numshifts, T_on_0 = createdrivershifts(shiftlength, tstep, drivershifttstep)
+elseif solutionmethod == "mag"	
 
-#Identify feasible arcs for each driver
-if solutionmethod == "nr"
-	homeArcSet, homeArcSet_space, availableDrivers, A_plus_d, A_minus_d, closelocs = driverArcSetsByDriver_nonrelay(numlocs, numarcs, numnodes, prearcs, drivers, tstep, horizon, nodes, arcs, assignedDrivers, A_minus, A_plus, T_off, drivershift, driverHomeLocs, T_off_0, shiftlength)
-	A_hasdriver, yupperbound, A_hasdriver_space, A_plus_hd, A_minus_hd = yarcreduction(numarcs, availableDrivers, A_space, numnodes, A_plus, A_minus)
-else
-	homeArcSet, homeArcSet_space, availableDrivers, A_plus_d, A_minus_d, closelocs = driverArcSetsByDriver_overnight(numlocs, numarcs, numnodes, prearcs, drivers, tstep, horizon, nodes, arcs, assignedDrivers, A_minus, A_plus, T_off, drivershift, driverHomeLocs, T_off_0, shiftlength)
-	A_hasdriver, yupperbound, A_hasdriver_space, A_plus_hd, A_minus_hd = yarcreduction(numarcs, availableDrivers, A_space, numnodes, A_plus, A_minus)
-end
-
-#Find return home arc sets
-R_off = Dict()
-for d in drivers
-	R_off[d] = []
-end
-for d in drivers, t in T_off_constr[d]
-	h = driverHomeLocs[d]
-	if t + 24 == horizon 
-		a1 = arcs[nodes[h,t], nodes[h,t+tstep]]
-		arcset = union(a1, [a for a in A_minus_d[d,nodes[h,horizon]]])
-	else
-		a1, a2 = arcs[nodes[h,t], nodes[h,t+tstep]], arcs[nodes[h,t+24], nodes[h,t+24+tstep]]
-		arcset = [a1, a2]
-	end
-	push!(R_off[d], arcset)
-end
-
-#====================================================#
-
-#Find the time length of every arc ("cost" of each arc in the shortest path problem)
-arccosts = []
-for a in 1:numarcs
-	push!(arccosts, nodesLookup[arcLookup[a][2]][2] - nodesLookup[arcLookup[a][1]][2] )
-end
-
-#Calculate shortest paths in miles between all pairs of locations
-distbetweenlocs, shortestpatharclists = cacheShortestDistance(numlocs, prearcs)
-traveltimebetweenlocs_rdd = cacheShortestTravelTimes(numlocs, prearcs, "rdd time")
-traveltimebetweenlocs_raw = cacheShortestTravelTimes(numlocs, prearcs, "raw time")
-traveltimebetweenlocs_llr = cacheShortestTravelTimes(numlocs, prearcs, "llr time")
-
-#Calculate the shortest trip times for each order i 
-shortesttriptimes = []
-for i in orders
-	#Using shortest path distances, ignoring driver availability
-	if traveltimefordelay_flag == 0
-		shortestpathtime = traveltimebetweenlocs_rdd[nodesLookup[Origin[i][1]][1], nodesLookup[Destination[i][1]][1]]
-	elseif traveltimefordelay_flag == 1
-		shortestpathtime = traveltimebetweenlocs_raw[nodesLookup[Origin[i][1]][1], nodesLookup[Destination[i][1]][1]]
-	elseif traveltimefordelay_flag == 2
-		shortestpathtime = traveltimebetweenlocs_llr[nodesLookup[Origin[i][1]][1], nodesLookup[Destination[i][1]][1]]
-	end
+	include("scripts/multiarcgeneration/multiarcgeneration.jl")
+	variablefixingthreshold = 1.0
+	mvg_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par = multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 	
-	push!(shortesttriptimes, shortestpathtime)
+	lp_obj, z_lp, lp_time, lp_bound = solvejourneymodel(1, opt_gap, magarcs, numeffshifts)
+    #fragmvgip_obj, z_ip, fragmvgip_time, ip_bound = solvedriverextensionmodel(0, opt_gap, orderArcSet, orderArcSet_space, A_plus_i, A_minus_i, numeffshifts)
+
 end
-
-shortesttripdists = []
-for i in orders
-	shortestpathdist = distbetweenlocs[nodesLookup[Origin[i][1]][1], nodesLookup[Destination[i][1]][1]]
-	push!(shortesttripdists, shortestpathdist)
-end
-
-#Add final legs for orders that are unfinished at the end of the horizon
-extendednodes, extendednumnodes, extendedarcs, extendednumarcs = copy(nodes), copy(numnodes), copy(arcs), copy(numarcs)
-for l in 1:numlocs
-	nodesLookup[extendednumnodes + 1] = (l, dummyendtime)
-	extendednodes[l, dummyendtime] = extendednumnodes + 1
-	A_minus[extendednumnodes + 1], A_plus[extendednumnodes + 1] = [], []
-	global extendednumnodes += 1
-end
-for l1 in 1:numlocs, l2 in 1:numlocs
-	n1, n2 = extendednodes[l1, horizon], extendednodes[l2, dummyendtime]
-	extendedarcs[n1,n2] = extendednumarcs + 1
-	arcLookup[extendednumarcs + 1] = (n1, n2)
-	push!(c, distbetweenlocs[l1,l2] * (1 + finallegdistancepenalty))
-	push!(A_minus[n2], extendednumarcs + 1)
-	push!(A_plus[n1], extendednumarcs + 1)
-	global extendednumarcs += 1
-end
-for i in orders
-	destinationlocation = nodesLookup[Destination[i][1]][1]
-	push!(Destination[i], extendednodes[destinationlocation, dummyendtime])
-end
-
-#====================================================#
-
-#Create dummy arc for column generation
-dummyarc = extendednumarcs + 1
-push!(c, 100000000)
-allarcs = extendednumarcs + 1
-
-#Finish times of arcs
-arcfinishtime = []
-if traveltimefordelay_flag == 0
-	for a in 1:numarcs
-		push!(arcfinishtime, nodesLookup[arcLookup[a][2]][2])
-	end
-	for a in numarcs+1:extendednumarcs
-		startloc, endloc = nodesLookup[arcLookup[a][1]][1], nodesLookup[arcLookup[a][2]][1]
-		push!(arcfinishtime, horizon + (1 + finallegtimepenalty) * traveltimebetweenlocs_rdd[startloc, endloc] )
-	end
-elseif traveltimefordelay_flag >=1
-	for a in 1:numarcs
-		push!(arcfinishtime, nodesLookup[arcLookup[a][1]][2] + truetraveltime[a])
-	end
-	for a in numarcs+1:extendednumarcs
-		startloc, endloc = nodesLookup[arcLookup[a][1]][1], nodesLookup[arcLookup[a][2]][1]
-		push!(arcfinishtime, horizon + (1 + finallegtimepenalty) * traveltimebetweenlocs_llr[startloc, endloc] )
-	end
-end
-push!(arcfinishtime, 1000)
-
-arcLookup[dummyarc] = (-1,-2)
-nodesLookup[-1] = (-1,0)
-nodesLookup[-2] = (-1,100000)
-
-#--------------------------------------INITIALIZE---------------------------------------# 
-
-#Find initial arc sets - begin with just dummy arcs
-if k == -1
-	orderArcSet, orderArcSet_space, A_minus_i, A_plus_i = initializearcsets(orders)
-else
-	orderArcSet, orderArcSet_space, A_minus_i, A_plus_i = initializearcsets_warmstart(k, ktype_flag)
-end
-orderArcSet_full, orderArcSet_space_full, A_plus_i_full, A_minus_i_full = orderarcreduction(prearcs, shortesttriptimes)
-
+=#
 #-----------------------------------------SOLVE-----------------------------------------# 
-
+#=
 if solutionmethod == "mvg" #Multi-variable generation
 
 	#Solve LP using arc-based CG to find updated arc set for each order
@@ -962,7 +752,7 @@ function fragDesc(l,s,f)
 		arcDesc(a)
 	end
 end
-
+=#
 #---------------------------------------------------------------------------------------# 
 
 println("Done!")

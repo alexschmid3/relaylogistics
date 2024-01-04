@@ -90,4 +90,17 @@ for d in drivers, l = driverHomeLocs[d], s = drivershift[d]
 		end
 	end
 end
+
+totalhours = 0
+for d in drivers, l = driverHomeLocs[d], s = drivershift[d]
+	for f in 1:numfragments[l,s]
+		if value(z_ip[d,f]) > 1e-4
+			println("$d = ", fragworkinghours[l,s,f] * value(z_ip[d,f]) )
+			totalhours += fragworkinghours[l,s,f] * value(z_ip[d,f])
+		end
+	end
+end
+println("Avg driver hours = ", totalhours / length(drivers))
+println("Driver utilization = ", totalhours / (maxweeklydriverhours * length(drivers)))
+
 =#
