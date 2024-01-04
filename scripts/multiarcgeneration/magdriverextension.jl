@@ -3,7 +3,7 @@ include("convergenceplots.jl")
 using Base.Iterators: partition
 
 #---------------------------------------------------------------------------------------#
-
+ 
 function initializearcsets(orders)
 	
 	orderArcSet, orderArcSet_space, A_plus_i, A_minus_i = Dict(), Dict(), Dict(), Dict()
@@ -285,7 +285,7 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function mvgsubproblem_preprocess(orderArcSet)
+function preprocesssubproblemsets(orderArcSet)
 
 	#Create copies of all important sets (so they can be modified for the shortest path problem)
 	nodesLookupSP = deepcopy(nodesLookup)

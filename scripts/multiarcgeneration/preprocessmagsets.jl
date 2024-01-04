@@ -1,5 +1,3 @@
-
-
 function preprocesssubproblemsets(orderArcSet)
 
 	#Create copies of all important sets (so they can be modified for the shortest path problem)

@@ -15,7 +15,7 @@ function sparsemasterproblem(magarcs, hasdriverarcs, timelimit)
 	    set_name(x[i,a], string("x[",i,",",a,"]")) 
 	end
 	@variable(smp, y[hasdriverarcs.A] >= 0)
-    @variable(smp, z[d = drivers, f = 1:numfragments[driverHomeLocs[d], drivershift[d]]] >= 0)
+    @variable(smp, 0 <= z[d = drivers, f = 1:numfragments[driverHomeLocs[d], drivershift[d]]] <= 1)
 	@variable(smp, w[a in primaryarcs.A_space] >= 0)
 	@variable(smp, ordtime[orders])
     @variable(smp, maxhours)
@@ -50,7 +50,7 @@ function sparsemasterproblem(magarcs, hasdriverarcs, timelimit)
 	@constraint(smp, truckFlowBalance[n in N_flow_t], sum(sum(x[i,a] for a in setdiff(magarcs.A_minus[i,n], dummyarc)) for i in orders) + sum(y[a] for a in hasdriverarcs.A_minus[n])- sum(sum(x[i,a] for a in setdiff(magarcs.A_plus[i,n],dummyarc)) for i in orders) - sum(y[a] for a in hasdriverarcs.A_plus[n]) == 0)
 
 	#Linking constraints
-	@constraint(smp, driverAvailability[a in A_space], sum(sum(z[d,f] for f in fragmentscontaining[driverHomeLocs[d], drivershift[d],a]) for d in drivers) == w[a]  )
+	@constraint(smp, driverAvailability[a in primaryarcs.A_space], sum(sum(z[d,f] for f in fragmentscontaining[driverHomeLocs[d], drivershift[d],a]) for d in drivers) == w[a]  )
 	for i in orders, a in magarcs.A_space[i]
 		set_normalized_coefficient(driverAvailability[a], x[i,a], -1)
 	end
@@ -59,9 +59,10 @@ function sparsemasterproblem(magarcs, hasdriverarcs, timelimit)
 	end
 
 	#Driver constraints
-	@constraint(smp, driverStartingLocs[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(sum(z[d,f] for f in F_plus_ls[l,s,n]) for n in driverSetStartNodes[l,s]) == 1)
+    @constraint(smp, driverStartingLocs[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(sum(z[d,f] for f in F_plus_ls[l,s,n]) for n in driverSetStartNodes[l,s]) == 1)
 	@constraint(smp, driverFlowBalance[d in drivers, l = driverHomeLocs[d], s = drivershift[d], n in N_flow_ls[l,s]], sum(z[d,f] for f in F_minus_ls[l,s,n]) - sum(z[d,f] for f in F_plus_ls[l,s,n]) == 0)
 	@constraint(smp, driverMaxHours[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(fragworkinghours[l,s,f] * z[d,f] for f in 1:numfragments[l,s]) <= maxhours)
+	@constraint(smp, maxhours <= maxweeklydriverhours)
 
 	#Return named tuple of constraints needed for column generation
 	smpconstraints = (con_orderFlowBalance = orderFlowBalance,
@@ -100,7 +101,7 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function getdualvalues(smpconstraints, setvariables, setvars_con)
+function getdualvalues(smpconstraints, setvariables)
 
     alpha = converttosparsearray(dual.(smpconstraints.con_orderFlowBalance), numorders, extendednumnodes)
     beta = Array(dual.(smpconstraints.con_departOrigin))
@@ -111,12 +112,12 @@ function getdualvalues(smpconstraints, setvariables, setvars_con)
     xi = Array(dual.(smpconstraints.con_driverAvailability))
     psi = Array(dual.(smpconstraints.con_deliveryTime))
 
-    if length(setvariables) > 0
-        zeta = converttosparsearray(dual.(setvars_con), numorders, extendednumarcs)
-        return alpha, beta, gamma, theta, nu, mu, xi, psi, zeta
-    else 
-        return alpha, beta, gamma, theta, nu, mu, xi, psi
-    end
+    #if length(setvariables) > 0
+    #    zeta = converttosparsearray(dual.(setvars_con2), numorders, extendednumarcs)
+    #    return alpha, beta, gamma, theta, nu, mu, xi, psi, zeta
+    #else 
+    return alpha, beta, gamma, theta, nu, mu, xi, psi
+    #end
 
 end
 
@@ -246,9 +247,9 @@ end
 
 ### TEST FOR SPEED (MAYBE SCALE UP INSTANCE?)
 
-function findarcvariablereducedcosts_varsetting(M, smpconstraints, setvariables, setvars_con)
+function findarcvariablereducedcosts_varsetting(M, smpconstraints, setvariables)
 
-    alpha, beta, gamma, theta, nu, mu, xi, psi, zeta = getdualvalues(smpconstraints, setvariables, setvars_con)
+    alpha, beta, gamma, theta, nu, mu, xi, psi = getdualvalues(smpconstraints, setvariables)
     
     arcredcosts = zeros(numorders, extendednumarcs)
     for i in orders
@@ -257,7 +258,7 @@ function findarcvariablereducedcosts_varsetting(M, smpconstraints, setvariables,
     end
 
     for (i,a) in setvariables
-        arcredcosts[i,a] += zeta[i,a]
+        arcredcosts[i,a] = 0.0 
     end
 
 	return arcredcosts
@@ -352,7 +353,79 @@ end
 function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 
 	#Build sparse master problem
-	model, x, y, z, w, smpconstraints = sparsemasterproblem(magarcs, hasdriverarcs, 60*60)
+	#smp, x, y, z, w, smpconstraints = sparsemasterproblem(magarcs, hasdriverarcs, 60*60)
+
+    smp = Model(Gurobi.Optimizer)
+	set_optimizer_attribute(smp, "TimeLimit", 60*60)
+	set_optimizer_attribute(smp, "OutputFlag", 0)
+    set_optimizer_attribute(smp, "MIPGap", 0.001)
+
+	#Variables
+	x = Dict()
+	for i in orders, a in magarcs.A[i]
+	    global x[i,a] = @variable(smp, lower_bound = 0) #, upper_bound = 1) <-- UB implied by order origin/dest con & messes up reduced cost sign
+	    set_name(x[i,a], string("x[",i,",",a,"]")) 
+	end
+	@variable(smp, y[hasdriverarcs.A] >= 0)
+    @variable(smp, 0 <= z[d = drivers, f = 1:numfragments[driverHomeLocs[d], drivershift[d]]] <= 1)
+	@variable(smp, w[a in primaryarcs.A_space] >= 0)
+	@variable(smp, ordtime[orders])
+    @variable(smp, maxhours)
+
+	#Objective
+	@objective(smp, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) + sum(sum(c[a]*x[i,a] for a in magarcs.A[i]) for i in orders) + sum(c[a]*y[a] for a in hasdriverarcs.A) + sum(u[a]*w[a] for a in primaryarcs.A_space) + lambda2 * maxhours)
+		
+	#Order constraints
+	@constraint(smp, orderFlowBalance[i = orders, n in setdiff([n2 for n2 in 1:numnodes], union(Origin[i], Destination[i]))], sum(x[i,a] for a in magarcs.A_minus[i,n]) - sum(x[i,a] for a in magarcs.A_plus[i,n]) == 0)
+	@constraint(smp, arriveDestin[i = orders], sum(sum(x[i,a] for a in magarcs.A_minus[i,n] if ((a == dummyarc) || (nodesLookup[arcLookup[a][1]][1] != nodesLookup[arcLookup[a][2]][1]))) for n in Destination[i]) == 1)
+	@constraint(smp, departOrigin[i = orders], sum(sum(x[i,a] for a in intersect(union(primaryarcs.A_space, dummyarc), magarcs.A_plus[i,n])) for n in Origin[i]) == 1)
+	for i in setdiff(orders, ordersinprogress)
+		extendedorderarc = extendedarcs[last(Origin[i]), last(Destination[i])]
+		if extendedorderarc in magarcs.A[i]
+			set_normalized_coefficient(departOrigin[i], x[i,extendedorderarc], 1)
+		end
+	end
+	
+	#Add in "stay where you are" arc for each in transit order - MAINLY NEEDED FOR ONLINE IMPLEMENTATION
+	for i in intersect(orders, ordersinprogress), n in Origin[i], a in setdiff(primaryarcs.A_plus[n], union(primaryarcs.A_space, dummyarc))
+		if a in magarcs.A[i]
+			set_normalized_coefficient(departOrigin[i], x[i,a], 1)
+		end
+	end
+
+	#Order delivery constraints
+	@constraint(smp, deliveryTime[i in orders], ordtime[i] - sum(sum(arcfinishtime[a] * x[i,a] for a in magarcs.A_minus[i,n]) for n in Destination[i]) == - orderOriginalStartTime[i])
+
+	#Truck constraints
+	@constraint(smp, initialTrucks[n in N_0], sum(sum(x[i,a] for a in setdiff(magarcs.A_plus[i,n], dummyarc)) for i in orders) + sum(y[a] for a in hasdriverarcs.A_plus[n]) == m_0[n])
+	@constraint(smp, finalTrucks[n in N_end], sum(sum(x[i,a] for a in setdiff(magarcs.A_minus[i,n], dummyarc)) for i in orders) + sum(y[a] for a in hasdriverarcs.A_minus[n]) >= m_end[n])
+	@constraint(smp, truckFlowBalance[n in N_flow_t], sum(sum(x[i,a] for a in setdiff(magarcs.A_minus[i,n], dummyarc)) for i in orders) + sum(y[a] for a in hasdriverarcs.A_minus[n])- sum(sum(x[i,a] for a in setdiff(magarcs.A_plus[i,n],dummyarc)) for i in orders) - sum(y[a] for a in hasdriverarcs.A_plus[n]) == 0)
+
+	#Linking constraints
+	@constraint(smp, driverAvailability[a in primaryarcs.A_space], sum(sum(z[d,f] for f in fragmentscontaining[driverHomeLocs[d], drivershift[d],a]) for d in drivers) == w[a]  )
+	for i in orders, a in magarcs.A_space[i]
+		set_normalized_coefficient(driverAvailability[a], x[i,a], -1)
+	end
+	for a in hasdriverarcs.A_space
+		set_normalized_coefficient(driverAvailability[a], y[a], -1)
+	end
+
+	#Driver constraints
+    @constraint(smp, driverStartingLocs[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(sum(z[d,f] for f in F_plus_ls[l,s,n]) for n in driverSetStartNodes[l,s]) == 1)
+	@constraint(smp, driverFlowBalance[d in drivers, l = driverHomeLocs[d], s = drivershift[d], n in N_flow_ls[l,s]], sum(z[d,f] for f in F_minus_ls[l,s,n]) - sum(z[d,f] for f in F_plus_ls[l,s,n]) == 0)
+	@constraint(smp, driverMaxHours[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(fragworkinghours[l,s,f] * z[d,f] for f in 1:numfragments[l,s]) <= maxhours)
+	@constraint(smp, maxhours <= maxweeklydriverhours)
+
+	#Return named tuple of constraints needed for column generation
+	smpconstraints = (con_orderFlowBalance = orderFlowBalance,
+		con_departOrigin = departOrigin,
+		con_arriveDestin = arriveDestin,
+		con_initialTrucks = initialTrucks,
+		con_finalTrucks = finalTrucks,
+		con_truckFlowBalance = truckFlowBalance,
+		con_driverAvailability = driverAvailability,
+		con_deliveryTime = deliveryTime
+		)
 
 	#------------------------------------------------------#
 
@@ -379,12 +452,12 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 
 		println("-------- ITERATION $cg_iter --------")
 
-		status = optimize!(model)
-		if termination_status(model) != MOI.OPTIMAL
-			println(termination_status(model))
-			return 100000000, model, x, y, z, w, magarcs.A
+		status = optimize!(smp)
+		if termination_status(smp) != MOI.OPTIMAL
+			println(termination_status(smp))
+			return 100000000, smp, x, y, z, w, magarcs.A
 		end
-		smpobj, smptime = objective_value(model), solve_time(model)
+		smpobj, smptime = objective_value(smp), solve_time(smp)
 		
 		push!(smpobjectives, copy(smpobj))
 		push!(smptimes, copy(smptime))	
@@ -396,7 +469,7 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
         if setvariables == []
             arcredcosts = findarcvariablereducedcosts(M, smpconstraints, setvariables)
         else
-            arcredcosts = findarcvariablereducedcosts_varsetting(M, smpconstraints, setvariables, setvars_con)
+            arcredcosts = findarcvariablereducedcosts_varsetting(M, smpconstraints, setvariables)
         end
 
 		#Run shortest path for each order to find new arcs
@@ -450,11 +523,11 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 		for (i,a) in newarcs
 
 			#Create a new variable for the arc
-			global x[i,a] = @variable(model, lower_bound = 0) #, upper_bound = 1)
+			global x[i,a] = @variable(smp, lower_bound = 0) #, upper_bound = 1)
 			set_name(x[i,a], string("x[",i,",",a,"]")) 
 
 			#Add to the objective
-			set_objective_function(model, objective_function(model) + c[a]*x[i,a])
+			set_objective_function(smp, objective_function(smp) + c[a]*x[i,a])
 
 			#Find the entering and exiting nodes for arc a (ex. n_plus is the node for which a belongs to A_plus[n])
 			n_plus = arcLookup[a][1]
@@ -510,18 +583,25 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 
 		#----------TERMINATION----------#
 
-		if (minimum(minreducedcosts) >= -0.0001) & (setvariables != [])
+		if (minimum(minreducedcosts) >= -0.0001) & (setvariables == [])
 			println("NO NEGATIVE REDUCED COSTS FOUND!")	
             println("PROCEEDING TO VARIABLE SETTING...")	
 			
+            varssetfor = [[] for i in orders]
             for i in orders, a in magarcs.A[i]
                 if variablefixingthreshold < value(x[i,a]) < 1 - 1e-4 
                     push!(setvariables, (i,a))
+                    push!(varssetfor[i], a)
                 end
-                @constraint(smp, setvars_con[(i,a) in setvariables], x[i,a] == 1)
+            end
+            @constraint(smp, setvars_con[i in orders, a in varssetfor[i]], x[i,a] == 1)
+
+            if variablefixingthreshold == 1.0
+                println("NO VARIABLES TO SET")
+                break
             end
 
-        elseif (minimum(minreducedcosts) >= -0.0001) & (setvariables == [])
+        elseif (minimum(minreducedcosts) >= -0.0001) & (setvariables != [])
 			println("NO NEGATIVE REDUCED COSTS FOUND!")	
 			break
 		end
@@ -532,13 +612,15 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 	
 	end
 
-	optimize!(model)
-	smpobj = objective_value(model)
+	optimize!(smp)
+	smpobj = objective_value(smp)
 	#writemagresults(resultsfilename)
+
+    totalarcs = sum(length(magarcs.A[i]) for i in orders)
 
 	#-------------------------------#
 
-	return smpobj, model, x, y, z, w, magarcs, sum(smptimes), sum(pptimes), sum(pptimes_par)
+	return smpobj, smp, x, y, z, w, magarcs, sum(smptimes), sum(pptimes), sum(pptimes_par), totalarcs
 
 end
 

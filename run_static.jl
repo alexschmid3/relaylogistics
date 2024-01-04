@@ -16,13 +16,14 @@ include("scripts/columngeneration/fragmentcolumngeneration.jl")
 include("scripts/journeybasedmodel/initializejourneymodel.jl")
 include("scripts/journeybasedmodel/solvedriverextensionmodel.jl")
 include("scripts/journeybasedmodel/solvejourneymodel.jl")
+include("scripts/metrics/writeresultsforearlytests.jl")
 
 #-------------------------------------FOUR INSTANCES------------------------------------#  
 
 inittime = time()
 
 loclist = [20, 40, 60, 66, 66]
-driverlist = [70-20, 300-140, 1600, 3316, 1600]
+driverlist = [70, 300, 1600, 3316, 1600]
 trucklist = [60, 230, 1200, 2495, 1200]
 seedlist = [202481, 155702, 731761, 963189, 731762]
 weekstartlist = [DateTime(2019, 7, 21, 8), DateTime(2019, 7, 14, 8), DateTime(2019, 7, 7, 8), DateTime(2019, 6, 30, 8), DateTime(2019, 7, 7, 8)]
@@ -42,7 +43,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 experiment_id = 9 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 paramsfilename = "data/newmodel.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
-ex = 1 #expparms[experiment_id, 2]		
+ex = 2 #expparms[experiment_id, 2]		
 solutionmethod = expparms[experiment_id, 3]		
 weekstart = expparms[experiment_id, 4]
 horizon = expparms[experiment_id, 5] * 24
@@ -52,8 +53,11 @@ k = expparms[experiment_id, 8]   #This is the rho value
 opt_gap = expparms[experiment_id, 9]
 lambda = expparms[experiment_id, 10]
 println("Lambda = ", lambda)
-maxweeklydriverhours = expparms[experiment_id, 11]
-lambda2 = 0.01
+
+#New parameters
+maxweeklydriverhours = 36 #expparms[experiment_id, 11]
+lambda2 = 0.01  #expparms[experiment_id, 12]
+variablefixingthreshold = 0.9  #expparms[experiment_id, 13]
 
 #Transform date
 #weekstart = DateTime(weekstart, "yyyy-mm-dd HH:MM-00")
@@ -214,24 +218,45 @@ driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F
 # ----------------------------------- START HERE ----------------------------------- #
 # ASK YOURSELF: COULD WE DO THE SAME TRICKS WITH LP HEURISTICS THOUGH?
 # ----------------------------------- START HERE ----------------------------------- #
-#=
+
 if solutionmethod == "lp"
 
 	include("scripts/journeybasedmodel/solvejourneymodel.jl")
-	lp_obj, z_lp, lp_time, lp_bound = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts)
-	ip_obj, z_ip, ip_time, ip_bound = solvejourneymodel(0, opt_gap, orderarcs, numeffshifts)
+	lp_obj, x_lp, z_lp, lp_time, lp_bound = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts)
+	timeslist = (mp=lp_time, pp=0, pppar=0, ip=0)
+	writeresultsforearlytests(resultsfilename, 0, "LP", lp_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders))
+
+elseif solutionmethod == "ip"
+
+	include("scripts/journeybasedmodel/solvejourneymodel.jl")
+	ip_obj, x_ip, z_ip, ip_time, ip_bound = solvejourneymodel(0, opt_gap, orderarcs, numeffshifts)
+	timeslist = (mp=0, pp=0, pppar=0, ip=ip_time)
+	writeresultsforearlytests(resultsfilename, 0, "IP", ip_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders))
+
+elseif solutionmethod == "basisip"
+
+	include("scripts/journeybasedmodel/solvejourneymodel.jl")
+	lp_obj, x_lp, z_lp, lp_time, lp_bound, lpbasisarcs = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts)
+	ip_obj, x_ip, z_ip, ip_time, ip_bound = solvejourneymodel(0, opt_gap, lpbasisarcs, numeffshifts)
+
+	timeslist1 = (mp=lp_time, pp=0, pppar=0, ip=0)
+	writeresultsforearlytests(resultsfilename, 0, "LP", lp_obj, timeslist1, sum(length(lpbasisarcs.A[i]) for i in orders))
+	timeslist2 = (mp=0, pp=0, pppar=0, ip=ip_time)
+	writeresultsforearlytests(resultsfilename, 1, "IP", ip_obj, timeslist2, sum(length(lpbasisarcs.A[i]) for i in orders))
 
 elseif solutionmethod == "mag"	
 
 	include("scripts/multiarcgeneration/multiarcgeneration.jl")
-	variablefixingthreshold = 1.0
-	mvg_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par = multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
-	
-	lp_obj, z_lp, lp_time, lp_bound = solvejourneymodel(1, opt_gap, magarcs, numeffshifts)
-    #fragmvgip_obj, z_ip, fragmvgip_time, ip_bound = solvedriverextensionmodel(0, opt_gap, orderArcSet, orderArcSet_space, A_plus_i, A_minus_i, numeffshifts)
+	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs = multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
+	magip_obj, x_magip, z_magip, magip_time, magip_bound = solvejourneymodel(0, opt_gap, magarcs, numeffshifts)
+   
+	timeslist1 = (mp=smptime, pp=pptime, pppar=pptime_par, ip=0)
+	writeresultsforearlytests(resultsfilename, 0, "MAG", mag_obj, timeslist1, totalmagarcs)
+	timeslist2 = (mp=0, pp=0, pppar=0, ip=ip_time)
+	writeresultsforearlytests(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs)
 
 end
-=#
+
 #-----------------------------------------SOLVE-----------------------------------------# 
 #=
 if solutionmethod == "mvg" #Multi-variable generation
