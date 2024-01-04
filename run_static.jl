@@ -40,10 +40,10 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters 
-experiment_id = 9 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 paramsfilename = "data/newmodel.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
-ex = 2 #expparms[experiment_id, 2]		
+ex = expparms[experiment_id, 2]		
 solutionmethod = expparms[experiment_id, 3]		
 weekstart = expparms[experiment_id, 4]
 horizon = expparms[experiment_id, 5] * 24
@@ -55,9 +55,9 @@ lambda = expparms[experiment_id, 10]
 println("Lambda = ", lambda)
 
 #New parameters
-maxweeklydriverhours = 36 #expparms[experiment_id, 11]
-lambda2 = 0.01  #expparms[experiment_id, 12]
-variablefixingthreshold = 0.9  #expparms[experiment_id, 13]
+maxweeklydriverhours = expparms[experiment_id, 11]
+lambda2 = expparms[experiment_id, 12]
+variablefixingthreshold = expparms[experiment_id, 13]
 
 #Transform date
 #weekstart = DateTime(weekstart, "yyyy-mm-dd HH:MM-00")
@@ -252,7 +252,7 @@ elseif solutionmethod == "mag"
    
 	timeslist1 = (mp=smptime, pp=pptime, pppar=pptime_par, ip=0)
 	writeresultsforearlytests(resultsfilename, 0, "MAG", mag_obj, timeslist1, totalmagarcs)
-	timeslist2 = (mp=0, pp=0, pppar=0, ip=ip_time)
+	timeslist2 = (mp=0, pp=0, pppar=0, ip=magip_time)
 	writeresultsforearlytests(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs)
 
 end

@@ -231,7 +231,7 @@ end
 
 function findarcvariablereducedcosts(M, smpconstraints, setvariables)
 
-    alpha, beta, gamma, theta, nu, mu, xi, psi = getdualvalues(smpconstraints, setvariables, 0)
+    alpha, beta, gamma, theta, nu, mu, xi, psi = getdualvalues(smpconstraints, setvariables)
     
     arcredcosts = zeros(numorders, extendednumarcs)
     for i in orders
