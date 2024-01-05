@@ -14,8 +14,13 @@ include("scripts/journeybasedmodel/lpipbasis.jl")
 include("scripts/multiarcgeneration/fragmentmultivariablegeneration.jl")
 include("scripts/columngeneration/fragmentcolumngeneration.jl")
 include("scripts/journeybasedmodel/initializejourneymodel.jl")
-include("scripts/journeybasedmodel/solvedriverextensionmodel.jl")
-include("scripts/journeybasedmodel/solvejourneymodel.jl")
+#include("scripts/journeybasedmodel/solvedriverextensionmodel.jl")
+
+#include("scripts/journeybasedmodel/solvejourneymodel.jl")
+#include("scripts/multiarcgeneration/multiarcgeneration.jl")
+include("scripts/journeybasedmodel/solvejourneymodel_homogeneous.jl")
+include("scripts/multiarcgeneration/multiarcgeneration_homogeneous.jl")
+
 include("scripts/metrics/writeresultsforearlytests.jl")
 
 #-------------------------------------FOUR INSTANCES------------------------------------#  
@@ -41,7 +46,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 
 #Read experiment parameters 
 experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/newmodel.csv"
+paramsfilename = "data/originalmodel.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 ex = expparms[experiment_id, 2]		
 solutionmethod = expparms[experiment_id, 3]		
@@ -57,7 +62,7 @@ println("Lambda = ", lambda)
 #New parameters
 maxweeklydriverhours = expparms[experiment_id, 11]
 lambda2 = expparms[experiment_id, 12]
-variablefixingthreshold = expparms[experiment_id, 13]
+variablefixingthreshold = 1.0 #expparms[experiment_id, 13]
 
 #Transform date
 #weekstart = DateTime(weekstart, "yyyy-mm-dd HH:MM-00")
@@ -150,7 +155,7 @@ vizflag = 0
 
 #File names					
 vizfoldername = string("visualizations/static/run ", runid)
-csvfoldername = string("outputs/static/")
+csvfoldername = string("outputs/bigtable_orig/")
 vizfilename = string(solutionmethod)			#Folder names + file extensions added later for viz files
 #resultsfilename = string(csvfoldername, runid, "/", solutionmethod, "_output.csv")
 resultsfilename = string(csvfoldername, runid, "_output.csv")
@@ -167,7 +172,7 @@ convergencedatafilename = string(csvfoldername, "convergence_exp", runid, ".csv"
 #---------------------------------IMPORT FINAL SCRIPTS----------------------------------# 
 
 if maketimespacevizfiles + makespatialvizfiles + makeadvancedvizfiles + vizflag >= 1
-	include("scripts/networkvisualization.jl")
+	include("scripts/visualizations/timespacenetwork.jl")
 end
 include("scripts/directoryinitialization.jl")
 include("scripts/helper.jl")
@@ -221,39 +226,67 @@ driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F
 
 if solutionmethod == "lp"
 
-	include("scripts/journeybasedmodel/solvejourneymodel.jl")
 	lp_obj, x_lp, z_lp, lp_time, lp_bound = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts)
 	timeslist = (mp=lp_time, pp=0, pppar=0, ip=0)
 	writeresultsforearlytests(resultsfilename, 0, "LP", lp_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders))
 
 elseif solutionmethod == "ip"
 
-	include("scripts/journeybasedmodel/solvejourneymodel.jl")
 	ip_obj, x_ip, z_ip, ip_time, ip_bound = solvejourneymodel(0, opt_gap, orderarcs, numeffshifts)
 	timeslist = (mp=0, pp=0, pppar=0, ip=ip_time)
 	writeresultsforearlytests(resultsfilename, 0, "IP", ip_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders))
+	#=
+	include("scripts/visualizations/timespacenetwork.jl")
+	for i in orders
+		arclistlist = [orderarcs.A[i], [a for a in orderarcs.A[i] if value(x_ip[i,a]) > 1e-4]]
+		colorlist = [(200,200,200), (0,0,0)]
+		timespacenetwork(string("outputs/viz/order", i,"_ip.png"), arclistlist, colorlist, 2000, 1200)
+	end
+	=#
 
 elseif solutionmethod == "basisip"
 
-	include("scripts/journeybasedmodel/solvejourneymodel.jl")
 	lp_obj, x_lp, z_lp, lp_time, lp_bound, lpbasisarcs = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts)
-	ip_obj, x_ip, z_ip, ip_time, ip_bound = solvejourneymodel(0, opt_gap, lpbasisarcs, numeffshifts)
+	bip_obj, x_bip, z_bip, bip_time, bip_bound = solvejourneymodel(0, opt_gap, lpbasisarcs, numeffshifts)
 
 	timeslist1 = (mp=lp_time, pp=0, pppar=0, ip=0)
 	writeresultsforearlytests(resultsfilename, 0, "LP", lp_obj, timeslist1, sum(length(lpbasisarcs.A[i]) for i in orders))
-	timeslist2 = (mp=0, pp=0, pppar=0, ip=ip_time)
-	writeresultsforearlytests(resultsfilename, 1, "IP", ip_obj, timeslist2, sum(length(lpbasisarcs.A[i]) for i in orders))
+	timeslist2 = (mp=0, pp=0, pppar=0, ip=bip_time)
+	writeresultsforearlytests(resultsfilename, 1, "IP", bip_obj, timeslist2, sum(length(lpbasisarcs.A[i]) for i in orders))
+	
+	#=
+	include("scripts/visualizations/timespacenetwork.jl")
+	for i in orders
+		arclistlist = [lpbasisarcs.A[i], [a for a in lpbasisarcs.A[i] if value(x_bip[i,a]) > 1e-4]]
+		colorlist = [(200,200,200), (0,0,0)]
+		timespacenetwork(string("outputs/viz/order", i,"_basis.png"), arclistlist, colorlist, 2000, 1200)
+	end
+	=#
 
-elseif solutionmethod == "mag"	
+elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 
-	include("scripts/multiarcgeneration/multiarcgeneration.jl")
+	magarcs = initializeorderarcsets(k)
 	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs = multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 	magip_obj, x_magip, z_magip, magip_time, magip_bound = solvejourneymodel(0, opt_gap, magarcs, numeffshifts)
-   
+
 	timeslist1 = (mp=smptime, pp=pptime, pppar=pptime_par, ip=0)
-	writeresultsforearlytests(resultsfilename, 0, "MAG", mag_obj, timeslist1, totalmagarcs)
+	writeresultsforearlytests(resultsfilename, 0, solutionmethod, mag_obj, timeslist1, totalmagarcs)
 	timeslist2 = (mp=0, pp=0, pppar=0, ip=magip_time)
 	writeresultsforearlytests(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs)
+
+	#=
+	include("scripts/visualizations/timespacenetwork.jl")
+	for i in orders
+		selectedarcs = [a for a in magarcs.A[i] if value(x_magip[i,a]) > 1e-4]
+		missingarcs = [a for a in orderarcs.A[i] if (value(x_ip[i,a]) > 1e-4) & !(a in magarcs.A[i])]
+		iparcs = [a for a in orderarcs.A[i] if value(x_ip[i,a]) > 1e-4]
+
+		arclistlist = [magarcs.A[i], iparcs, missingarcs, selectedarcs]
+		colorlist = [(160,160,160), (0,0,0), (0,0,240), (244,143,20)] 
+		thicknesslist = [4,8,8,10]
+		timespacenetwork(string("outputs/viz/order", i,"_mag.png"), arclistlist, colorlist, thicknesslist, 2400, 1800)
+	end
+	=#
 
 end
 
