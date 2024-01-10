@@ -1,5 +1,8 @@
 
 include("preprocesscgsets.jl")
+include("convergenceplots.jl")
+
+using Base.Iterators: partition
 
 function initialfeasiblepaths(orderarcs)
 		

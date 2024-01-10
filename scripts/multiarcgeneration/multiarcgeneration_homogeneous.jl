@@ -1,4 +1,6 @@
 
+using Base.Iterators: partition
+
 include("preprocessmagsets.jl")
 
 function converttosparsearray(jumpcontainer::JuMP.Containers.SparseAxisArray, keysize1::Int, keysize2::Int)

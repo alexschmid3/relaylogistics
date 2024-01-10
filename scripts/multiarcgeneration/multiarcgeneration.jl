@@ -1,4 +1,6 @@
 
+using Base.Iterators: partition
+
 include("preprocessmagsets.jl")
 
 function sparsemasterproblem(magarcs, hasdriverarcs, timelimit)

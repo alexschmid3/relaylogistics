@@ -1,5 +1,5 @@
 
-figuredirectory = string("outputs/basisgaps")
+figuredirectory = string("outputs/bigtable_orig")
 
 #Get list of files
 filelist = readdir(figuredirectory)
