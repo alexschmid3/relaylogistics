@@ -352,9 +352,6 @@ end
 
 function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 
-	#Build sparse master problem
-	#smp, x, y, z, w, smpconstraints = sparsemasterproblem(magarcs, hasdriverarcs, 60*60)
-
     smp = Model(Gurobi.Optimizer)
 	set_optimizer_attribute(smp, "TimeLimit", 60*60)
 	set_optimizer_attribute(smp, "OutputFlag", 0)
@@ -660,7 +657,7 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 
 	#-------------------------------#
 
-	return smpobj, smp, x, y, z, w, magarcs, sum(smptimes), sum(pptimes), sum(pptimes_par), totalarcs
+	return smpobj, smp, x, y, z, w, magarcs, sum(smptimes), sum(pptimes), sum(pptimes_par), totalarcs, cg_iter
 
 end
 

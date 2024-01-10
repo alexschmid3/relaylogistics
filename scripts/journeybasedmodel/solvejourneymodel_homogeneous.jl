@@ -71,16 +71,13 @@ function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts)
         @variable(ip, x[i in orders, a in orderarcs.A[i]], Bin)
         @variable(ip, y[hasdriverarcs.A] >= 0, Int)
         @variable(ip, z[l = 1:numlocs, s = 1:numeffshifts, f = 1:numfragments[l,s]] >= 0, Int)	
-		#@variable(ip, z[d = drivers, f = 1:numfragments[driverHomeLocs[d], drivershift[d]]] >= 0, Bin)
     elseif lprelax_flag == 1
         @variable(ip, 0 <= x[i in orders, a in orderarcs.A[i]] <= 1)
 	    @variable(ip, y[hasdriverarcs.A] >= 0)
 	    @variable(ip, z[l = 1:numlocs, s = 1:numeffshifts, f = 1:numfragments[l,s]] >= 0)
-	    #@variable(ip, 0 <= z[d = drivers, f = 1:numfragments[driverHomeLocs[d], drivershift[d]]] <= 1)
     end
     @variable(ip, w[a in primaryarcs.A_space] >= 0)
 	@variable(ip, ordtime[orders])
-	@variable(ip, maxhours)
 
 	#Objective
 	@objective(ip, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) 

@@ -459,7 +459,7 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 
 	#-------------------------------#
 
-	return smpobj, smp, x, y, z, w, magarcs, sum(smptimes), sum(pptimes), sum(pptimes_par), totalarcs
+	return smpobj, smp, x, y, z, w, magarcs, sum(smptimes), sum(pptimes), sum(pptimes_par), totalarcs, cg_iter
 
 end
 

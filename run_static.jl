@@ -11,15 +11,7 @@ include("scripts/arcbasedmodel/arclpandip.jl")
 include("scripts/journeybasedmodel/fragmentlpandip.jl")
 include("scripts/journeybasedmodel/solvedriverextensionmodel.jl")
 include("scripts/journeybasedmodel/lpipbasis.jl")
-include("scripts/multiarcgeneration/fragmentmultivariablegeneration.jl")
-include("scripts/columngeneration/fragmentcolumngeneration.jl")
 include("scripts/journeybasedmodel/initializejourneymodel.jl")
-#include("scripts/journeybasedmodel/solvedriverextensionmodel.jl")
-
-#include("scripts/journeybasedmodel/solvejourneymodel.jl")
-#include("scripts/multiarcgeneration/multiarcgeneration.jl")
-include("scripts/journeybasedmodel/solvejourneymodel_homogeneous.jl")
-include("scripts/multiarcgeneration/multiarcgeneration_homogeneous.jl")
 
 include("scripts/metrics/writeresultsforearlytests.jl")
 
@@ -46,6 +38,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 
 #Read experiment parameters 
 experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+formulation = "homogeneous" # homogeneous, heterogeneous
 paramsfilename = "data/originalmodel.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 ex = expparms[experiment_id, 2]		
@@ -169,7 +162,20 @@ fullzsolutionfilename = string(csvfoldername, runid, "/z_soln.csv")
 convergencedatafilename = string(csvfoldername, "convergence_exp", runid, ".csv")
 #convergencefilename = string(csvfoldername, "convergence_exp", experiment_id,".csv")
 
+
 #---------------------------------IMPORT FINAL SCRIPTS----------------------------------# 
+
+if formulation == "heterogeneous"
+	include("scripts/journeybasedmodel/solvejourneymodel.jl")
+	include("scripts/journeybasedmodel/solvejourneymodel_paths.jl")
+	include("scripts/multiarcgeneration/multiarcgeneration.jl")
+	include("scripts/columngeneration/columngeneration.jl")
+elseif formulation == "homogeneous"
+	include("scripts/journeybasedmodel/solvejourneymodel_homogeneous.jl")
+	include("scripts/multiarcgeneration/multiarcgeneration_homogeneous.jl")
+	include("scripts/columngeneration/columngeneration_homogeneous.jl")
+	include("scripts/journeybasedmodel/solvejourneymodel_paths_homogeneous.jl")
+end
 
 if maketimespacevizfiles + makespatialvizfiles + makeadvancedvizfiles + vizflag >= 1
 	include("scripts/visualizations/timespacenetwork.jl")
@@ -266,11 +272,11 @@ elseif solutionmethod == "basisip"
 elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 
 	magarcs = initializeorderarcsets(k)
-	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs = multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
+	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter = multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 	magip_obj, x_magip, z_magip, magip_time, magip_bound = solvejourneymodel(0, opt_gap, magarcs, numeffshifts)
 
 	timeslist1 = (mp=smptime, pp=pptime, pppar=pptime_par, ip=0)
-	writeresultsforearlytests(resultsfilename, 0, solutionmethod, mag_obj, timeslist1, totalmagarcs)
+	writeresultsforearlytests(resultsfilename, 0, mag_iter, mag_obj, timeslist1, totalmagarcs)
 	timeslist2 = (mp=0, pp=0, pppar=0, ip=magip_time)
 	writeresultsforearlytests(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs)
 
@@ -287,6 +293,17 @@ elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 		timespacenetwork(string("outputs/viz/order", i,"_mag.png"), arclistlist, colorlist, thicknesslist, 2400, 1800)
 	end
 	=#
+
+elseif solutionmethod == "cg"
+
+	dummypath = 1
+	cg_obj, rmp, x_rmp, y_rmp, z_rmp, w_rmp, cgpaths, delta, rmptime, pptime, pptime_par, totalcgpaths, cg_iter = columngeneration!(orderarcs, hasdriverarcs)
+	cgip_obj, x_cgip, z_cgip, cgip_time, cgip_bound = solvejourneymodel_paths(0, opt_gap, cgpaths, delta, numeffshifts)
+
+	timeslist1 = (mp=rmptime, pp=pptime, pppar=pptime_par, ip=0)
+	writeresultsforearlytests(resultsfilename, 0, cg_iter, cg_obj, timeslist1, totalcgpaths)
+	timeslist2 = (mp=0, pp=0, pppar=0, ip=cgip_time)
+	writeresultsforearlytests(resultsfilename, 1, "IP", cgip_obj, timeslist2, totalcgpaths)
 
 end
 

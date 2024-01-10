@@ -70,13 +70,11 @@ function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts)
     if lprelax_flag == 0
         @variable(ip, x[i in orders, a in orderarcs.A[i]], Bin)
         @variable(ip, y[hasdriverarcs.A] >= 0, Int)
-        #@variable(ip, z[l = 1:numlocs, s = 1:numeffshifts, f = 1:numfragments[l,s]] >= 0, Int)	
-		@variable(ip, z[d = drivers, f = 1:numfragments[driverHomeLocs[d], drivershift[d]]] >= 0, Bin)
+        @variable(ip, z[d = drivers, f = 1:numfragments[driverHomeLocs[d], drivershift[d]]] >= 0, Bin)
     elseif lprelax_flag == 1
         @variable(ip, 0 <= x[i in orders, a in orderarcs.A[i]] <= 1)
 	    @variable(ip, y[hasdriverarcs.A] >= 0)
-	    #@variable(ip, z[l = 1:numlocs, s = 1:numeffshifts, f = 1:numfragments[l,s]] >= 0)
-		@variable(ip, 0 <= z[d = drivers, f = 1:numfragments[driverHomeLocs[d], drivershift[d]]] <= 1)
+	    @variable(ip, 0 <= z[d = drivers, f = 1:numfragments[driverHomeLocs[d], drivershift[d]]] <= 1)
     end
     @variable(ip, w[a in primaryarcs.A_space] >= 0)
 	@variable(ip, ordtime[orders])
@@ -84,8 +82,8 @@ function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts)
 
 	#Objective
 	@objective(ip, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) 
-	+ sum(sum(c[a]*x[i,a] for a in orderarcs.A[i]) for i in orders) + sum(c[a]*(y[a] ) for a in hasdriverarcs.A) + sum(u[a]*(w[a] ) for a in primaryarcs.A_space) 
-	+ lambda2 * maxhours)
+		+ sum(sum(c[a]*x[i,a] for a in orderarcs.A[i]) for i in orders) + sum(c[a]*(y[a] ) for a in hasdriverarcs.A) + sum(u[a]*(w[a] ) for a in primaryarcs.A_space) 
+		+ lambda2 * maxhours)
 
 	#Order constraints
 	@constraint(ip, orderFlowBalance[i = orders, n in setdiff([n2 for n2 in 1:numnodes], union(Origin[i], Destination[i]))], sum(x[i,a] for a in orderarcs.A_minus[i,n]) - sum(x[i,a] for a in orderarcs.A_plus[i,n]) == 0)
@@ -111,7 +109,6 @@ function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts)
 	#Truck constraints
 	@constraint(ip, initialTrucks[n in N_0], sum(sum(x[i,a] for a in setdiff(orderarcs.A_plus[i,n], dummyarc)) for i in orders) + sum(y[a] for a in hasdriverarcs.A_plus[n]) == m_0[n])
 	@constraint(ip, finalTrucks[n in N_end], sum(sum(x[i,a] for a in setdiff(orderarcs.A_minus[i,n], dummyarc)) for i in orders) + sum(y[a] for a in hasdriverarcs.A_minus[n]) >= m_end[n])
-	#@constraint(ip, truckFlowBalance[n in N_flow_t], sum(sum(x[i,a] for a in setdiff(orderarcs.A_minus[i,n], dummyarc)) for i in orders) + sum(y[a] for a in hasdriverarcs.A_minus[n]) - sum(sum(x[i,a] for a in setdiff(orderarcs.A_plus[i,n],dummyarc)) for i in orders) - sum(y[a] for a in hasdriverarcs.A_plus[n]) == 0)
 	@constraint(ip, truckFlowBalance[n in N_flow_t], sum(sum(x[i,a] for a in setdiff(orderarcs.A_minus[i,n], dummyarc)) for i in orders) + sum(y[a] for a in hasdriverarcs.A_minus[n]) - sum(sum(x[i,a] for a in setdiff(orderarcs.A_plus[i,n],dummyarc)) for i in orders) - sum(y[a] for a in hasdriverarcs.A_plus[n]) == 0)
 
 	#Linking constraints
@@ -124,8 +121,6 @@ function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts)
 	end
 
 	#Driver constraints
-	#@constraint(ip, driverStartingLocs[l in 1:numlocs, s in 1:numeffshifts], sum(sum(z[l,s,f] for f in F_plus_ls[l,s,n]) for n in driverSetStartNodes[l,s]) == length(driversets[l,s]))
-	#@constraint(ip, driverFlowBalance[l in 1:numlocs, s in 1:numeffshifts, n in N_flow_ls[l,s]], sum(z[l,s,f] for f in F_minus_ls[l,s,n]) - sum(z[l,s,f] for f in F_plus_ls[l,s,n]) == 0)
 	@constraint(ip, driverStartingLocs[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(sum(z[d,f] for f in F_plus_ls[l,s,n]) for n in driverSetStartNodes[l,s]) == 1)
 	@constraint(ip, driverFlowBalance[d in drivers, l = driverHomeLocs[d], s = drivershift[d], n in N_flow_ls[l,s]], sum(z[d,f] for f in F_minus_ls[l,s,n]) - sum(z[d,f] for f in F_plus_ls[l,s,n]) == 0)
 	@constraint(ip, driverMaxHours[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(fragworkinghours[l,s,f] * z[d,f] for f in 1:numfragments[l,s]) <= maxhours)
