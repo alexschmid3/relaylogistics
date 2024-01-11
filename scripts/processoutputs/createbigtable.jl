@@ -12,18 +12,30 @@ methodmap_stg = Dict("ip" => "a_ip",
                  "basisip" => "b_basisip", 
                  "cg" => "c_cg",
                  "sag" => "d_sag",
-                 "mag" => "e_mag",
+                 "mag" => "e_mag"
                  ) 
 methodmap = Dict("a_ip" => "Direct implementation",
                  "b_basisip" => "Direct on LO basis", 
                  "c_cg" => "Path-based column generation",
                  "d_sag" => "Single-arc generation",
-                 "e_mag" => "Multi-arc generation",
+                 "e_mag" => "Multi-arc generation"
                  ) 
 
-instancekey = [:instance, :lambda_delay, :lambda_drvrhrs, :horizon, :tstep, :week, :numlocs, :numorders, :numdrivers, :variablefixingthreshold]
-methodkey = [:experiment_id, :instance, :lambda_delay, :lambda_drvrhrs, :horizon, :tstep, :week, :numlocs, :numorders, :numdrivers, :variablefixingthreshold, :method]
-tablekey = [:lambda_delay, :horizon, :tstep, :method]
+#Primary key for each instance --> "how can I identify which IP optimal solution this row corresponds to?"
+#instancekey = [:instance, :lambda_delay, :lambda_drvrhrs, :horizon, :tstep, :week, :numlocs, :numorders, :numdrivers]
+#Primary key for each experiment_id
+#methodkey = [:experiment_id, :instance, :lambda_delay, :lambda_drvrhrs, :horizon, :tstep, :week, :numlocs, :numorders, :numdrivers, :method]
+#What do you want the final table grouped by?
+#tablekey = [:lambda_delay, :horizon, :tstep, :method]
+
+#Primary key for each instance --> "how can I identify which IP optimal solution this row corresponds to?"
+instancekey = [:instance, :lambda_delay, :lambda_drvrhrs, :horizon, :tstep, :week, :numlocs, :numorders, :numdrivers]
+#Primary key for each experiment_id
+methodkey = [:experiment_id, :instance, :lambda_delay, :lambda_drvrhrs, :horizon, :tstep, :week, :numlocs, :numorders, :numdrivers, :method]
+#What do you want the final table grouped by?
+tablekey = [:lambda_delay, :horizon, :tstep, :method, :variablefixingthreshold, :strengthenedredcost, :columnmemory]
+
+#----------------------------------------------------------------------------#
 
 #Read data
 df = CSV.read(datafile, DataFrame)
@@ -33,12 +45,12 @@ df = replacemissingwithzeros(df, "lambda_drvrhrs")
 
 #Find the IP optimal solution for all instances
 IPoptima = filter(row -> findIPopt(row.method, row.iteration) == true, df)
-IPoptima = IPoptima[:, ["instance","lambda_delay","lambda_drvrhrs","horizon","tstep","week","numlocs","numorders","numdrivers","variablefixingthreshold","objective"]]
+IPoptima = IPoptima[:, ["instance","lambda_delay","lambda_drvrhrs","horizon","tstep","week","numlocs","numorders","numdrivers","objective"]]
 rename!(IPoptima,:objective => :ipopt)
 
 #Find the LP optimal solution for all instances
 LPoptima = filter(row -> findLPopt(row.method, row.iteration) == true, df)
-LPoptima = LPoptima[:, ["instance","lambda_delay","lambda_drvrhrs","horizon","tstep","week","numlocs","numorders","numdrivers","variablefixingthreshold","objective"]]
+LPoptima = LPoptima[:, ["instance","lambda_delay","lambda_drvrhrs","horizon","tstep","week","numlocs","numorders","numdrivers","objective"]]
 rename!(LPoptima,:objective => :lpopt)
 
 #Join the IP and LP optima onto the original table and calculate the IP and LP gaps
@@ -65,7 +77,10 @@ df_summ = combine(df_grp, nrow, [:totaltime, :mptime, :pptime, :iptime, :objecti
 
 #Sort for table
 df_summ[!,"method"] = [methodmap_stg[i] for i in df_summ[!,"method"]]
-df_final = sort!(df_summ, [:horizon, order(:tstep, rev=true), :lambda_delay, :method])
+#df_final = sort!(df_summ, [:horizon, order(:tstep, rev=true), :lambda_delay, :method])
+df_final = sort!(df_summ, [:horizon, order(:tstep, rev=true), :lambda_delay, :method, :variablefixingthreshold, :strengthenedredcost, order(:columnmemory, rev=true)])
 
 #Format as LaTeX table
-printbigtable(df_final, fulltimes, fulllambdas, fullmethods)
+#printbigtable(df_final, fulltimes, fulllambdas, fullmethods)
+df_final[!,"method"] = [methodmap[i] for i in df_final[!,"method"]]
+CSV.write("outputs/enhancements.csv", df_final)
