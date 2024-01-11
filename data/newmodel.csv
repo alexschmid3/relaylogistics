@@ -1,5 +1,5 @@
 experiment_id,instance,method,weekstart,horizon,tstep,numdrivers,rho-value,opt_gap,lambda,maxdriverhours,lambda2,varfixingthreshold,strengthenredcosts,formulation,columnmemory
-1,3,ip,2019-06-23,5,6,1.5,0,0.001,500,30,0.01,1,0,heterogeneous,1000
+1,3,ip,2019-06-23,5,6,1.5,0,0.0011,500,30,0.01,1,0,heterogeneous,1000
 2,3,basisip,2019-06-23,5,6,1.5,0,0.001,500,30,0.01,1,0,heterogeneous,1000
 3,3,mag,2019-06-23,5,6,1.5,0,0.001,500,30,0.01,1,0,heterogeneous,1000
 4,3,ip,2019-06-30,5,6,1.5,0,0.001,500,30,0.01,1,0,heterogeneous,1000
