@@ -53,6 +53,16 @@ function getnonzeroarcs(x, orderarcs)
         end
     end
 
+	for i in orders
+        orderArcSet_red[i] = unique(orderArcSet_red[i])
+        orderArcSet_space_red[i] = unique(orderArcSet_space_red[i])
+    end
+    for i in orders, n in 1:extendednumnodes
+    	A_plus_i_red[i,n] = unique(A_plus_i_red[i,n])
+        A_minus_i_red[i,n] = unique(A_minus_i_red[i,n])
+    end
+
+
     return orderArcSet_red, orderArcSet_space_red, A_plus_i_red, A_minus_i_red
 
 end
