@@ -379,6 +379,43 @@ end
 
 #----------------------------------------------------------------------------------------#
 
+function managecolumnmemory(magarcs, cg_iter, columnmemory, columnmemorylength, variableselected, allremovedarcs)
+
+	removedvars = []
+
+	if cg_iter > columnmemorylength
+
+		#println("--------------------------- COL MGMT ---------------------------")
+		
+		#Look back a few iterations (defined by columnmemorylength parameter)
+		deletefromiter = cg_iter - columnmemorylength
+
+		#Remove arcs added in the chosen iteration that have not been selected since
+		for i in orders
+			#println("=== ORDER $i ===")
+			#println("Arcs added in iteration = $deletefromiter", columnmemory[i,deletefromiter])
+			#println("All selected arcs = ", variableselected[i])
+			for a in setdiff(columnmemory[i,deletefromiter], variableselected[i])
+				if !((i,a) in allremovedarcs)
+					remove!(magarcs.A[i], a)
+					remove!(magarcs.A_space[i], a)
+					n_start, n_end = arcLookup[a]
+					remove!(magarcs.A_minus[i, n_end], a)
+					remove!(magarcs.A_plus[i, n_start], a)
+					push!(removedvars, (i,a))
+				end
+			end
+		end
+
+		#println("---------------------------------------------------------------")
+	end
+
+	return magarcs, removedvars
+
+end
+
+#----------------------------------------------------------------------------------------#
+
 function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 
     smp = Model(Gurobi.Optimizer)
@@ -473,6 +510,7 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
     for i in orders
         variableselected[i] = []
     end
+	columnmemory, allremovedarcs = Dict(), []
 
     #------------------------------------------------------#
 
@@ -492,7 +530,7 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
         #Update chosen variables
         for i in orders, a in magarcs.A[i]
             if value(x[i,a]) > 1e-4
-                variableselected[i] = union(variableselected[i], a)
+                push!(variableselected[i], a)
             end
         end
 
@@ -571,8 +609,15 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 		#Add new arcs to order arc sets
 		magarcs, newarcs = updatearcsets(magarcs, addarcs)
 
+		#Add new row to the column memory
+		for i in orders
+			columnmemory[i,cg_iter] = []
+		end
+
 		#Add new arcs to model as x-variables
 		for (i,a) in newarcs
+
+			push!(columnmemory[i,cg_iter], a)
 
 			#Create a new variable for the arc
 			global x[i,a] = @variable(smp, lower_bound = 0) #, upper_bound = 1)
@@ -656,6 +701,14 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
         elseif (minimum(minreducedcosts) >= -0.0001) & (setvariables != [])
 			println("NO NEGATIVE REDUCED COSTS FOUND!")	
 			break
+		end
+
+		#-------COLUMN MANAGEMENT-------#
+		
+		magarcs, removedvars = managecolumnmemory(magarcs, cg_iter, columnmemory, columnmemorylength, variableselected, allremovedarcs)
+		for (i,a) in removedvars
+			delete(smp, x[i,a])
+			push!(allremovedarcs, (i,a))
 		end
 
 		#------------ITERATE------------#

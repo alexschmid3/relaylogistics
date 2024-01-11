@@ -57,6 +57,7 @@ maxweeklydriverhours = expparms[experiment_id, 11]
 lambda2 = expparms[experiment_id, 12]
 variablefixingthreshold = expparms[experiment_id, 13]
 strengthenedreducedcost_flag = expparms[experiment_id, 14]
+columnmemorylength = expparms[experiment_id, 16] #Forget unused columns after this many iterations
 
 #Transform date
 #weekstart = DateTime(weekstart, "yyyy-mm-dd HH:MM-00")

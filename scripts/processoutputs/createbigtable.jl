@@ -1,9 +1,10 @@
 
-using CSV, DataFrames
+using CSV, DataFrames, Statistics
+
 #include("createbigtable_helper.jl")
 include("scripts/processoutputs/createbigtable_helper.jl")
 
-datafile = "outputs/bigtable_orig/ex_combined.csv"
+datafile = "outputs/bigtable_cluster/ex_combined.csv"
 
 fulltimes, fulllambdas, fullmethods = [(5, 6), (5, 3), (7, 6)], [100,500,1000], ["Direct implementation", "Direct on LO basis", "Path-based column generation", "Single-arc generation", "Multi-arc generation"]
 
