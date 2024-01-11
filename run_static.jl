@@ -144,7 +144,7 @@ vizflag = 0
 
 #File names					
 vizfoldername = string("visualizations/static/run ", runid)
-csvfoldername = string("outputs/bigtable_orig/")
+csvfoldername = string("outputs/bigtable_new/")
 vizfilename = string(solutionmethod)			#Folder names + file extensions added later for viz files
 #resultsfilename = string(csvfoldername, runid, "/", solutionmethod, "_output.csv")
 resultsfilename = string(csvfoldername, runid, "_output.csv")
