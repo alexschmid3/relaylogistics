@@ -38,9 +38,9 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 
 #Read experiment parameters 
 experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-formulation = "homogeneous" # Drivers = homogeneous, heterogeneous
-paramsfilename = "data/originalmodel.csv"
+paramsfilename = "data/newmodel.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
+formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
 ex = expparms[experiment_id, 2]		
 solutionmethod = expparms[experiment_id, 3]		
 weekstart = expparms[experiment_id, 4]
@@ -55,7 +55,8 @@ println("Lambda = ", lambda)
 #New parameters
 maxweeklydriverhours = expparms[experiment_id, 11]
 lambda2 = expparms[experiment_id, 12]
-variablefixingthreshold = 1.0 #expparms[experiment_id, 13]
+variablefixingthreshold = expparms[experiment_id, 13]
+strengthenedreducedcost_flag = expparms[experiment_id, 14]
 
 #Transform date
 #weekstart = DateTime(weekstart, "yyyy-mm-dd HH:MM-00")
@@ -97,11 +98,6 @@ traveltimefordelay_flag = 2 						# 0 = use rounded travel times for shortest pa
 
 #MVG algorithm control parameters
 newreducedcost_flag = 0								# 1 = use z-variable reduced costs to bound arc reduced costs for the subproblem, 0 = do not
-if solutionmethod == "fragsvg"
-	onearcatatime_flag = 1
-else
-	onearcatatime_flag = 0
-end
 fewarcsatatime_flag = 0
 arcsperiteration = 5
 minarcspernode = 5
@@ -249,6 +245,10 @@ elseif solutionmethod == "ip"
 		timespacenetwork(string("outputs/viz/order", i,"_ip.png"), arclistlist, colorlist, 2000, 1200)
 	end
 	=#
+	
+	if formulation == "heterogeneous"
+		println("Driver util = ", sum(sum(fragworkinghours[driverHomeLocs[d],drivershift[d],f] * value(z_ip[d,f]) for f in 1:numfragments[driverHomeLocs[d],drivershift[d]]) for d in drivers) / sum(maxweeklydriverhours for d in drivers))
+	end
 
 elseif solutionmethod == "basisip"
 
@@ -268,6 +268,10 @@ elseif solutionmethod == "basisip"
 		timespacenetwork(string("outputs/viz/order", i,"_basis.png"), arclistlist, colorlist, 2000, 1200)
 	end
 	=#
+
+	if formulation == "heterogeneous"
+		println("Driver util = ", sum(sum(fragworkinghours[driverHomeLocs[d],drivershift[d],f] * value(z_bip[d,f]) for f in 1:numfragments[driverHomeLocs[d],drivershift[d]]) for d in drivers) / sum(maxweeklydriverhours for d in drivers))
+	end
 
 elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 
@@ -294,6 +298,10 @@ elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 	end
 	=#
 
+	if formulation == "heterogeneous"
+		println("Driver util = ", sum(sum(fragworkinghours[driverHomeLocs[d],drivershift[d],f] * value(z_magip[d,f]) for f in 1:numfragments[driverHomeLocs[d],drivershift[d]]) for d in drivers) / sum(maxweeklydriverhours for d in drivers))
+	end
+
 elseif solutionmethod == "cg"
 
 	dummypath = 1
@@ -304,6 +312,10 @@ elseif solutionmethod == "cg"
 	writeresultsforearlytests(resultsfilename, 0, cg_iter, cg_obj, timeslist1, totalcgpaths)
 	timeslist2 = (mp=0, pp=0, pppar=0, ip=cgip_time)
 	writeresultsforearlytests(resultsfilename, 1, "IP", cgip_obj, timeslist2, totalcgpaths)
+
+	if formulation == "heterogeneous"
+		println("Driver util = ", sum(sum(fragworkinghours[driverHomeLocs[d],drivershift[d],f] * value(z_cgip[d,f]) for f in 1:numfragments[driverHomeLocs[d],drivershift[d]]) for d in drivers) / sum(maxweeklydriverhours for d in drivers))
+	end
 
 end
 

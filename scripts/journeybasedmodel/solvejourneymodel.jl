@@ -92,7 +92,7 @@ function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts)
 
 	#Objective
 	@objective(ip, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) 
-		+ sum(sum(c[a]*x[i,a] for a in orderarcs.A[i]) for i in orders) + sum(c[a]*(y[a] ) for a in hasdriverarcs.A) + sum(u[a]*(w[a] ) for a in primaryarcs.A_space) 
+		+ sum(sum(c[a]*x[i,a] for a in orderarcs.A[i]) for i in orders) + sum(c[a]*(y[a]) for a in hasdriverarcs.A) + sum(u[a]*(w[a]) for a in primaryarcs.A_space) 
 		+ lambda2 * maxhours)
 
 	#Order constraints

@@ -247,6 +247,33 @@ end
 
 #----------------------------------------------------------------------------------------#
 
+function strengthenreducedcosts(arcredcosts, z)
+
+	driverredcost = reduced_cost.(z)
+
+	bestdriver_rc = Dict()
+	for a in 1:numarcs
+		listoffragments = []
+		for d in drivers, l = driverHomeLocs[d], s = drivershift[d], f in fragmentscontaining[l,s,a]
+			push!(listoffragments, (d,f))
+		end
+		if listoffragments != []
+			bestdriver_rc[a] = max(0, minimum(driverredcost[frag] for frag in listoffragments))
+		else
+			bestdriver_rc[a] = 0
+		end
+	end
+
+	for i in orders, a in 1:numarcs
+		arcredcosts[i,a] += bestdriver_rc[a]
+	end
+
+	return arcredcosts
+
+end
+
+#----------------------------------------------------------------------------------------#
+
 ### TEST FOR SPEED (MAYBE SCALE UP INSTANCE?)
 
 function findarcvariablereducedcosts_varsetting(M, smpconstraints, setvariables)
@@ -493,6 +520,9 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
         else
             arcredcosts = findarcvariablereducedcosts_varsetting(M, smpconstraints, setvariables)
         end
+		if strengthenedreducedcost_flag == 1
+			arcredcosts = strengthenreducedcosts(arcredcosts, z)
+		end
 
 		#Run shortest path for each order to find new arcs
 		dptimelist = []
