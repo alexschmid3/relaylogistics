@@ -23,7 +23,7 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function getdualvalues(smpconstraints, setvariables)
+function getdualvalues(smpconstraints)
 
     alpha = converttosparsearray(dual.(smpconstraints.con_orderFlowBalance), numorders, extendednumnodes)
     beta = Array(dual.(smpconstraints.con_departOrigin))
@@ -34,10 +34,6 @@ function getdualvalues(smpconstraints, setvariables)
     xi = Array(dual.(smpconstraints.con_driverAvailability))
     psi = Array(dual.(smpconstraints.con_deliveryTime))
 
-    #if length(setvariables) > 0
-    #    zeta = converttosparsearray(dual.(setvars_con2), numorders, extendednumarcs)
-    #    return alpha, beta, gamma, theta, nu, mu, xi, psi, zeta
-    #else 
     return alpha, beta, gamma, theta, nu, mu, xi, psi
     #end
 
@@ -47,9 +43,9 @@ end
 
 ### TEST FOR SPEED (MAYBE SCALE UP INSTANCE?)
 
-function findarcvariablereducedcosts(M, smpconstraints, setvariables)
+function findarcvariablereducedcosts(M, smpconstraints)
 
-    alpha, beta, gamma, theta, nu, mu, xi, psi = getdualvalues(smpconstraints, setvariables)
+    alpha, beta, gamma, theta, nu, mu, xi, psi = getdualvalues(smpconstraints)
     
     arcredcosts = zeros(numorders, extendednumarcs)
     for i in orders
@@ -83,28 +79,6 @@ function strengthenreducedcosts(arcredcosts, z)
 	for i in orders, a in 1:numarcs
 		arcredcosts[i,a] += bestdriver_rc[a]
 	end
-
-	return arcredcosts
-
-end
-
-#----------------------------------------------------------------------------------------#
-
-### TEST FOR SPEED (MAYBE SCALE UP INSTANCE?)
-
-function findarcvariablereducedcosts_varsetting(M, smpconstraints, setvariables)
-
-    alpha, beta, gamma, theta, nu, mu, xi, psi = getdualvalues(smpconstraints, setvariables)
-    
-    arcredcosts = zeros(numorders, extendednumarcs)
-    for i in orders
-        arcredcosts[i,:] += c[1:extendednumarcs] + M.alpha[i] * alpha[i,:] + M.beta[i] * beta[i] + M.gamma[i] * gamma[i] + M.psi[i] * psi[i]
-        arcredcosts[i,:] += M.theta * theta + M.nu * nu + M.mu * mu + M.xi * xi
-    end
-
-    for (i,a) in setvariables
-        arcredcosts[i,a] = 0.0 
-    end
 
 	return arcredcosts
 
@@ -283,14 +257,6 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 	#Pre-processing
     M, subproblemsets = preprocessmagsets(orderarcs.A);
 
-	#------------------------------------------------------#
-
-    setvariables = []
-    variableselected = Dict()
-    for i in orders
-        variableselected[i] = []
-    end
-
     #------------------------------------------------------#
 
 	while cg_iter <= 100000
@@ -332,11 +298,7 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
         #------------SUBPROBLEMS------------#
 
 		#Calculate reduced costs
-        if setvariables == []
-            arcredcosts = findarcvariablereducedcosts(M, smpconstraints, setvariables)
-        else
-            arcredcosts = findarcvariablereducedcosts_varsetting(M, smpconstraints, setvariables)
-        end
+        arcredcosts = findarcvariablereducedcosts(M, smpconstraints)
 		if strengthenedreducedcost_flag == 1
 			arcredcosts = strengthenreducedcosts(arcredcosts, z)
 		end
@@ -452,25 +414,7 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 
 		#----------TERMINATION----------#
 
-		if (minimum(minreducedcosts) >= -0.0001) & (setvariables == [])
-			println("NO NEGATIVE REDUCED COSTS FOUND!")	
-            println("PROCEEDING TO VARIABLE SETTING...")	
-			
-            varssetfor = [[] for i in orders]
-            for i in orders, a in magarcs.A[i]
-                if variablefixingthreshold < value(x[i,a]) < 1 - 1e-4 
-                    push!(setvariables, (i,a))
-                    push!(varssetfor[i], a)
-                end
-            end
-            @constraint(smp, setvars_con[i in orders, a in varssetfor[i]], x[i,a] == 1)
-
-            if variablefixingthreshold == 1.0
-                println("NO VARIABLES TO SET")
-                break
-            end
-
-        elseif (minimum(minreducedcosts) >= -0.0001) & (setvariables != [])
+		if (minimum(minreducedcosts) >= -0.0001) 
 			println("NO NEGATIVE REDUCED COSTS FOUND!")	
 			break
 		end

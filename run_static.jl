@@ -50,14 +50,19 @@ driverfactor = expparms[experiment_id, 7]
 k = expparms[experiment_id, 8]   #This is the rho value
 opt_gap = expparms[experiment_id, 9]
 lambda = expparms[experiment_id, 10]
-println("Lambda = ", lambda)
+println("Experiment = ", experiment_id)
 
 #New parameters
 maxweeklydriverhours = expparms[experiment_id, 11]
 lambda2 = expparms[experiment_id, 12]
-variablefixingthreshold = expparms[experiment_id, 13]
+variablefixing_ub = expparms[experiment_id, 18]
+variablefixing_lb = expparms[experiment_id, 17]
+variablefixingthreshold = (variablefixing_lb, variablefixing_ub)
+varsettingiterations = expparms[experiment_id, 13]
 strengthenedreducedcost_flag = expparms[experiment_id, 14]
 columnmemorylength = expparms[experiment_id, 16] #Forget unused columns after this many iterations
+postmagcolumndeletioniterationpercent = expparms[experiment_id, 19] 
+postmagcolumndeletionthreshold = expparms[experiment_id, 20] 
 
 #Transform date
 #weekstart = DateTime(weekstart, "yyyy-mm-dd HH:MM-00")
@@ -288,14 +293,56 @@ elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 	#=
 	include("scripts/visualizations/timespacenetwork.jl")
 	for i in orders
-		selectedarcs = [a for a in magarcs.A[i] if value(x_magip[i,a]) > 1e-4]
-		missingarcs = [a for a in orderarcs.A[i] if (value(x_ip[i,a]) > 1e-4) & !(a in magarcs.A[i])]
+		magiparcs = [a for a in magarcs.A[i] if value(x_magip[i,a]) > 1e-4]
 		iparcs = [a for a in orderarcs.A[i] if value(x_ip[i,a]) > 1e-4]
+		missingarcs = [a for a in orderarcs.A[i] if (value(x_ip[i,a]) > 1e-4) & !(a in magarcs.A[i])]
+		lparcs = [a for a in magarcs.A[i] if value(x_smp[i,a]) > 1e-4]
 
-		arclistlist = [magarcs.A[i], iparcs, missingarcs, selectedarcs]
-		colorlist = [(160,160,160), (0,0,0), (0,0,240), (244,143,20)] 
-		thicknesslist = [4,8,8,10]
+		arclistlist = [magarcs.A[i], lparcs, iparcs, missingarcs, magiparcs]
+		colorlist = [(190,190,190), (0,0,0), (100,143,255), (120,94,240), (254,97,0)] 
+		thicknesslist = [3,11,7,7,7]
 		timespacenetwork(string("outputs/viz/order", i,"_mag.png"), arclistlist, colorlist, thicknesslist, 2400, 1800)
+	end
+	for d in drivers
+		lparcs, iparcs = [], []
+		for f in 1:numfragments[driverHomeLocs[d], drivershift[d]]
+			if value(z_magip[d,f]) > 1e-4
+				for a in 1:numarcs
+					if f in fragmentscontaining[driverHomeLocs[d],drivershift[d],a]
+						push!(iparcs, a)
+					end
+				end
+			end
+		end
+		for f in 1:numfragments[driverHomeLocs[d], drivershift[d]]
+			if value(z_smp[d,f]) > 1e-4
+				for a in 1:numarcs
+					if f in fragmentscontaining[driverHomeLocs[d],drivershift[d],a]
+						push!(lparcs, a)
+					end
+				end
+			end
+		end
+		
+		arclistlist = [driverarcs.A[d], lparcs, iparcs]
+		colorlist = [(200,200,200),(0,0,0), (254,97,0)] 
+		thicknesslist = [3,11,6]
+		timespacenetwork(string("outputs/viz/driver", d,"_mag.png"), arclistlist, colorlist, thicknesslist, 2400, 1800)
+	end
+
+	for d in [9], f in 1:numfragments[driverHomeLocs[d], drivershift[d]]
+		if value(z_smp[d,f]) > 1e-4
+			println("-------- FRAG $f --------")
+			println("flow = ", value(z_smp[d,f]))
+			fragDesc(driverHomeLocs[d], drivershift[d],f)
+		end
+	end
+
+	for i in [33], a in magarcs.A[i]
+		if value(x_smp[i,a]) > 1e-4
+			println("Flow = ", value(x_smp[i,a]))
+			arcDesc(a)
+		end
 	end
 	=#
 

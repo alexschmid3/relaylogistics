@@ -1,4 +1,5 @@
 
+using Plots
 using Base.Iterators: partition
 
 include("preprocessmagsets.jl")
@@ -103,7 +104,7 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function getdualvalues(smpconstraints, setvariables)
+function getdualvalues(smpconstraints)
 
     alpha = converttosparsearray(dual.(smpconstraints.con_orderFlowBalance), numorders, extendednumnodes)
     beta = Array(dual.(smpconstraints.con_departOrigin))
@@ -231,9 +232,9 @@ end
 
 ### TEST FOR SPEED (MAYBE SCALE UP INSTANCE?)
 
-function findarcvariablereducedcosts(M, smpconstraints, setvariables)
+function findarcvariablereducedcosts(M, smpconstraints)
 
-    alpha, beta, gamma, theta, nu, mu, xi, psi = getdualvalues(smpconstraints, setvariables)
+    alpha, beta, gamma, theta, nu, mu, xi, psi = getdualvalues(smpconstraints)
     
     arcredcosts = zeros(numorders, extendednumarcs)
     for i in orders
@@ -278,7 +279,7 @@ end
 
 function findarcvariablereducedcosts_varsetting(M, smpconstraints, setvariables)
 
-    alpha, beta, gamma, theta, nu, mu, xi, psi = getdualvalues(smpconstraints, setvariables)
+    alpha, beta, gamma, theta, nu, mu, xi, psi = getdualvalues(smpconstraints)
     
     arcredcosts = zeros(numorders, extendednumarcs)
     for i in orders
@@ -511,6 +512,11 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
         variableselected[i] = []
     end
 	columnmemory, allremovedarcs = Dict(), []
+	varsettingcount = 0
+	variableusecount = Dict()
+	for i in orders, a in magarcs.A[i]
+		variableusecount[i,a] = []
+	end
 
     #------------------------------------------------------#
 
@@ -531,6 +537,7 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
         for i in orders, a in magarcs.A[i]
             if value(x[i,a]) > 1e-4
                 push!(variableselected[i], a)
+				push!(variableusecount[i,a], cg_iter)
             end
         end
 
@@ -554,7 +561,7 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 
 		#Calculate reduced costs
         if setvariables == []
-            arcredcosts = findarcvariablereducedcosts(M, smpconstraints, setvariables)
+            arcredcosts = findarcvariablereducedcosts(M, smpconstraints)
         else
             arcredcosts = findarcvariablereducedcosts_varsetting(M, smpconstraints, setvariables)
         end
@@ -618,6 +625,7 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 		for (i,a) in newarcs
 
 			push!(columnmemory[i,cg_iter], a)
+			variableusecount[i,a] = []
 
 			#Create a new variable for the arc
 			global x[i,a] = @variable(smp, lower_bound = 0) #, upper_bound = 1)
@@ -680,25 +688,38 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 
 		#----------TERMINATION----------#
 
-		if (minimum(minreducedcosts) >= -0.0001) & (setvariables == [])
+		if (minimum(minreducedcosts) >= -0.0001) & (varsettingcount < varsettingiterations)
 			println("NO NEGATIVE REDUCED COSTS FOUND!")	
-            println("PROCEEDING TO VARIABLE SETTING...")	
+            println("PROCEEDING TO VARIABLE SETTING...")
 			
-            varssetfor = [[] for i in orders]
-            for i in orders, a in magarcs.A[i]
-                if variablefixingthreshold < value(x[i,a]) < 1 - 1e-4 
+			vals = []
+			for i in orders, a in magarcs.A[i] 
+				if value(x[i,a]) > 1e-4
+					push!(vals, value(x[i,a]))
+				end
+			end
+			hist = histogram(vals, bins = 0:0.1:1.1)
+			savefig(hist, string("outputs/activevars_", varsettingcount,".png"))
+			
+            println("------------------- SETTING VARIABLES - $varsettingcount -------------------")
+			varssetfor = [[] for i in orders]
+            varssetcount = 0
+			for i in orders, a in magarcs.A[i]
+                if variablefixingthreshold[1] + 1e-4 < value(x[i,a]) < variablefixingthreshold[2] - 1e-4 
                     push!(setvariables, (i,a))
                     push!(varssetfor[i], a)
+					varssetcount += 1
                 end
             end
-            @constraint(smp, setvars_con[i in orders, a in varssetfor[i]], x[i,a] == 1)
+            @constraint(smp, [i in orders, a in varssetfor[i]], x[i,a] == 1)
+			varsettingcount += 1
 
-            if variablefixingthreshold == 1.0
+            if (variablefixingthreshold[2] == 1.0) || (varssetcount == 0)
                 println("NO VARIABLES TO SET")
                 break
             end
 
-        elseif (minimum(minreducedcosts) >= -0.0001) & (setvariables != [])
+        elseif (minimum(minreducedcosts) >= -0.0001) & (varsettingcount >= varsettingiterations)
 			println("NO NEGATIVE REDUCED COSTS FOUND!")	
 			break
 		end
@@ -709,6 +730,7 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 		for (i,a) in removedvars
 			delete(smp, x[i,a])
 			push!(allremovedarcs, (i,a))
+			remove!(setvariables, (i,a))
 		end
 
 		#------------ITERATE------------#
@@ -722,20 +744,23 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 	#writemagresults(resultsfilename)
 
     #-------------------------------#
-    #=
+    
     println("Before arcs = ", sum(length(magarcs.A[i]) for i in orders))
-
+	
     #Remove MAG arcs that were never chosen
-    for i in orders, a in intersect(1:numarcs, setdiff(copy(magarcs.A[i]), variableselected[i]))
-        remove!(magarcs.A[i], a)
-        remove!(magarcs.A_space[i], a)
-        n_start, n_end = arcLookup[a]
-        remove!(magarcs.A_minus[i, n_end], a)
-        remove!(magarcs.A_plus[i, n_start], a)
+	postmagdeletioniterations = ceil(cg_iter * postmagcolumndeletioniterationpercent)
+    for i in orders, a in intersect(1:numarcs, magarcs.A[i])
+		if length(intersect(variableusecount[i,a], cg_iter-postmagdeletioniterations+1:cg_iter)) / postmagdeletioniterations <= postmagcolumndeletionthreshold
+			remove!(magarcs.A[i], a)
+			remove!(magarcs.A_space[i], a)
+			n_start, n_end = arcLookup[a]
+			remove!(magarcs.A_minus[i, n_end], a)
+			remove!(magarcs.A_plus[i, n_start], a)
+		end
     end
 
     println("After arcs = ", sum(length(magarcs.A[i]) for i in orders))
-    =#
+    
     #-------------------------------#
 
     totalarcs = sum(length(magarcs.A[i]) for i in orders)
