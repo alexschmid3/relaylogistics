@@ -17,7 +17,7 @@ include("scripts/metrics/writeresultsforearlytests.jl")
 
 #-------------------------------------FOUR INSTANCES------------------------------------#  
 
-const GRB_ENV = Gurobi.Env()
+#const GRB_ENV = Gurobi.Env()
 
 inittime = time()
 
@@ -339,12 +339,12 @@ elseif solutionmethod == "basisip"
 elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 
 	magarcs = initializeorderarcsets(k)
-	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts = multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
+	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts, cuttime = multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 	magip_obj, x_magip, z_magip, magip_time, magip_bound = solvejourneymodel(0, opt_gap, magarcs, numeffshifts, knapsackcuts)
 
-	timeslist1 = (mp=smptime, pp=pptime, pppar=pptime_par, ip=0)
+	timeslist1 = (mp=smptime, pp=pptime, pppar=pptime_par, ip=0, cut=cuttime)
 	writeresultsforearlytests(resultsfilename, 0, mag_iter, mag_obj, timeslist1, totalmagarcs)
-	timeslist2 = (mp=0, pp=0, pppar=0, ip=magip_time)
+	timeslist2 = (mp=0, pp=0, pppar=0, ip=magip_time, cut=0)
 	writeresultsforearlytests(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs)
 
 	#=

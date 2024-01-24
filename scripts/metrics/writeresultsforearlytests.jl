@@ -19,13 +19,15 @@ function writeresultsforearlytests(resultsfilename, appendflag, iteration, obj, 
 			columnmemory = [columnmemorylength],
 			deletioniterationpercent = [postmagcolumndeletioniterationpercent],
 			deletionthreshold = [postmagcolumndeletionthreshold],
+			cuttype = [knapsackcuttype],
 			iteration = [iteration],
 			objective = [obj],
 			smptime = [timeslist.mp],
 			pptime = [timeslist.pp],
 			pptime_par = [timeslist.pppar],
 			iptime = [timeslist.ip],
-            totalarcs = [totalarcs]
+            totalarcs = [totalarcs],
+			cuttime = [timeslist.cut]
 		)
 
 	if appendflag == 1

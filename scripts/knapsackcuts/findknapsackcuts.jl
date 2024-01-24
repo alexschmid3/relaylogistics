@@ -66,9 +66,9 @@ end
 
 #---------------------------------------------------------------------------------------#
 
-function findliftcoeffs(ss, j, rhs, l, s)
+function findliftcoeffs_opt(ss, j, rhs, l, s)
 
-    model = Model(() -> Gurobi.Optimizer(GRB_ENV)) #Model(Gurobi.Optimizer)
+    model = Model(Gurobi.Optimizer) #Model(() -> Gurobi.Optimizer(GRB_ENV))
     set_optimizer_attribute(model, "OutputFlag", 0)
     @variable(model, z[1:numfragments[l,s]], Bin)
     @objective(model, Max, sum(z[f] for f in ss))
@@ -77,6 +77,27 @@ function findliftcoeffs(ss, j, rhs, l, s)
     optimize!(model)
 
     return rhs - objective_value(model)
+
+end
+
+#---------------------------------------------------------------------------------------#
+
+#This is equivalent to the optimization above, but is faster and doesn't use Gurobi as much on the cluster
+function findliftcoeffs(ss, j, rhs, l, s)
+
+    sortedss = sort(ss, by=x->fragdrivinghours[l,s,x])
+    for n in rhs:-1:0
+        #Check whether we could choose j plus the n journeys with the fewest working hours and still satisfy the knapsack   
+        if (n == 0) & (fragdrivinghours[l,s,j] <= maxweeklydriverhours)
+            return rhs
+        elseif (n>0) & (sum(fragdrivinghours[l,s,f] for f in sortedss[1:n]) + fragdrivinghours[l,s,j] <= maxweeklydriverhours)
+            return rhs - n
+        end
+    end
+
+    #If journey j does not satify the knapsack, it's lifting coeff should be ∞ 
+    #Note: shouldn't happen bc of pre-processing
+    return 1e10
 
 end
 

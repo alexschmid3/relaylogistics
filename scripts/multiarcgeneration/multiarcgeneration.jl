@@ -579,6 +579,7 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 		variableusecount[i,a] = []
 	end
 	addcutsthisiter_flag = 0
+	cuttime = 0
 
     #------------------------------------------------------#
 
@@ -676,6 +677,7 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 		#-----------ADD CUTS-----------#
 			
 		if addcutsthisiter_flag == 1
+			cutstarttime = time()
 			cuts = findknapsackcuts(z, knapsackcuttype)
 			@constraint(smp, [i in 1:cuts.numcuts], sum(cuts.coeff[i][d,j] * z[d,j] for (d,j) in cuts.vars[i]) <= cuts.rhs[i])
 			cutindex = length(mastercuts.rhs)+1
@@ -686,6 +688,7 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 				cutindex += 1
 			end
 			cutsaddedthisiter = cuts.numcuts
+			cuttime += time() - cutstarttime
 			println("Added ", cuts.numcuts, " cuts")
 		else 
 			cutsaddedthisiter = -1 * knapsackcuts_flag
@@ -842,6 +845,6 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 
 	#-------------------------------#
 
-	return smpobj, smp, x, y, z, w, magarcs, sum(smptimes), sum(pptimes), sum(pptimes_par), totalarcs, cg_iter, mastercuts
+	return smpobj, smp, x, y, z, w, magarcs, sum(smptimes), sum(pptimes), sum(pptimes_par), totalarcs, cg_iter, mastercuts, cuttime
 
 end
