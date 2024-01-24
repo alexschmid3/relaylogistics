@@ -17,6 +17,8 @@ include("scripts/metrics/writeresultsforearlytests.jl")
 
 #-------------------------------------FOUR INSTANCES------------------------------------#  
 
+const GRB_ENV = Gurobi.Env()
+
 inittime = time()
 
 loclist = [20, 40, 60, 66, 66]
@@ -24,7 +26,6 @@ driverlist = [70, 300, 1600, 3316, 1600]
 trucklist = [60, 230, 1200, 2495, 1200]
 seedlist = [202481, 155702, 731761, 963189, 731762]
 weekstartlist = [DateTime(2019, 7, 21, 8), DateTime(2019, 7, 14, 8), DateTime(2019, 7, 7, 8), DateTime(2019, 6, 30, 8), DateTime(2019, 7, 7, 8)]
-
 ordercapslist = [3, 6, 18, 10000, 18]  #Cap on the number of orders introduced in each 6 hour increment in the online problem (6 hrs doesn't depend on tstep or timedelta to ensure consistent instance when these parameters are adjusted)
 								       #Order caps is technically an online parameter, but we use it in the static version as well to ensure the orders included in the instance are the same in the static and online version
 
@@ -59,13 +60,19 @@ variablefixing_ub = expparms[experiment_id, 18]
 variablefixing_lb = expparms[experiment_id, 17]
 variablefixingthreshold = (variablefixing_lb, variablefixing_ub)
 varsettingiterations = expparms[experiment_id, 13]
+varsettingtype = "z" 
 strengthenedreducedcost_flag = expparms[experiment_id, 14]
 columnmemorylength = expparms[experiment_id, 16] #Forget unused columns after this many iterations
 postmagcolumndeletioniterationpercent = expparms[experiment_id, 19] 
 postmagcolumndeletionthreshold = expparms[experiment_id, 20] 
+knapsackcuttype = expparms[experiment_id, 21] 
+if knapsackcuttype > 0
+	knapsackcuts_flag = 1
+else
+	knapsackcuts_flag = 0
+end
 
 #Transform date
-#weekstart = DateTime(weekstart, "yyyy-mm-dd HH:MM-00")
 weekstart = DateTime(weekstart) + Dates.Hour(8)
 
 #Definition of the instance 
@@ -77,10 +84,7 @@ randomseedval = seedlist[ex]
 Random.seed!(randomseedval)
 
 #User controlled instance parameters
-#tstep = 6											# Time discretization in hours
-#horizon = 24*3										# Length of planning horion in hours
 shiftlength = 12									# Length of each driver shift in hours
-#lambda = 500										# Objective function = lambda * delay + miles
 taxicostpct = 2.0                          			# Cost to taxi along an arc as a percentage of cost to drive a truck along that arc (should be > 1.0)
 roundup_flag = 1			 					 	# 0 = round down to find discretized travel times, 1 = round up
 drivershifttstep = 12								# How many hours between start of driver shifts, (ex. drivershifttstep=12 means each driver's first shift starts at time 0 or time 12, drivershifttstep=6 means a driver's first shift could start at time 0, 6, 12, or 18)
@@ -118,7 +122,6 @@ pathsperiter2, pathsitercap2 = 5, 20
 pathsperiter3 = 1
 
 #Uniform k and ABCG + k control parameters
-#Get k directly from the solutionmethod specified above 
 k = 0
 ktype_flag = "pct"									# "hrs" = # of hours acceptable delay, "pct" = acceptable delay as percent of shortest path time, "min24" = max(24 hrs, percent of shortest path)
 
@@ -129,11 +132,6 @@ pbcgtimelimit = 60*95
 #Branch-and-price parameters
 drivervalidinequalities_flag = 0
 maxbbnodes = 100000
-#variableselectionstrategy_output = expparms[experiment_id, 10]
-#variableselectionstrategy = split(variableselectionstrategy_output, "-") #split(expparms[experiment_id, 6],"-") 
-#nodeselectionstrategy = expparms[experiment_id, 11]
-#boundinitialization = expparms[experiment_id, 12]
-#bap_optimality_tolerance = expparms[experiment_id, 13]
 
 #Visualization/output/print statements control parameters
 printstatements = 1									# Turn on/off printing 			
@@ -164,7 +162,6 @@ fullzsolutionfilename = string(csvfoldername, runid, "/z_soln.csv")
 convergencedatafilename = string(csvfoldername, "convergence_exp", runid, ".csv")
 #convergencefilename = string(csvfoldername, "convergence_exp", experiment_id,".csv")
 
-
 #---------------------------------IMPORT FINAL SCRIPTS----------------------------------# 
 
 if formulation == "heterogeneous"
@@ -178,6 +175,8 @@ elseif formulation == "homogeneous"
 	include("scripts/columngeneration/columngeneration_homogeneous.jl")
 	include("scripts/journeybasedmodel/solvejourneymodel_paths_homogeneous.jl")
 end
+include("scripts/knapsackcuts/findknapsackcuts.jl")
+include("scripts/knapsackcuts/solvelpwithcuts.jl")
 
 if maketimespacevizfiles + makespatialvizfiles + makeadvancedvizfiles + vizflag >= 1
 	include("scripts/visualizations/timespacenetwork.jl")
@@ -226,21 +225,79 @@ include("scripts/multiarcgeneration/initializeorderarcsets.jl")
 primaryarcs, extendedtimearcs, orderarcs, driverarcs, hasdriverarcs = initializearcsets(A_space, A_plus, A_minus)
 R_off = findreturnhomearcsets(driverarcs)
 magarcs = initializeorderarcsets(k)
-driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours = initializejourneymodel(maxnightsaway)
+driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours, workingfragments = initializejourneymodel(maxnightsaway)
 
-# ----------------------------------- START HERE ----------------------------------- #
-# ASK YOURSELF: COULD WE DO THE SAME TRICKS WITH LP HEURISTICS THOUGH?
-# ----------------------------------- START HERE ----------------------------------- #
+nocuts=(vars=[], rhs=[])
+
+#---------------------------------------SOLVE----------------------------------------# 
 
 if solutionmethod == "lp"
 
-	lp_obj, x_lp, z_lp, lp_time, lp_bound = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts)
+	lp_obj, x_lp, z_lp, lp_time, lp_bound = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts, nocuts)
 	timeslist = (mp=lp_time, pp=0, pppar=0, ip=0)
 	writeresultsforearlytests(resultsfilename, 0, "LP", lp_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders))
 
+elseif solutionmethod == "lpcuts"
+
+	lpc_obj, x_lpc, z_lpc, lpc_time, lpc_bound, knapsackcuts = solvelpwithcuts(opt_gap, orderarcs, knapsackcuttype)
+	timeslist = (mp=lpc_time, pp=0, pppar=0, ip=0)
+	writeresultsforearlytests(resultsfilename, 0, "LP", lpc_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders))
+
+	ipc_obj, x_ipc, z_ipc, ipc_time, ipc_bound = solvejourneymodel(0, opt_gap, orderarcs, numeffshifts, knapsackcuts)
+	timeslist = (mp=0, pp=0, pppar=0, ip=ipc_time)
+	writeresultsforearlytests(resultsfilename, 1, "IP", ipc_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders))
+
+	#=include("scripts/visualizations/timespacenetwork.jl")
+	for i in orders
+		lparcs = [a for a in orderarcs.A[i] if value(x_lpc[i,a]) > 1e-4]
+		iparcs = [a for a in orderarcs.A[i] if value(x_ip[i,a]) > 1e-4]
+		arclistlist = [orderarcs.A[i], lparcs, iparcs]
+		colorlist = [(200,200,200),(0,0,0), (255,0,0)] 
+		thicknesslist = [5,11,6]
+		fractlist = [[],Dict(),[]]
+		for a in lparcs
+			fractlist[2][a] = string(round(value(x_lpc[i,a]), digits=2))
+		end
+		timespacenetwork(string("outputs/viz/order", i,".png"), arclistlist, colorlist, thicknesslist, fractlist, 2000, 1200)
+	end
+	for d in drivers
+		lparcs, iparcs = [], []
+		fractlist = [[],Dict(),[]]
+		for f in 1:numfragments[driverHomeLocs[d], drivershift[d]] 
+			if value(z_lpc[d,f]) > 1e-4
+				for a in 1:numarcs
+					if f in fragmentscontaining[driverHomeLocs[d],drivershift[d],a]
+						push!(lparcs, a)
+						try
+							fractlist[2][a] += round(value(z_lpc[d,f]), digits=2)
+						catch
+							fractlist[2][a] = round(value(z_lpc[d,f]), digits=2)
+						end
+					end
+				end
+			end
+		end	
+		for f in 1:numfragments[driverHomeLocs[d], drivershift[d]]
+			if value(z_ip[d,f]) > 1e-4
+				for a in 1:numarcs
+					if f in fragmentscontaining[driverHomeLocs[d],drivershift[d],a]
+						push!(iparcs, a)
+					end
+				end
+			end
+		end		
+		for a in keys(fractlist[2])
+			fractlist[2][a] = string(round(fractlist[2][a], digits=2))
+		end
+		arclistlist = [driverarcs.A[d], lparcs, iparcs]
+		colorlist = [(200,200,200),(0,0,0), (255,0,0)] 
+		thicknesslist = [5,11,6]
+		timespacenetwork(string("outputs/viz/driver", d,".png"), arclistlist, colorlist, thicknesslist, fractlist, 2000, 1200)
+	end=#
+
 elseif solutionmethod == "ip"
 
-	ip_obj, x_ip, z_ip, ip_time, ip_bound = solvejourneymodel(0, opt_gap, orderarcs, numeffshifts)
+	ip_obj, x_ip, z_ip, ip_time, ip_bound = solvejourneymodel(0, opt_gap, orderarcs, numeffshifts, nocuts)
 	timeslist = (mp=0, pp=0, pppar=0, ip=ip_time)
 	writeresultsforearlytests(resultsfilename, 0, "IP", ip_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders))
 	#=
@@ -258,8 +315,8 @@ elseif solutionmethod == "ip"
 
 elseif solutionmethod == "basisip"
 
-	lp_obj, x_lp, z_lp, lp_time, lp_bound, lpbasisarcs = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts)
-	bip_obj, x_bip, z_bip, bip_time, bip_bound = solvejourneymodel(0, opt_gap, lpbasisarcs, numeffshifts)
+	lp_obj, x_lp, z_lp, lp_time, lp_bound, lpbasisarcs = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts, nocuts)
+	bip_obj, x_bip, z_bip, bip_time, bip_bound = solvejourneymodel(0, opt_gap, lpbasisarcs, numeffshifts, nocuts)
 
 	timeslist1 = (mp=lp_time, pp=0, pppar=0, ip=0)
 	writeresultsforearlytests(resultsfilename, 0, "LP", lp_obj, timeslist1, sum(length(lpbasisarcs.A[i]) for i in orders))
@@ -282,8 +339,8 @@ elseif solutionmethod == "basisip"
 elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 
 	magarcs = initializeorderarcsets(k)
-	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter = multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
-	magip_obj, x_magip, z_magip, magip_time, magip_bound = solvejourneymodel(0, opt_gap, magarcs, numeffshifts)
+	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts = multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
+	magip_obj, x_magip, z_magip, magip_time, magip_bound = solvejourneymodel(0, opt_gap, magarcs, numeffshifts, knapsackcuts)
 
 	timeslist1 = (mp=smptime, pp=pptime, pppar=pptime_par, ip=0)
 	writeresultsforearlytests(resultsfilename, 0, mag_iter, mag_obj, timeslist1, totalmagarcs)
@@ -370,3 +427,10 @@ end
 #-----------------------------------------------------------------------------#
 
 println("Done!")
+
+
+
+
+
+
+

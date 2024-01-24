@@ -417,6 +417,62 @@ end
 
 #----------------------------------------------------------------------------------------#
 
+function setvarsformag(setvariables, x, z, magarcs)
+
+	if varsettingtype == "x"
+		varssetfor = [[] for i in orders]
+		varssetcount = 0
+		for i in orders, a in magarcs.A[i]
+			if variablefixingthreshold[1] + 1e-4 < value(x[i,a]) < variablefixingthreshold[2] - 1e-4 
+				push!(setvariables, (i,a))
+				push!(varssetfor[i], a)
+				varssetcount += 1
+			end
+		end
+		
+	elseif varsettingtype == "z"
+		varssetfor = [[] for d in drivers]
+		varssetcount = 0
+		for d in drivers, f in 1:numfragments[driverHomeLocs[d], drivershift[d]]
+			if variablefixingthreshold[1] + 1e-4 < value(z[d,f]) < variablefixingthreshold[2] - 1e-4 
+				push!(setvariables, (d,f))
+				push!(varssetfor[d], f)
+				varssetcount += 1
+			end
+		end
+		
+	end
+
+	return setvariables, varssetfor, varssetcount
+
+end
+
+#----------------------------------------------------------------------------------------#
+
+function fractionalhistogram(x, z, magarcs, filenamex, filenamez)
+
+	vals = []
+	for i in orders, a in magarcs.A[i] 
+		if value(x[i,a]) > 1e-4
+			push!(vals, value(x[i,a]))
+		end
+	end
+	hist = histogram(vals, bins = 0:0.05:1.1)
+	savefig(hist, filenamex)
+
+	vals = []
+	for d in drivers, f in 1:numfragments[driverHomeLocs[d], drivershift[d]]
+		if value(z[d,f]) > 1e-4
+			push!(vals, value(z[d,f]))
+		end
+	end
+	hist = histogram(vals, bins = 0:0.05:1.1)
+	savefig(hist, filenamez)
+
+end
+
+#----------------------------------------------------------------------------------------#
+
 function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 
     smp = Model(Gurobi.Optimizer)
@@ -499,6 +555,9 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 	listlength = convert(Int64, ceil(length(orders)/4))
 	shuffle_partition(N; chunk_size=listlength) = (collect ∘ partition)(shuffle(1:N), chunk_size)
 
+	#Master list of knapsack cuts
+	mastercuts = (vars=Dict(), rhs=Dict())
+
 	#------------------------------------------------------#
 
 	#Pre-processing
@@ -517,6 +576,7 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 	for i in orders, a in magarcs.A[i]
 		variableusecount[i,a] = []
 	end
+	addcutsthisiter_flag = 0
 
     #------------------------------------------------------#
 
@@ -610,7 +670,24 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 			maximprove = minimum(minreducedcosts) * sum(sum(value(x[i,a]) for a in magarcs.A[i]) for i in orders)
 			write_cg_conv(convergencedatafilename, cg_iter, maximprove, totalorderarcs, totalorderpaths, smpobj)
 		end
-	
+
+		#-----------ADD CUTS-----------#
+			
+		if addcutsthisiter_flag == 1
+			cuts = findknapsackcuts(z, knapsackcuttype)
+			@constraint(smp, [i in 1:cuts.numcuts], sum(cuts.coeff[i][d,j] * z[d,j] for (d,j) in cuts.vars[i]) <= cuts.rhs[i])
+			cutindex = length(mastercuts.rhs)+1
+			for i in 1:cuts.numcuts
+				mastercuts.vars[cutindex] = cuts.vars[i]
+				mastercuts.rhs[cutindex] = cuts.rhs[i]
+				cutindex += 1
+			end
+			cutsaddedthisiter = cuts.numcuts
+			println("Added ", cuts.numcuts, " cuts")
+		else 
+			cutsaddedthisiter = -1 * knapsackcuts_flag
+		end
+
 		#-------ADD NEW VARIABLES-------#
 
 		#Add new arcs to order arc sets
@@ -688,30 +765,21 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 
 		#----------TERMINATION----------#
 
-		if (minimum(minreducedcosts) >= -0.0001) & (varsettingcount < varsettingiterations)
+		if (minimum(minreducedcosts) >= -0.0001) & (cutsaddedthisiter == -1) 
+			addcutsthisiter_flag += 1
+		elseif (minimum(minreducedcosts) >= -0.0001) & (varsettingcount < varsettingiterations) & (cutsaddedthisiter == 0)
 			println("NO NEGATIVE REDUCED COSTS FOUND!")	
             println("PROCEEDING TO VARIABLE SETTING...")
 			
-			vals = []
-			for i in orders, a in magarcs.A[i] 
-				if value(x[i,a]) > 1e-4
-					push!(vals, value(x[i,a]))
-				end
-			end
-			hist = histogram(vals, bins = 0:0.1:1.1)
-			savefig(hist, string("outputs/activevars_", varsettingcount,".png"))
+			fractionalhistogram(x, z, magarcs, string("outputs/activevars_x_", varsettingcount,".png"), string("outputs/activevars_z_", varsettingcount,".png"))
 			
             println("------------------- SETTING VARIABLES - $varsettingcount -------------------")
-			varssetfor = [[] for i in orders]
-            varssetcount = 0
-			for i in orders, a in magarcs.A[i]
-                if variablefixingthreshold[1] + 1e-4 < value(x[i,a]) < variablefixingthreshold[2] - 1e-4 
-                    push!(setvariables, (i,a))
-                    push!(varssetfor[i], a)
-					varssetcount += 1
-                end
-            end
-            @constraint(smp, [i in orders, a in varssetfor[i]], x[i,a] == 1)
+			setvariables, varssetfor, varssetcount = setvarsformag(setvariables, x, z, magarcs)
+			if varsettingtype == "x"
+				@constraint(smp, [i in orders, a in varssetfor[i]], x[i,a] == 1)
+			elseif varsettingtype == "z"
+				@constraint(smp, [d in drivers, f in varssetfor[d]], z[d,f] == 1)
+			end
 			varsettingcount += 1
 
             if (variablefixingthreshold[2] == 1.0) || (varssetcount == 0)
@@ -719,9 +787,11 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
                 break
             end
 
-        elseif (minimum(minreducedcosts) >= -0.0001) & (varsettingcount >= varsettingiterations)
+        elseif (minimum(minreducedcosts) >= -0.0001) & (varsettingcount >= varsettingiterations) & (cutsaddedthisiter == 0)
 			println("NO NEGATIVE REDUCED COSTS FOUND!")	
 			break
+		elseif (minimum(minreducedcosts) >= -0.0001) & (cutsaddedthisiter >= 1)
+			println("Need to keep adding cuts")
 		end
 
 		#-------COLUMN MANAGEMENT-------#
@@ -730,7 +800,9 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 		for (i,a) in removedvars
 			delete(smp, x[i,a])
 			push!(allremovedarcs, (i,a))
-			remove!(setvariables, (i,a))
+			if varsettingtype == "x"
+				remove!(setvariables, (i,a))
+			end
 		end
 
 		#------------ITERATE------------#
@@ -767,7 +839,6 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 
 	#-------------------------------#
 
-	return smpobj, smp, x, y, z, w, magarcs, sum(smptimes), sum(pptimes), sum(pptimes_par), totalarcs, cg_iter
+	return smpobj, smp, x, y, z, w, magarcs, sum(smptimes), sum(pptimes), sum(pptimes_par), totalarcs, cg_iter, mastercuts
 
 end
-

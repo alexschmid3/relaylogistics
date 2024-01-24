@@ -69,7 +69,7 @@ end
 
 #---------------------------------------------------------------------------------------#
 
-function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts)
+function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts, cuts)
 
 	ip = Model(Gurobi.Optimizer)
 	set_optimizer_attribute(ip, "TimeLimit", 60*60*40)
@@ -88,12 +88,12 @@ function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts)
     end
     @variable(ip, w[a in primaryarcs.A_space] >= 0)
 	@variable(ip, ordtime[orders])
-	@variable(ip, maxhours)
+	@variable(ip, maxhours>=0)
 
 	#Objective
 	@objective(ip, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) 
 		+ sum(sum(c[a]*x[i,a] for a in orderarcs.A[i]) for i in orders) + sum(c[a]*(y[a]) for a in hasdriverarcs.A) + sum(u[a]*(w[a]) for a in primaryarcs.A_space) 
-		+ lambda2 * maxhours)
+	) #+ lambda2 * maxhours)
 
 	#Order constraints
 	@constraint(ip, orderFlowBalance[i = orders, n in setdiff([n2 for n2 in 1:numnodes], union(Origin[i], Destination[i]))], sum(x[i,a] for a in orderarcs.A_minus[i,n]) - sum(x[i,a] for a in orderarcs.A_plus[i,n]) == 0)
@@ -135,6 +135,9 @@ function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts)
 	@constraint(ip, driverFlowBalance[d in drivers, l = driverHomeLocs[d], s = drivershift[d], n in N_flow_ls[l,s]], sum(z[d,f] for f in F_minus_ls[l,s,n]) - sum(z[d,f] for f in F_plus_ls[l,s,n]) == 0)
 	@constraint(ip, driverMaxHours[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(fragworkinghours[l,s,f] * z[d,f] for f in 1:numfragments[l,s]) <= maxhours)
 	@constraint(ip, maxhours <= maxweeklydriverhours)
+
+	#Knapsack cuts
+	@constraint(ip, [i in 1:length(cuts.vars)], sum(cuts.coeff[i][d,j] * z[d,j] for (d,j) in cuts.vars[i]) <= cuts.rhs[i])
 
 	optimize!(ip)
 

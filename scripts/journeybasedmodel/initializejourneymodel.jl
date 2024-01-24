@@ -225,6 +225,16 @@ function initializejourneymodel(maxnightsaway)
 		end
 	end
 
-	return driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours
+	workingfragments = Dict()
+	for l in 1:numlocs, s in 1:numeffshifts
+		workingfragments[l,s] = []
+		for f in 1:numfragments[l,s] 
+			if fragworkinghours[l,s,f] > 1e-4
+				push!(workingfragments[l,s], f)
+			end
+		end
+	end
+
+	return driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours, workingfragments
 
 end 

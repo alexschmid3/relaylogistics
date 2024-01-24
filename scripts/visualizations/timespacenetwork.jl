@@ -11,7 +11,9 @@ for item in tempHueList
 	end
 end
 
-function timespacenetwork(drawingname, arclistlist, colorlist, thicknesslist, x_size, y_size)
+#drawingname, arclistlist, colorlist, thicknesslist, fractlist, x_size, y_size = string("outputs/viz/order", i,".png"), arclistlist, colorlist, thicknesslist, fractlist, 2000, 1200
+
+function timespacenetwork(drawingname, arclistlist, colorlist, thicknesslist, fractlist, x_size, y_size)
 
 	#Find coordinates for each time-space node
 	nodelist = []
@@ -44,9 +46,14 @@ function timespacenetwork(drawingname, arclistlist, colorlist, thicknesslist, x_
         arcColor = colorlist[j] # (0,0,255) #RGB tuple 
         arcDash = "solid" #"solid", "dashed"			
         arcThickness = thicknesslist[j]
+		if fractlist[j] != []
+			arcLabel = fractlist[j][a]
+		else
+			arcLabel = ""
+		end
         
         #Add to arcinfo list to be used in the drawing 
-        push!(arcinfo, (startPoint, endPoint, arcColor, arcDash, arcThickness))
+        push!(arcinfo, (startPoint, endPoint, arcColor, arcDash, arcThickness, arcLabel))
     end
 
 	#-------------------------------------------------------------------------#
@@ -76,6 +83,7 @@ function timespacenetwork(drawingname, arclistlist, colorlist, thicknesslist, x_
 		#Draw the arrow head
 		local p = ngon(arrowhead, 10, 3, theta, vertices=true)
 		poly(p, :fill,  close=true)
+
 	end
 
 	#Draw node points
@@ -95,6 +103,18 @@ function timespacenetwork(drawingname, arclistlist, colorlist, thicknesslist, x_
 	for t in 0:tstep*2:horizon
 		coord = nodePoints[nodes[(1,t)]] + Point(0,-30)
 		label("t = $t", :N , coord)
+	end
+
+	#Add arc labels
+	for i in arcinfo
+		if i[6] != ""
+			fontsize(20)
+			coord = Point((i[1][1] + i[2][1])/2, (i[1][2] + i[2][2])/2)
+			sethue("black")
+			rect(coord+Point(-30,-25), 60, 25, :fill)
+			sethue("white")
+			label(i[6], :N , coord)
+		end
 	end
 
 	finish()
