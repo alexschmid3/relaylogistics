@@ -1,4 +1,6 @@
 
+using Pkg
+Pkg.add("Combinatorics")
 using Combinatorics
 
 function findjourneypaircuts(z)
