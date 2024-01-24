@@ -556,7 +556,7 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 	shuffle_partition(N; chunk_size=listlength) = (collect ∘ partition)(shuffle(1:N), chunk_size)
 
 	#Master list of knapsack cuts
-	mastercuts = (vars=Dict(), rhs=Dict())
+	mastercuts = (vars=Dict(), rhs=Dict(), coeff=Dict())
 
 	#------------------------------------------------------#
 
@@ -679,6 +679,7 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 			cutindex = length(mastercuts.rhs)+1
 			for i in 1:cuts.numcuts
 				mastercuts.vars[cutindex] = cuts.vars[i]
+				mastercuts.coeff[cutindex] = cuts.coeff[i]
 				mastercuts.rhs[cutindex] = cuts.rhs[i]
 				cutindex += 1
 			end
