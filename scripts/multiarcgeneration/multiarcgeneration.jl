@@ -287,8 +287,10 @@ function findarcvariablereducedcosts_varsetting(M, smpconstraints, setvariables)
         arcredcosts[i,:] += M.theta * theta + M.nu * nu + M.mu * mu + M.xi * xi
     end
 
-    for (i,a) in setvariables
-        arcredcosts[i,a] = 0.0 
+	if varsettingtype == "x"
+		for (i,a) in setvariables
+        	arcredcosts[i,a] = 0.0 
+		end
     end
 
 	return arcredcosts
