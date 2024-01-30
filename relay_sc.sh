@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -a 1449-1450
+#SBATCH -a 1451-1496,1509-1520,1557-1568
 #SBATCH --partition=xeon-p8
 #SBATCH --time=2-00:00
 #SBATCH -o /home/gridsan/aschmid/relaylogistics/outerr/resub_%a.out
