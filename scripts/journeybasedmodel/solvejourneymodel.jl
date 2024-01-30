@@ -136,6 +136,16 @@ function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts, cuts)
 	@constraint(ip, driverMaxHours[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(fragworkinghours[l,s,f] * z[d,f] for f in 1:numfragments[l,s]) <= maxhours)
 	@constraint(ip, maxhours <= maxweeklydriverhours)
 
+	#Symmetry breaking constraints
+	if symmetrybreaking_flag == 1
+		for l in 1:numlocs, s in 1:numeffshifts
+			for j in 1:length(driversets[l,s])-1
+				d1, d2 = driversets[l,s][j], driversets[l,s][j+1]
+				@constraint(ip, sum(z[d1,f] for f in setdiff(1:numfragments[l,s], workingfragments[l,s])) <= sum(z[d2,f] for f in setdiff(1:numfragments[l,s], workingfragments[l,s])) )
+			end
+		end
+	end
+
 	#Knapsack cuts
 	@constraint(ip, [i in 1:length(cuts.vars)], sum(cuts.coeff[i][d,j] * z[d,j] for (d,j) in cuts.vars[i]) <= cuts.rhs[i])
 
