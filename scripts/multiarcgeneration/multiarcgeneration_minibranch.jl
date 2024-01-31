@@ -478,7 +478,7 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, starterfixedvars, variableusecount, currvarfixingiter)
+function multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, starterfixedvars, variableusecount, currvarfixingiter, cg_iter_start)
 
     smp = Model(Gurobi.Optimizer)
 	set_optimizer_attribute(smp, "TimeLimit", 60*60)
@@ -570,7 +570,7 @@ function multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, sta
 	#------------------------------------------------------#
 
 	#Initialize column generation 
-	cg_iter = 1
+	cg_iter = cg_iter_start
 	smpobjectives, smptimes, pptimes, pptimes_par, lowerbounds = [], [], [], [], []
 	listlength = convert(Int64, ceil(length(orders)/4))
 	shuffle_partition(N; chunk_size=listlength) = (collect ∘ partition)(shuffle(1:N), chunk_size)
@@ -613,7 +613,7 @@ function multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, sta
         for i in orders, a in magarcs.A[i]
             if value(x[i,a]) > 1e-4
                 push!(variableselected[i], a)
-				variableusecount[i,a] += 1
+				variableusecount[i,a] += max(1,cg_iter/20) #More weight to later iterations
             end
         end
 		
@@ -709,7 +709,7 @@ function multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, sta
 		for (i,a) in newarcs
 
 			push!(columnmemory[i,cg_iter], a)
-			variableusecount[i,a] = currvarfixingiter
+			variableusecount[i,a] = currvarfixingiter*100 #Never remove arcs added via variable fixing
 
 			#Create a new variable for the arc
 			global x[i,a] = @variable(smp, lower_bound = 0) #, upper_bound = 1)
@@ -810,8 +810,8 @@ function multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, sta
 
                 #Run MAG with the new fixed variables
                 println("------------------- SETTING VARIABLES - ", masterfixedvars.varsettingiter, " -------------------")
-                obj_fix, smp_fix, x_fix, y_fix, z_fix, w_fix, magarcs_fix, smptm_fix, pptm_fix, pppar_fix, arcs_fix, cgiter_fix, cuts_fix, cuttime = multiarcgeneration_minibranch!(magarcs, hasdriverarcs, mastercuts, masterfixedvars, variableusecount, currvarfixingiter+1)
-                cg_iter += cgiter_fix
+                obj_fix, smp_fix, x_fix, y_fix, z_fix, w_fix, magarcs_fix, smptm_fix, pptm_fix, pppar_fix, arcs_fix, cgiter_fix, cuts_fix, cuttime = multiarcgeneration_minibranch!(magarcs, hasdriverarcs, mastercuts, masterfixedvars, variableusecount, currvarfixingiter+1, cg_iter+1)
+                cg_iter += - cg_iter + cgiter_fix 
 
                 println("Variables used after var setting = ", sum(values(variableusecount)))
 
@@ -855,7 +855,7 @@ function multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, sta
         
         #Column management
         for i in orders, a in intersect(1:numarcs, magarcs.A[i])
-            if variableusecount[i,a] / cg_iter <= postmagcolumndeletionthreshold
+            if variableusecount[i,a] / 100 <= postmagcolumndeletionthreshold
                 remove!(magarcs.A[i], a)
                 remove!(magarcs.A_space[i], a)
                 n_start, n_end = arcLookup[a]

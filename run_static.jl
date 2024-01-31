@@ -341,7 +341,7 @@ elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 
 	magarcs = initializeorderarcsets(k)
 	variableusecount, startercuts, starterfixedvars = initmagsets(magarcs)	
-	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts, cuttime = multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, starterfixedvars, variableusecount, 0)
+	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts, cuttime = multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, starterfixedvars, variableusecount, 0, 1)
 
 	#mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts, cuttime = multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 	
