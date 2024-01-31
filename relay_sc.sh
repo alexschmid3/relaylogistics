@@ -1,6 +1,7 @@
 #!/bin/bash
-#SBATCH -a 1509-1520,1557-1568
+#SBATCH -a 1557-1568
 #SBATCH --partition=xeon-p8
+#SBATCH --mem=64G
 #SBATCH --time=2-00:00
 #SBATCH -o /home/gridsan/aschmid/relaylogistics/outerr/resub_%a.out
 #SBATCH -e /home/gridsan/aschmid/relaylogistics/outerr/resub_%a.err
