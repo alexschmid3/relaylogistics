@@ -79,6 +79,7 @@ end
 function findbasefragments(homeloc, maxnightsaway, adjacentlocs)
 		
 	basefragments = []
+	basefragmentnightsaway = Dict()
 
 	for deadline in shiftlength:24:shiftlength+24*maxnightsaway
 		currentfrags = [[(homeloc, 0)]] 
@@ -91,9 +92,12 @@ function findbasefragments(homeloc, maxnightsaway, adjacentlocs)
 
 	 	#Add the paths of length "deadline" to the list of fragments 
 	 	basefragments = union(basefragments, completedfrags)
+		for f in completedfrags
+			basefragmentnightsaway[f] = convert(Int, round((deadline-shiftlength)/24, digits=0))
+		end
 	end
 
-	return basefragments
+	return basefragments, basefragmentnightsaway
 
 end
 
@@ -125,8 +129,10 @@ function initializejourneymodel(maxnightsaway)
 		F_minus_ls[l,s,n] = []
 	end
 
+	fragmentnightsaway = Dict()
+
 	for l in 1:numlocs
-		basefragments = findbasefragments(l, maxnightsaway, adjacentlocs)
+		basefragments, basefragmentnightsaway = findbasefragments(l, maxnightsaway, adjacentlocs)
 		for s in 1:numeffshifts
 			#println("------ $l, $s ------")
 			fragindex = 1
@@ -153,6 +159,8 @@ function initializejourneymodel(maxnightsaway)
 
 					fragdrivinghours[l,s,fragindex] = 0
 					fragworkinghours[l,s,fragindex] = 0
+
+					fragmentnightsaway[l,s,fragindex] = basefragmentnightsaway[frag]
 
 					fragindex += 1
 					numfragments[l,s] += 1
@@ -204,6 +212,8 @@ function initializejourneymodel(maxnightsaway)
 								end
 							end	
 
+							fragmentnightsaway[l,s,fragindex] = basefragmentnightsaway[frag]
+
 							#println(fragindex, " ==> ", frag, " @ t = $t")
 
 							fragindex += 1
@@ -235,6 +245,6 @@ function initializejourneymodel(maxnightsaway)
 		end
 	end
 
-	return driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours, workingfragments
+	return driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway
 
 end 

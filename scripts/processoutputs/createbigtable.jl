@@ -4,7 +4,7 @@ using CSV, DataFrames, Statistics
 #include("createbigtable_helper.jl")
 include("scripts/processoutputs/createbigtable_helper.jl")
 
-datafile = "outputs/bigtable_cluster/ex_combined_cluster.csv"
+datafile = "outputs/ex_combined_minibranch.csv"
 
 fulltimes, fulllambdas, fullmethods = [(5, 6), (5, 3), (7, 6)], [100,500,1000], ["Direct implementation", "Direct on LO basis", "Path-based column generation", "Single-arc generation", "Multi-arc generation"]
 
@@ -30,6 +30,7 @@ methodmap = Dict("a_ip" => "Direct implementation",
 
 #Primary key for each instance --> "how can I identify which IP optimal solution this row corresponds to?"
 instancekey = [:instance, :lambda_delay, :lambda_drvrhrs, :horizon, :tstep, :week, :numlocs, :numorders, :numdrivers]
+instancekey_cuts = [:instance, :lambda_delay, :lambda_drvrhrs, :horizon, :tstep, :week, :numlocs, :numorders, :numdrivers, :cuttype]
 #Primary key for each experiment_id --> "over which rows should computational times be summed?"
 methodkey = [:experiment_id, :instance, :lambda_delay, :lambda_drvrhrs, :horizon, :tstep, :week, :numlocs, :numorders, :numdrivers, :method]
 #What do you want the final table grouped by?
@@ -49,12 +50,19 @@ IPoptima = IPoptima[:, ["instance","lambda_delay","lambda_drvrhrs","horizon","ts
 rename!(IPoptima,:objective => :ipopt)
 
 #Find the LP optimal solution for all instances
-LPoptima = filter(row -> findLPopt(row.method, row.iteration) == true, df)
-LPoptima = LPoptima[:, ["instance","lambda_delay","lambda_drvrhrs","horizon","tstep","week","numlocs","numorders","numdrivers","objective"]]
+#LPoptima = filter(row -> findLPopt(row.method, row.iteration) == true, df)
+#LPoptima = LPoptima[:, ["instance","lambda_delay","lambda_drvrhrs","horizon","tstep","week","numlocs","numorders","numdrivers","cuttype","objective"]]
+#rename!(LPoptima,:objective => :lpopt)
+
+LPoptima = filter(row -> row.experiment_id >=  1449, df)
+LPoptima = filter(row -> row.method == "mag", LPoptima)
+LPoptima = filter(row -> row.iteration != "IP", LPoptima)
+LPoptima = LPoptima[:, ["instance","lambda_delay","lambda_drvrhrs","horizon","tstep","week","numlocs","numorders","numdrivers","cuttype","objective"]]
 rename!(LPoptima,:objective => :lpopt)
+unique!(LPoptima)
 
 #Join the IP and LP optima onto the original table and calculate the IP and LP gaps
-df = outerjoin(df, LPoptima, on = instancekey)
+df = outerjoin(df, LPoptima, on = instancekey_cuts)
 df = outerjoin(df, IPoptima, on = instancekey)
 lpgaps = [(df[i,"objective"]-df[i,"lpopt"])/df[i,"lpopt"] for i in 1:size(df)[1]]
 ipgaps = [(df[i,"objective"]-df[i,"ipopt"])/df[i,"ipopt"] for i in 1:size(df)[1]]
@@ -83,5 +91,5 @@ df_final = sort!(df_summ, [:horizon, order(:tstep, rev=true), :week, :lambda_del
 #Format as LaTeX table
 #printbigtable(df_final, fulltimes, fulllambdas, fullmethods)
 df_final[!,"method"] = [methodmap[i] for i in df_final[!,"method"]]
-CSV.write("outputs/cutplusvars3.csv", df_final)
+CSV.write("outputs/cutplusvars5.csv", df_final)
 

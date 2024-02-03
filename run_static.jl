@@ -226,7 +226,7 @@ include("scripts/multiarcgeneration/initializeorderarcsets.jl")
 primaryarcs, extendedtimearcs, orderarcs, driverarcs, hasdriverarcs = initializearcsets(A_space, A_plus, A_minus)
 R_off = findreturnhomearcsets(driverarcs)
 magarcs = initializeorderarcsets(k)
-driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours, workingfragments = initializejourneymodel(maxnightsaway)
+driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = initializejourneymodel(maxnightsaway)
 
 nocuts=(vars=[], rhs=[], coeff=[])
 
@@ -236,17 +236,17 @@ if solutionmethod == "lp"
 
 	lp_obj, x_lp, z_lp, lp_time, lp_bound = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts, nocuts)
 	timeslist = (mp=lp_time, pp=0, pppar=0, ip=0, cut=0)
-	writeresultsforearlytests(resultsfilename, 0, "LP", lp_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders))
+	writeresultsforearlytests(resultsfilename, 0, "LP", lp_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_lp, z_lp)
 
 elseif solutionmethod == "lpcuts"
 
 	lpc_obj, x_lpc, z_lpc, lpc_time, lpc_bound, knapsackcuts = solvelpwithcuts(opt_gap, orderarcs, knapsackcuttype)
 	timeslist = (mp=lpc_time, pp=0, pppar=0, ip=0)
-	writeresultsforearlytests(resultsfilename, 0, "LP", lpc_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders))
+	writeresultsforearlytests(resultsfilename, 0, "LP", lpc_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_lpc, z_lpc)
 
 	ipc_obj, x_ipc, z_ipc, ipc_time, ipc_bound = solvejourneymodel(0, opt_gap, orderarcs, numeffshifts, knapsackcuts)
 	timeslist = (mp=0, pp=0, pppar=0, ip=ipc_time)
-	writeresultsforearlytests(resultsfilename, 1, "IP", ipc_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders))
+	writeresultsforearlytests(resultsfilename, 1, "IP", ipc_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_ipc, z_ipc)
 
 	#=include("scripts/visualizations/timespacenetwork.jl")
 	for i in orders
@@ -300,7 +300,8 @@ elseif solutionmethod == "ip"
 
 	ip_obj, x_ip, z_ip, ip_time, ip_bound = solvejourneymodel(0, opt_gap, orderarcs, numeffshifts, nocuts)
 	timeslist = (mp=0, pp=0, pppar=0, ip=ip_time, cut=0)
-	writeresultsforearlytests(resultsfilename, 0, "IP", ip_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders))
+	writeresultsforearlytests(resultsfilename, 0, "IP", ip_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_ip, z_ip)
+	
 	#=
 	include("scripts/visualizations/timespacenetwork.jl")
 	for i in orders
@@ -310,19 +311,15 @@ elseif solutionmethod == "ip"
 	end
 	=#
 	
-	if formulation == "heterogeneous"
-		println("Driver util = ", sum(sum(fragworkinghours[driverHomeLocs[d],drivershift[d],f] * value(z_ip[d,f]) for f in 1:numfragments[driverHomeLocs[d],drivershift[d]]) for d in drivers) / sum(maxweeklydriverhours for d in drivers))
-	end
-
 elseif solutionmethod == "basisip"
 
 	lp_obj, x_lp, z_lp, lp_time, lp_bound, lpbasisarcs = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts, nocuts)
 	bip_obj, x_bip, z_bip, bip_time, bip_bound = solvejourneymodel(0, opt_gap, lpbasisarcs, numeffshifts, nocuts)
 
 	timeslist1 = (mp=lp_time, pp=0, pppar=0, ip=0, cut=0)
-	writeresultsforearlytests(resultsfilename, 0, "LP", lp_obj, timeslist1, sum(length(lpbasisarcs.A[i]) for i in orders))
+	writeresultsforearlytests(resultsfilename, 0, "LP", lp_obj, timeslist1, sum(length(lpbasisarcs.A[i]) for i in orders), x_lp, z_lp)
 	timeslist2 = (mp=0, pp=0, pppar=0, ip=bip_time, cut=0)
-	writeresultsforearlytests(resultsfilename, 1, "IP", bip_obj, timeslist2, sum(length(lpbasisarcs.A[i]) for i in orders))
+	writeresultsforearlytests(resultsfilename, 1, "IP", bip_obj, timeslist2, sum(length(lpbasisarcs.A[i]) for i in orders), x_bip, z_bip)
 	
 	#=
 	include("scripts/visualizations/timespacenetwork.jl")
@@ -332,10 +329,6 @@ elseif solutionmethod == "basisip"
 		timespacenetwork(string("outputs/viz/order", i,"_basis.png"), arclistlist, colorlist, 2000, 1200)
 	end
 	=#
-
-	if formulation == "heterogeneous"
-		println("Driver util = ", sum(sum(fragworkinghours[driverHomeLocs[d],drivershift[d],f] * value(z_bip[d,f]) for f in 1:numfragments[driverHomeLocs[d],drivershift[d]]) for d in drivers) / sum(maxweeklydriverhours for d in drivers))
-	end
 
 elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 
@@ -348,9 +341,9 @@ elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 	magip_obj, x_magip, z_magip, magip_time, magip_bound = solvejourneymodel(0, opt_gap, magarcs, numeffshifts, knapsackcuts)
 
 	timeslist1 = (mp=smptime, pp=pptime, pppar=pptime_par, ip=0, cut=cuttime)
-	writeresultsforearlytests(resultsfilename, 0, mag_iter, mag_obj, timeslist1, totalmagarcs)
+	writeresultsforearlytests(resultsfilename, 0, mag_iter, mag_obj, timeslist1, totalmagarcs, x_smp, z_smp)
 	timeslist2 = (mp=0, pp=0, pppar=0, ip=magip_time, cut=0)
-	writeresultsforearlytests(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs)
+	writeresultsforearlytests(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs, x_magip, z_magip)
 	
 	#=
 	include("scripts/visualizations/timespacenetwork.jl")
