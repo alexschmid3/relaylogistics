@@ -207,7 +207,7 @@ function findminimalcovercuts(z, lifting_flag)
             if length(journeysubset) >= 2                
                 if checkminimalcover(l,s,journeysubset)
                     bestrhs = length(journeysubset) - 1
-                    if sum(value(z[d,f]) for f in journeysubset) > bestrhs
+                    if sum(value(z[d,f]) for f in journeysubset) > bestrhs + 1e-4
 
                         ss = copy(journeysubset)
                         coeff = Dict()
