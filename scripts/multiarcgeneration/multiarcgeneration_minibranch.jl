@@ -480,6 +480,8 @@ end
 
 function multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, starterfixedvars, variableusecount, currvarfixingiter, cg_iter_start)
 
+	#currvarfixingiter, cg_iter_start = 0, 1
+
     smp = Model(Gurobi.Optimizer)
 	set_optimizer_attribute(smp, "TimeLimit", 60*60)
 	set_optimizer_attribute(smp, "OutputFlag", 0)
@@ -676,7 +678,7 @@ function multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, sta
 		end
 
 		#-----------ADD CUTS-----------#
-			
+	
 		if addcutsthisiter_flag == 1
 			cutstarttime = time()
 			cuts = findknapsackcuts(z, knapsackcuttype)
