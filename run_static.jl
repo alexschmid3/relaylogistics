@@ -38,7 +38,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters 
-experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+experiment_id = 1714 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 paramsfilename = "data/newmodel.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
@@ -106,6 +106,7 @@ excludeoutliers_flag = 1							# 0 = include outliers in travel time calculation
 googlemapstraveltimes_flag = 1						# 1 = travel time between two locations is max(Avg from Rivigo data, Google Maps travel time) (<5% of arcs use google maps time), 0 = travel time is avg of Rivigo data
 includesymmetricarcs_flag = 1						# 1 = if arc A-->B present in Rivigo data but not B-->A, create synthetic arc B-->A; 0 = do not include synthetic arcs (may cause feasibility issues)
 traveltimefordelay_flag = 2 						# 0 = use rounded travel times for shortest path used in delay objective, 1 = use raw travel times (best for comparing across multiple tsteps), 2 = use rounded travel times, except on the final leg of the journey where raw is used 
+ensureconnectivity_flag = 1
 
 #MVG algorithm control parameters
 newreducedcost_flag = 0								# 1 = use z-variable reduced costs to bound arc reduced costs for the subproblem, 0 = do not
@@ -238,6 +239,24 @@ if solutionmethod == "lp"
 	timeslist = (mp=lp_time, pp=0, pppar=0, ip=0, cut=0)
 	writeresultsforearlytests(resultsfilename, 0, "LP", lp_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_lp, z_lp)
 
+	#=
+	include("scripts/visualizations/timespacenetwork.jl")
+	for i in orders
+		magiparcs = [a for a in magarcs.A[i] if value(x_magip[i,a]) > 1e-4]
+		lparcs = [a for a in orderarcs.A[i] if value(x_lp[i,a]) > 1e-4]
+
+		fractlist = [[],Dict(),[]]
+		for a in lparcs
+			fractlist[2][a] = string(round(value(x_lp[i,a]), digits=2))
+		end
+
+		arclistlist = [magarcs.A[i], lparcs, magiparcs]
+		colorlist = [(190,190,190), (0,0,0), (254,97,0)] 
+		thicknesslist = [3,11,7]
+		timespacenetwork(string("outputs/viz/order", i,"_lp.png"), arclistlist, colorlist, thicknesslist, fractlist, 2400, 1800)
+	end
+	=#
+
 elseif solutionmethod == "lpcuts"
 
 	lpc_obj, x_lpc, z_lpc, lpc_time, lpc_bound, knapsackcuts = solvelpwithcuts(opt_gap, orderarcs, knapsackcuttype)
@@ -336,7 +355,7 @@ elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts, cuttime = multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, starterfixedvars, variableusecount, 0, 1)
 	
 	#mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts, cuttime = multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
-	
+
 	magip_obj, x_magip, z_magip, magip_time, magip_bound = solvejourneymodel(0, opt_gap, magarcs, numeffshifts, knapsackcuts)
 
 	timeslist1 = (mp=smptime, pp=pptime, pppar=pptime_par, ip=0, cut=cuttime)
@@ -348,14 +367,19 @@ elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 	include("scripts/visualizations/timespacenetwork.jl")
 	for i in orders
 		magiparcs = [a for a in magarcs.A[i] if value(x_magip[i,a]) > 1e-4]
-		iparcs = [a for a in orderarcs.A[i] if value(x_ip[i,a]) > 1e-4]
-		missingarcs = [a for a in orderarcs.A[i] if (value(x_ip[i,a]) > 1e-4) & !(a in magarcs.A[i])]
-		lparcs = [a for a in magarcs.A[i] if value(x_smp[i,a]) > 1e-4]
+		#iparcs = [a for a in orderarcs.A[i] if value(x_ip[i,a]) > 1e-4]
+		#missingarcs = [a for a in orderarcs.A[i] if (value(x_ip[i,a]) > 1e-4) & !(a in magarcs.A[i])]
+		lparcs = [a for a in orderarcs.A[i] if value(x_lp[i,a]) > 1e-4]
 
-		arclistlist = [magarcs.A[i], lparcs, iparcs, missingarcs, magiparcs]
-		colorlist = [(190,190,190), (0,0,0), (100,143,255), (120,94,240), (254,97,0)] 
-		thicknesslist = [3,11,7,7,7]
-		timespacenetwork(string("outputs/viz/order", i,"_mag.png"), arclistlist, colorlist, thicknesslist, 2400, 1800)
+		fractlist = [[],Dict(),[]]
+		for a in lparcs
+			fractlist[2][a] = string(round(value(x_smp[i,a]), digits=2))
+		end
+
+		arclistlist = [magarcs.A[i], lparcs, magiparcs]
+		colorlist = [(190,190,190), (0,0,0), (254,97,0)] 
+		thicknesslist = [3,11,7]
+		timespacenetwork(string("outputs/viz/order", i,"_mag.png"), arclistlist, colorlist, thicknesslist, fractlist, 2400, 1800)
 	end
 	for d in drivers
 		lparcs, iparcs = [], []

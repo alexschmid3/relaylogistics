@@ -116,6 +116,12 @@ function readarcs(filename, hubdistfilename, tstep, numlocs, hubsTravelTimeIndex
 					rawtt = max(data[row,5], data[row,8])
 				elseif (googlemapstraveltimes_flag == 1) & (excludeoutliers_flag == 1)
 					rawtt = max(data[row,6], data[row,8])
+				elseif (googlemapstraveltimes_flag == 1) & (excludeoutliers_flag == 1) & (ensureconnectivity_flag == 1)
+					if (shiftlength < data[row,6] < shiftlength + tstep) & (data[row,8] < shiftlength)
+						rawtt = (data[row,6] + data[row,8])/2
+					else
+						rawtt = max(data[row,6], data[row,8])
+					end
 				end
 
 				#Add travel time to list of pre-arcs and arcLength lists
