@@ -64,3 +64,41 @@ function writeresultsforearlytests(resultsfilename, appendflag, iteration, obj, 
 	end
 
 end
+
+function writedriverstats(filename, z)
+
+	mylocs, myshifts, mydrivers, myunused, myhours, myutil, mynights = [], [], [], [], [], [], []
+	for l in 1:numlocs, s in 1:numshifts
+
+		push!(mylocs, l)
+		push!(myshifts, s)
+		push!(mydrivers, length(driversets[l,s]))
+			
+		if driversets[l,s] != []
+			util = sum(sum(fragworkinghours[l,s,f] * value(z[d,f]) for f in 1:numfragments[l,s]) for d in driversets[l,s]) / sum(maxweeklydriverhours for d in driversets[l,s])
+			nightsaway = sum(sum(fragmentnightsaway[l,s,f] * value(z[d,f]) for f in 1:numfragments[l,s]) for d in driversets[l,s]) 
+			hoursworkedperdriver = [sum(fragworkinghours[l,s,f] * value(z[d,f]) for f in 1:numfragments[l,drivershift[d]]) for d in driversets[l,s]] 
+			driversunused = length([d for d in hoursworkedperdriver if d==0])		
+			push!(myunused, driversunused)
+			push!(myhours, sum(hoursworkedperdriver))
+			push!(myutil, util)
+			push!(mynights, nightsaway)
+		else
+			push!(myunused, 0)
+			push!(myhours, 0)
+			push!(myutil, 1)
+			push!(mynights, 0)
+		end
+	end
+
+	df = DataFrame(location=mylocs,
+					shift=myshifts,
+					drivers=mydrivers,
+					unused=myunused,
+					totalhoursworked=myhours,
+					utilization=myutil,
+					nightsaway=mynights)
+					
+	CSV.write(filename, df)
+
+end

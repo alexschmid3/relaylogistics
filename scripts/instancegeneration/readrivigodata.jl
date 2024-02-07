@@ -114,10 +114,12 @@ function readarcs(filename, hubdistfilename, tstep, numlocs, hubsTravelTimeIndex
 					rawtt = data[row,6]
 				elseif (googlemapstraveltimes_flag == 1) & (excludeoutliers_flag == 0)
 					rawtt = max(data[row,5], data[row,8])
-				elseif (googlemapstraveltimes_flag == 1) & (excludeoutliers_flag == 1)
+				elseif (googlemapstraveltimes_flag == 1) & (excludeoutliers_flag == 1) & (ensureconnectivity_flag == 0)
 					rawtt = max(data[row,6], data[row,8])
 				elseif (googlemapstraveltimes_flag == 1) & (excludeoutliers_flag == 1) & (ensureconnectivity_flag == 1)
-					if (shiftlength < data[row,6] < shiftlength + tstep) & (data[row,8] < shiftlength)
+					if (shiftlength < data[row,6]) & (data[row,8] < shiftlength) & (origin in [63,65,66]) & (destination in [63,65,66])
+						rawtt = min(shiftlength-1e-4, (data[row,6] + data[row,8])/2)
+					elseif (shiftlength < data[row,6] < shiftlength + tstep) & (data[row,8] < shiftlength)
 						rawtt = (data[row,6] + data[row,8])/2
 					else
 						rawtt = max(data[row,6], data[row,8])
@@ -688,7 +690,7 @@ function readdrivers(filename, maxdrivers, numlocs, nodes, horizon)
 	totaldrivers = 0
 	for i in 1:size(data)[1]
 		loc = data[i,2]
-		drivers = data[i,3]
+		drivers = data[i,4]
 		if loc <= numlocs
 			totaldrivers += drivers
 			realdrivers[loc] = drivers

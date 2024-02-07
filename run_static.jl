@@ -38,7 +38,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters 
-experiment_id = 1714 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 paramsfilename = "data/newmodel.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
@@ -239,10 +239,8 @@ if solutionmethod == "lp"
 	timeslist = (mp=lp_time, pp=0, pppar=0, ip=0, cut=0)
 	writeresultsforearlytests(resultsfilename, 0, "LP", lp_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_lp, z_lp)
 
-	#=
 	include("scripts/visualizations/timespacenetwork.jl")
 	for i in orders
-		magiparcs = [a for a in magarcs.A[i] if value(x_magip[i,a]) > 1e-4]
 		lparcs = [a for a in orderarcs.A[i] if value(x_lp[i,a]) > 1e-4]
 
 		fractlist = [[],Dict(),[]]
@@ -250,12 +248,12 @@ if solutionmethod == "lp"
 			fractlist[2][a] = string(round(value(x_lp[i,a]), digits=2))
 		end
 
-		arclistlist = [magarcs.A[i], lparcs, magiparcs]
-		colorlist = [(190,190,190), (0,0,0), (254,97,0)] 
-		thicknesslist = [3,11,7]
+		arclistlist = [orderarcs.A[i], lparcs]
+		colorlist = [(190,190,190), (0,0,0)] 
+		thicknesslist = [3,11]
 		timespacenetwork(string("outputs/viz/order", i,"_lp.png"), arclistlist, colorlist, thicknesslist, fractlist, 2400, 1800)
 	end
-	=#
+	
 
 elseif solutionmethod == "lpcuts"
 
@@ -362,6 +360,8 @@ elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 	writeresultsforearlytests(resultsfilename, 0, mag_iter, mag_obj, timeslist1, totalmagarcs, x_smp, z_smp)
 	timeslist2 = (mp=0, pp=0, pppar=0, ip=magip_time, cut=0)
 	writeresultsforearlytests(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs, x_magip, z_magip)
+	
+	writedriverstats(string("outputs/bigtable_new/driverstats_exp", experiment_id,".csv"), z_magip)
 	
 	#=
 	include("scripts/visualizations/timespacenetwork.jl")
