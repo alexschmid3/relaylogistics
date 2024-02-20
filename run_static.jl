@@ -7,7 +7,6 @@ include("scripts/instancegeneration/readrivigodata.jl")
 include("scripts/instancegeneration/shortestpath.jl")
 include("scripts/instancegeneration/constraintmatrix.jl")
 include("scripts/metrics/static_writeresults.jl")
-include("scripts/arcbasedmodel/solvearcbasedmodel.jl")
 include("scripts/journeybasedmodel/fragmentlpandip.jl")
 include("scripts/journeybasedmodel/solvedriverextensionmodel.jl")
 include("scripts/journeybasedmodel/lpipbasis.jl")
@@ -177,14 +176,17 @@ if formulation == "heterogeneous"
 	include("scripts/journeybasedmodel/solvejourneymodel_paths.jl")
 	include("scripts/multiarcgeneration/multiarcgeneration_minibranch.jl")
 	include("scripts/columngeneration/columngeneration.jl")
+	include("scripts/arcbasedmodel/solvearcbasedmodel_heterogeneous.jl")
 elseif formulation == "homogeneous"
 	include("scripts/journeybasedmodel/solvejourneymodel_homogeneous.jl")
 	include("scripts/multiarcgeneration/multiarcgeneration_homogeneous.jl")
 	include("scripts/columngeneration/columngeneration_homogeneous.jl")
 	include("scripts/journeybasedmodel/solvejourneymodel_paths_homogeneous.jl")
+	include("scripts/arcbasedmodel/solvearcbasedmodel_homogeneous.jl")
 end
 include("scripts/knapsackcuts/findknapsackcuts.jl")
 include("scripts/knapsackcuts/solvelpwithcuts.jl")
+include("scripts/knapsackcuts/solveipwithcuts.jl")
 
 if maketimespacevizfiles + makespatialvizfiles + makeadvancedvizfiles + vizflag >= 1
 	include("scripts/visualizations/timespacenetwork.jl")
@@ -263,11 +265,11 @@ if solutionmethod == "lp"
 elseif solutionmethod == "lpcuts"
 
 	lpc_obj, x_lpc, z_lpc, lpc_time, lpc_bound, knapsackcuts = solvelpwithcuts(opt_gap, orderarcs, knapsackcuttype)
-	timeslist = (mp=lpc_time, pp=0, pppar=0, ip=0)
+	timeslist = (mp=lpc_time, pp=0, pppar=0, ip=0, cut=0)
 	writeresultsforearlytests(resultsfilename, 0, "LP", lpc_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_lpc, z_lpc)
 
 	ipc_obj, x_ipc, z_ipc, ipc_time, ipc_bound = solvejourneymodel(0, opt_gap, orderarcs, numeffshifts, knapsackcuts)
-	timeslist = (mp=0, pp=0, pppar=0, ip=ipc_time)
+	timeslist = (mp=0, pp=0, pppar=0, ip=ipc_time, cut=0)
 	writeresultsforearlytests(resultsfilename, 1, "IP", ipc_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_ipc, z_ipc)
 
 	#=include("scripts/visualizations/timespacenetwork.jl")
@@ -318,12 +320,32 @@ elseif solutionmethod == "lpcuts"
 		timespacenetwork(string("outputs/viz/driver", d,".png"), arclistlist, colorlist, thicknesslist, fractlist, 2000, 1200)
 	end=#
 
-elseif solutionmethod == "ip"
+elseif (solutionmethod == "ip") & (knapsackcuttype == 0)
+
+	lp_obj, x_lp, z_lp, lp_time, lp_bound = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts, nocuts)
+	timeslist = (mp=0, pp=0, pppar=0, ip=lp_time, cut=0)
+	writeresultsforearlytests(resultsfilename, 0, "LP", lp_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_lp, z_lp)
 
 	ip_obj, x_ip, z_ip, ip_time, ip_bound = solvejourneymodel(0, opt_gap, orderarcs, numeffshifts, nocuts)
 	timeslist = (mp=0, pp=0, pppar=0, ip=ip_time, cut=0)
-	writeresultsforearlytests(resultsfilename, 0, "IP", ip_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_ip, z_ip)
+	writeresultsforearlytests(resultsfilename, 1, "IP", ip_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_ip, z_ip)
 	
+	#=
+	include("scripts/visualizations/timespacenetwork.jl")
+	for i in orders
+		arclistlist = [orderarcs.A[i], [a for a in orderarcs.A[i] if value(x_ip[i,a]) > 1e-4]]
+		colorlist = [(200,200,200), (0,0,0)]
+		timespacenetwork(string("outputs/viz/order", i,"_ip.png"), arclistlist, colorlist, 2000, 1200)
+	end
+	=#
+
+elseif (solutionmethod == "ip") & (knapsackcuttype != 0)
+
+	#Solve IP with generated cuts
+	ipc_obj, x_ipc, z_ipc, ipc_time, ipc_bound = solveipwithcuts(opt_gap, orderarcs, numeffshifts)
+	timeslist = (mp=0, pp=0, pppar=0, ip=ipc_time, cut=0)
+	writeresultsforearlytests(resultsfilename, 1, "IP", ipc_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_ipc, z_ipc)
+
 	#=
 	include("scripts/visualizations/timespacenetwork.jl")
 	for i in orders
