@@ -114,7 +114,7 @@ convergencedatafilename = string(csvfoldername, "convergence_exp", runid, ".csv"
 if formulation == "heterogeneous"
 	include("scripts/journeybasedmodel/solvejourneymodel.jl")
 	include("scripts/journeybasedmodel/solvejourneymodel_paths.jl")
-	include("scripts/multiarcgeneration/multiarcgeneration_minibranch.jl")
+	include("scripts/multiarcgeneration/multiarcgeneration_heterogeneous.jl")
 	include("scripts/columngeneration/columngeneration.jl")
 	include("scripts/arcbasedmodel/solvearcbasedmodel_heterogeneous.jl")
 elseif formulation == "homogeneous"
@@ -332,7 +332,7 @@ elseif solutionmethod == "basisip"
 elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 
 	variableusecount, startercuts, starterfixedvars = initmagsets(magarcs)	
-	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts, cuttime, arcsbeforecolmgmt, arcsbeforevarsetting = multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, starterfixedvars, variableusecount, 0, 1)
+	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts, cuttime, arcsbeforecolmgmt, arcsbeforevarsetting = multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, startercuts, starterfixedvars, variableusecount, 0, 1)
 	
 	#mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts, cuttime = multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 

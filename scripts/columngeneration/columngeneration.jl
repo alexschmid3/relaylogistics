@@ -351,6 +351,7 @@ function columngeneration!(orderarcs, hasdriverarcs, startercuts)
 
 		if (minimum(minreducedcosts) >= -0.0001) & (cutsaddedthisiter == -1) 
 			addcutsthisiter_flag += 1
+			println("Begin adding cuts")
         elseif (minimum(minreducedcosts) >= -0.0001) & (cutsaddedthisiter == 0)
 			println("NO NEGATIVE REDUCED COSTS FOUND!")	
 			break

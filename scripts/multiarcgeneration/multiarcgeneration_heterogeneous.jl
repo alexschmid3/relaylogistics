@@ -527,7 +527,7 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, starterfixedvars, variableusecount, currvarfixingiter, cg_iter_start)
+function multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, startercuts, starterfixedvars, variableusecount, currvarfixingiter, cg_iter_start)
 
 	#currvarfixingiter, cg_iter_start = 0, 1
 
@@ -873,7 +873,7 @@ function multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, sta
 
                 #Run MAG with the new fixed variables
                 println("------------------- SETTING VARIABLES - ", masterfixedvars.varsettingiter, " -------------------")
-                obj_fix, smp_fix, x_fix, y_fix, z_fix, w_fix, magarcs_fix, smptm_fix, pptm_fix, pppar_fix, arcs_fix, cgiter_fix, cuts_fix, cuttime = multiarcgeneration_minibranch!(magarcs, hasdriverarcs, mastercuts, masterfixedvars, variableusecount, currvarfixingiter+1, cg_iter+1)
+                obj_fix, smp_fix, x_fix, y_fix, z_fix, w_fix, magarcs_fix, smptm_fix, pptm_fix, pppar_fix, arcs_fix, cgiter_fix, cuts_fix, cuttime = multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, mastercuts, masterfixedvars, variableusecount, currvarfixingiter+1, cg_iter+1)
                 cg_iter += - cg_iter + cgiter_fix 
 
                 println("Variables used after var setting = ", sum(values(variableusecount)))

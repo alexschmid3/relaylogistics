@@ -29,12 +29,12 @@ function solvejourneymodel_paths(lprelax_flag, opt_gap, paths, delta, numeffshif
 	@constraint(ip, orderpath[i in orders], sum(x[i,p] for p in paths[i]) == 1)
 
 	#Order delivery constraints
-	@constraint(ip, deliveryTime[i in orders], ordtime[i] - sum(sum(arcfinishtime[a] * x[i,a] for a in orderarcs.A_minus[i,n]) for n in Destination[i]) == - orderOriginalStartTime[i])
+	@constraint(ip, deliveryTime[i in orders], ordtime[i] - sum(sum(sum(arcfinishtime[a] * delta[i,a,p] * x[i,p] for a in orderarcs.A_minus[i,n]) for p in paths[i]) for n in Destination[i]) == - orderOriginalStartTime[i] )
 
 	#Truck constraints
 	@constraint(ip, initialTrucks[n in N_0], sum(sum(sum(delta[i,a,p] * x[i,p] for a in orderarcs.A_plus[i,n]) for p in setdiff(paths[i], dummypath)) for i in orders) + sum(y[a] for a in hasdriverarcs.A_plus[n]) == m_0[n])
 	@constraint(ip, finalTrucks[n in N_end], sum(sum(sum(delta[i,a,p] * x[i,p] for a in orderarcs.A_minus[i,n]) for p in setdiff(paths[i], dummypath)) for i in orders) + sum(y[a] for a in hasdriverarcs.A_minus[n]) >= m_end[n])
-	@constraint(ip, truckFlowBalance[n in N_flow_t], sum(sum(sum(delta[i,a,p] * x[i,p] for a in orderarcs.A_minus[i,n]) for p in setdiff(paths[i], dummypath)) for i in orders) + sum(y[a] for a in hasdriverarcs.A_minus[n]) - sum(sum(x[i,a] for a in setdiff(orderarcs.A_plus[i,n],dummyarc)) for i in orders) - sum(y[a] for a in hasdriverarcs.A_plus[n]) == 0)
+	@constraint(ip, truckFlowBalance[n in N_flow_t], sum(sum(sum(delta[i,a,p] * x[i,p] for a in orderarcs.A_minus[i,n]) for p in setdiff(paths[i], dummypath)) for i in orders) + sum(y[a] for a in hasdriverarcs.A_minus[n]) - 	sum(sum(sum(delta[i,a,p] * x[i,p] for a in orderarcs.A_plus[i,n]) for p in setdiff(paths[i], dummypath)) for i in orders) - sum(y[a] for a in hasdriverarcs.A_plus[n]) == 0)
 
 	#Linking constraints
 	@constraint(ip, driverAvailability[a in primaryarcs.A_space], sum(sum(z[d,f] for f in fragmentscontaining[driverHomeLocs[d], drivershift[d],a]) for d in drivers) == w[a]  )
