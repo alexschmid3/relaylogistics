@@ -1,5 +1,5 @@
 
-function solvejourneymodel_paths(lprelax_flag, opt_gap, paths, delta, numeffshifts)
+function solvejourneymodel_paths(lprelax_flag, opt_gap, paths, delta, numeffshifts, cuts)
 
 	ip = Model(Gurobi.Optimizer)
 	set_optimizer_attribute(ip, "TimeLimit", 60*60*40)
@@ -50,6 +50,9 @@ function solvejourneymodel_paths(lprelax_flag, opt_gap, paths, delta, numeffshif
 	@constraint(ip, driverFlowBalance[d in drivers, l = driverHomeLocs[d], s = drivershift[d], n in N_flow_ls[l,s]], sum(z[d,f] for f in F_minus_ls[l,s,n]) - sum(z[d,f] for f in F_plus_ls[l,s,n]) == 0)
 	@constraint(ip, driverMaxHours[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(fragworkinghours[l,s,f] * z[d,f] for f in 1:numfragments[l,s]) <= maxhours)
 	@constraint(ip, maxhours <= maxweeklydriverhours)
+
+	#Knapsack cuts
+	@constraint(ip, [i in 1:length(cuts.vars)], sum(cuts.coeff[i][d,j] * z[d,j] for (d,j) in cuts.vars[i]) <= cuts.rhs[i])
 
 	#Solve
     optimize!(ip)

@@ -21,7 +21,7 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function writeresultsforearlytests(resultsfilename, appendflag, iteration, obj, timeslist, totalarcs, x, z)
+function writeresultsforrun(resultsfilename, appendflag, iteration, obj, timeslist, totalarcs, x, z)
 
 	if (formulation == "heterogeneous") & !(solutionmethod == "arcip")
 		util, nightsaway, driversunused = calcdrivermetrics(z)

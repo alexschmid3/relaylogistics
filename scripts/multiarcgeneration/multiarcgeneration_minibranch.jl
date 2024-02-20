@@ -626,7 +626,7 @@ function multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, sta
 	listlength = convert(Int64, ceil(length(orders)/4))
 	shuffle_partition(N; chunk_size=listlength) = (collect ∘ partition)(shuffle(1:N), chunk_size)
 
-	#Master list of knapsack cuts and fixed variables
+	#Master list of knapsack cuts 
 	mastercuts = startercuts #(vars=[], coeff=[], rhs=[])
 
 	#------------------------------------------------------#

@@ -1,5 +1,5 @@
 
-figuredirectory = string("outputs/ex4")
+figuredirectory = string("outputs/ex4pt2")
 
 #Get list of files
 filelist = readdir(figuredirectory)

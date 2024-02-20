@@ -159,6 +159,10 @@ function solvelpwithcuts(opt_gap, orderarcs, startcuttype)
     println("Increased bound by ", round(100*(lp_obj - originallpopt)/originallpopt, digits=3), "%")
 	println("Time = ", solve_time(lp))
 
-    return lp_obj, value.(x), value.(z), solve_time(lp), objective_bound(lp), mastercuts
+    #Find the basis arcs
+	orderArcSet_basis, orderArcSet_space_basis, A_plus_i_basis, A_minus_i_basis = getnonzeroarcs(value.(x), orderarcs)
+	basisarcs = (A=orderArcSet_basis, A_space=orderArcSet_space_basis, A_minus=A_minus_i_basis, A_plus=A_plus_i_basis, available=[], closelocs=[]);
+
+    return lp_obj, value.(x), value.(z), solve_time(lp), objective_bound(lp), mastercuts, basisarcs
 
 end
