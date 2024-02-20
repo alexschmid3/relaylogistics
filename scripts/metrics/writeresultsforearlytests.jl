@@ -23,7 +23,11 @@ end
 
 function writeresultsforearlytests(resultsfilename, appendflag, iteration, obj, timeslist, totalarcs, x, z)
 
-	util, nightsaway, driversunused = calcdrivermetrics(z)
+	if formulation == "heterogeneous"
+		util, nightsaway, driversunused = calcdrivermetrics(z)
+	else
+		util, nightsaway, driversunused = 0, 0, 0
+	end
 	
 	df = DataFrame(experiment_id = [experiment_id],
 			instance = [ex],

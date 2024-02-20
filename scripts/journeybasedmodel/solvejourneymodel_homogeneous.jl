@@ -68,7 +68,7 @@ end
 
 #---------------------------------------------------------------------------------------#
 
-function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts)
+function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts, cuts)
 
 	ip = Model(Gurobi.Optimizer)
 	set_optimizer_attribute(ip, "TimeLimit", 60*60*40)
