@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH -a 1509-1520
+#SBATCH -a 25-120
 #SBATCH --partition=xeon-p8
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G
 #SBATCH --time=2-00:00
-#SBATCH -o /home/gridsan/aschmid/relaylogistics/outerr/resub_%a.out
-#SBATCH -e /home/gridsan/aschmid/relaylogistics/outerr/resub_%a.err
+#SBATCH -o /home/gridsan/aschmid/relaylogistics/outerr/table1_%a.out
+#SBATCH -e /home/gridsan/aschmid/relaylogistics/outerr/table1_%a.err
 #SBATCH --mail-type=BEGIN,END
 #SBATCH --mail-user=aschmid@mit.edu
 
