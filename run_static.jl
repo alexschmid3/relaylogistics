@@ -7,7 +7,7 @@ include("scripts/instancegeneration/readrivigodata.jl")
 include("scripts/instancegeneration/shortestpath.jl")
 include("scripts/instancegeneration/constraintmatrix.jl")
 include("scripts/metrics/static_writeresults.jl")
-include("scripts/arcbasedmodel/arclpandip.jl")
+include("scripts/arcbasedmodel/solvearcbasedmodel.jl")
 include("scripts/journeybasedmodel/fragmentlpandip.jl")
 include("scripts/journeybasedmodel/solvedriverextensionmodel.jl")
 include("scripts/journeybasedmodel/lpipbasis.jl")
@@ -339,6 +339,12 @@ elseif solutionmethod == "ipred"
 	ipk_obj, x_ipk, z_ipk, ipk_time, ipk_bound = solvejourneymodel(0, opt_gap, reducedarcs, numeffshifts, nocuts)
 	timeslist = (mp=0, pp=0, pppar=0, ip=ipk_time, cut=0)
 	writeresultsforearlytests(resultsfilename, 0, "IPreduced", ipk_obj, timeslist, sum(length(reducedarcs.A[i]) for i in orders), x_ipk, z_ipk)
+		
+elseif solutionmethod == "arcip"
+
+	arcip_obj, x_arcip, z_arcip, arcip_time, arcip_bound = solvearcbasedmodel(orderarcs, 0)
+	timeslist = (mp=0, pp=0, pppar=0, ip=arcip_time, cut=0)
+	writeresultsforearlytests(resultsfilename, 0, "ArcIP", arcip_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_arcip, z_arcip)
 		
 elseif solutionmethod == "basisip"
 
