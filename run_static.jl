@@ -6,12 +6,13 @@ using JuMP, Gurobi, Random, CSV, DataFrames, Statistics, Dates, SparseArrays
 include("scripts/instancegeneration/readrivigodata.jl")
 include("scripts/instancegeneration/shortestpath.jl")
 include("scripts/instancegeneration/constraintmatrix.jl")
-include("scripts/metrics/static_writeresults.jl")
+
 include("scripts/journeybasedmodel/fragmentlpandip.jl")
 include("scripts/journeybasedmodel/solvedriverextensionmodel.jl")
 include("scripts/journeybasedmodel/lpipbasis.jl")
 include("scripts/journeybasedmodel/initializejourneymodel.jl")
 
+include("scripts/metrics/static_writeresults.jl")
 include("scripts/metrics/writeresultsforearlytests.jl")
 
 #-------------------------------------FOUR INSTANCES------------------------------------#  

@@ -23,7 +23,7 @@ end
 
 function writeresultsforearlytests(resultsfilename, appendflag, iteration, obj, timeslist, totalarcs, x, z)
 
-	if formulation == "heterogeneous"
+	if (formulation == "heterogeneous") & !(solutionmethod == "arcip")
 		util, nightsaway, driversunused = calcdrivermetrics(z)
 	else
 		util, nightsaway, driversunused = 0, 0, 0
