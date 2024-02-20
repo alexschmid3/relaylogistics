@@ -111,7 +111,7 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function columngeneration!(orderarcs, hasdriverarcs)
+function columngeneration!(orderarcs, hasdriverarcs, startercuts)
 	
 	#Initialize paths
 	delta, paths = initialfeasiblepaths(orderarcs)
@@ -131,7 +131,7 @@ function columngeneration!(orderarcs, hasdriverarcs)
 	    set_name(x[i,p], string("x[",i,",",p,"]")) 
 	end
 	@variable(rmp, y[hasdriverarcs.A] >= 0)
-    @variable(smp, 0 <= z[d = drivers, f = 1:numfragments[driverHomeLocs[d], drivershift[d]]] <= 1)
+    @variable(rmp, 0 <= z[d = drivers, f = 1:numfragments[driverHomeLocs[d], drivershift[d]]] <= 1)
 	@variable(rmp, w[a in primaryarcs.A_space] >= 0)
 	@variable(rmp, ordtime[orders])
     @variable(rmp, maxhours)
@@ -167,11 +167,14 @@ function columngeneration!(orderarcs, hasdriverarcs)
 	end
 
 	#Driver constraints
-    @constraint(smp, driverStartingLocs[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(sum(z[d,f] for f in F_plus_ls[l,s,n]) for n in driverSetStartNodes[l,s]) == 1)
-	@constraint(smp, driverFlowBalance[d in drivers, l = driverHomeLocs[d], s = drivershift[d], n in N_flow_ls[l,s]], sum(z[d,f] for f in F_minus_ls[l,s,n]) - sum(z[d,f] for f in F_plus_ls[l,s,n]) == 0)
-	@constraint(smp, driverMaxHours[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(fragworkinghours[l,s,f] * z[d,f] for f in 1:numfragments[l,s]) <= maxhours)
-	@constraint(smp, maxhours <= maxweeklydriverhours)
+    @constraint(rmp, driverStartingLocs[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(sum(z[d,f] for f in F_plus_ls[l,s,n]) for n in driverSetStartNodes[l,s]) == 1)
+	@constraint(rmp, driverFlowBalance[d in drivers, l = driverHomeLocs[d], s = drivershift[d], n in N_flow_ls[l,s]], sum(z[d,f] for f in F_minus_ls[l,s,n]) - sum(z[d,f] for f in F_plus_ls[l,s,n]) == 0)
+	@constraint(rmp, driverMaxHours[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(fragworkinghours[l,s,f] * z[d,f] for f in 1:numfragments[l,s]) <= maxhours)
+	@constraint(rmp, maxhours <= maxweeklydriverhours)
 
+	#Add any existing cuts
+	@constraint(rmp, [i in 1:length(startercuts.vars)], sum(startercuts.coeff[i][d,j] * z[d,j] for (d,j) in startercuts.vars[i]) <= startercuts.rhs[i])
+	 
 	#Return named tuple of constraints needed for column generation
 	rmpconstraints = (con_orderpath = orderpath,
 		con_initialTrucks = initialTrucks,
@@ -188,6 +191,11 @@ function columngeneration!(orderarcs, hasdriverarcs)
 	rmpobjectives, rmptimes, pptimes, pptimes_par, lowerbounds = [], [], [], [], []
 	listlength = convert(Int64, ceil(length(orders)/4))
 	shuffle_partition(N; chunk_size=listlength) = (collect ∘ partition)(shuffle(1:N), chunk_size)
+
+	#Master list of knapsack cuts
+	mastercuts = startercuts
+	cuttime = 0
+	addcutsthisiter_flag = 0
 
 	#------------------------------------------------------#
 
@@ -271,6 +279,26 @@ function columngeneration!(orderarcs, hasdriverarcs)
 			maximprove = minimum(minreducedcosts) * totalusedpaths
 			write_cg_conv(convergencedatafilename, cg_iter, maximprove, totalorderarcs, totalorderpaths, rmpobj)
 		end
+
+		#-----------ADD CUTS-----------#
+	
+		if addcutsthisiter_flag == 1
+			cutstarttime = time()
+			cuts = findknapsackcuts(z, knapsackcuttype)
+			@constraint(smp, [i in 1:cuts.numcuts], sum(cuts.coeff[i][d,j] * z[d,j] for (d,j) in cuts.vars[i]) <= cuts.rhs[i])
+			cutindex = length(mastercuts.rhs)+1
+			for i in 1:cuts.numcuts
+				mastercuts.vars[cutindex] = cuts.vars[i]
+				mastercuts.coeff[cutindex] = cuts.coeff[i]
+				mastercuts.rhs[cutindex] = cuts.rhs[i]
+				cutindex += 1
+			end
+			cutsaddedthisiter = cuts.numcuts
+			cuttime += time() - cutstarttime
+			println("Added ", cuts.numcuts, " cuts")
+		else 
+			cutsaddedthisiter = -1 * knapsackcuts_flag
+		end
 	
 		#-------ADD NEW VARIABLES-------#
 
@@ -321,9 +349,13 @@ function columngeneration!(orderarcs, hasdriverarcs)
 
 		#----------TERMINATION----------#
 
-		if (minimum(minreducedcosts) >= -0.0001) 
+		if (minimum(minreducedcosts) >= -0.0001) & (cutsaddedthisiter == -1) 
+			addcutsthisiter_flag += 1
+        elseif (minimum(minreducedcosts) >= -0.0001) & (cutsaddedthisiter == 0)
 			println("NO NEGATIVE REDUCED COSTS FOUND!")	
 			break
+		elseif (minimum(minreducedcosts) >= -0.0001) & (cutsaddedthisiter >= 1)
+			println("Keep adding cuts")
 		end
 
 		#------------ITERATE------------#
@@ -341,7 +373,7 @@ function columngeneration!(orderarcs, hasdriverarcs)
 
 	#-------------------------------#
 
-	return rmpobj, rmp, x, y, z, w, paths, delta, sum(rmptimes), sum(pptimes), sum(pptimes_par), totalpaths, cg_iter
+	return rmpobj, rmp, x, y, z, w, paths, delta, sum(rmptimes), sum(pptimes), sum(pptimes_par), totalpaths, cg_iter, mastercuts, cuttime
 
 end
 
