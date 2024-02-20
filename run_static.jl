@@ -39,7 +39,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 
 #Read experiment parameters 
 experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/newmodel.csv"
+paramsfilename = "data/paperexperiments.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
 ex = expparms[experiment_id, 2]		
@@ -99,7 +99,7 @@ maxnightsaway = 1
 driveroffdays_flag = 0
 
 #Create id for this run
-runid = string("ex", ex, "_", solutionmethod, "_warmstart_exp", experiment_id, "_rundate", today())
+runid = string("ex", ex, "_exp", experiment_id, "_", solutionmethod, "_rundate", today())
 
 #Travel time calculation parameters
 excludeoutliers_flag = 1							# 0 = include outliers in travel time calculation, 1 = exclude outliers
@@ -124,7 +124,6 @@ pathsperiter2, pathsitercap2 = 5, 20
 pathsperiter3 = 1
 
 #Uniform k and ABCG + k control parameters
-k = 0
 ktype_flag = "pct"									# "hrs" = # of hours acceptable delay, "pct" = acceptable delay as percent of shortest path time, "min24" = max(24 hrs, percent of shortest path)
 
 #Full IP time control parameters (also used for uniform k) 
@@ -150,7 +149,7 @@ vizflag = 0
 
 #File names					
 vizfoldername = string("visualizations/static/run ", runid)
-csvfoldername = string("outputs/bigtable_new/")
+csvfoldername = string("outputs/paperexperiments/")
 vizfilename = string(solutionmethod)			#Folder names + file extensions added later for viz files
 #resultsfilename = string(csvfoldername, runid, "/", solutionmethod, "_output.csv")
 resultsfilename = string(csvfoldername, runid, "_output.csv")
@@ -163,6 +162,13 @@ fullysolutionfilename = string(csvfoldername, runid, "/y_soln.csv")
 fullzsolutionfilename = string(csvfoldername, runid, "/z_soln.csv")
 convergencedatafilename = string(csvfoldername, "convergence_exp", runid, ".csv")
 #convergencefilename = string(csvfoldername, "convergence_exp", experiment_id,".csv")
+
+if !(isdir("outputs"))
+	mkdir("outputs")
+end
+if !(isdir(csvfoldername))
+	mkdir(csvfoldername)
+end
 
 #---------------------------------IMPORT FINAL SCRIPTS----------------------------------# 
 
@@ -254,7 +260,6 @@ if solutionmethod == "lp"
 		timespacenetwork(string("outputs/viz/order", i,"_lp.png"), arclistlist, colorlist, thicknesslist, fractlist, 2400, 1800)
 	end
 	
-
 elseif solutionmethod == "lpcuts"
 
 	lpc_obj, x_lpc, z_lpc, lpc_time, lpc_bound, knapsackcuts = solvelpwithcuts(opt_gap, orderarcs, knapsackcuttype)
@@ -327,7 +332,14 @@ elseif solutionmethod == "ip"
 		timespacenetwork(string("outputs/viz/order", i,"_ip.png"), arclistlist, colorlist, 2000, 1200)
 	end
 	=#
-	
+
+elseif solutionmethod == "ipred"
+
+	reducedarcs = initializeorderarcsets(k)
+	ipk_obj, x_ipk, z_ipk, ipk_time, ipk_bound = solvejourneymodel(0, opt_gap, reducedarcs, numeffshifts, nocuts)
+	timeslist = (mp=0, pp=0, pppar=0, ip=ipk_time, cut=0)
+	writeresultsforearlytests(resultsfilename, 0, "IPreduced", ipk_obj, timeslist, sum(length(reducedarcs.A[i]) for i in orders), x_ipk, z_ipk)
+		
 elseif solutionmethod == "basisip"
 
 	lp_obj, x_lp, z_lp, lp_time, lp_bound, lpbasisarcs = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts, nocuts)
@@ -350,7 +362,7 @@ elseif solutionmethod == "basisip"
 elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 
 	variableusecount, startercuts, starterfixedvars = initmagsets(magarcs)	
-	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts, cuttime = multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, starterfixedvars, variableusecount, 0, 1)
+	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts, cuttime, arcsbeforecolmgmt, arcsbeforevarsetting = multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, starterfixedvars, variableusecount, 0, 1)
 	
 	#mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts, cuttime = multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 

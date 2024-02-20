@@ -13,7 +13,7 @@ end
 
 #drawingname, arclistlist, colorlist, thicknesslist, fractlist, x_size, y_size = string("outputs/viz/order", i,".png"), arclistlist, colorlist, thicknesslist, fractlist, 2000, 1200
 
-function timespacenetwork(drawingname, arclistlist, colorlist, thicknesslist, fractlist, x_size, y_size)
+function timespacenetwork(drawingname, arclistlist, colorlist, thicknesslist, dashlist, fractlist, x_size, y_size)
 
 	#Find coordinates for each time-space node
 	nodelist = []
@@ -44,13 +44,13 @@ function timespacenetwork(drawingname, arclistlist, colorlist, thicknesslist, fr
         
         #Set arc attributes
         arcColor = colorlist[j] # (0,0,255) #RGB tuple 
-        arcDash = "solid" #"solid", "dashed"			
+        arcDash = dashlist[j] #"solid" #"solid", "dashed"			
         arcThickness = thicknesslist[j]
-		if fractlist[j] != []
-			arcLabel = fractlist[j][a]
-		else
-			arcLabel = ""
-		end
+		#if fractlist[j] != []
+		#	arcLabel = fractlist[j][a]
+		#else
+		arcLabel = ""
+		#end
         
         #Add to arcinfo list to be used in the drawing 
         push!(arcinfo, (startPoint, endPoint, arcColor, arcDash, arcThickness, arcLabel))
@@ -81,17 +81,17 @@ function timespacenetwork(drawingname, arclistlist, colorlist, thicknesslist, fr
 		arrowhead = (1-12/dist)*i[2] + (12/dist)*i[1] #8 pixels from the end node
 		
 		#Draw the arrow head
-		local p = ngon(arrowhead, 10, 3, theta, vertices=true)
+		local p = ngon(arrowhead, max(10, i[5]), 3, theta, vertices=true)
 		poly(p, :fill,  close=true)
 
 	end
 
 	#Draw node points
 	setcolor("black")
-	circle.(nodePoints, 7, :fill)
+	circle.(nodePoints, 9, :fill)
 
 	#Set font size for labels
-	fontsize(20)
+	fontsize(30)
 
 	#Add location labels
 	for l in 1:numlocs

@@ -1,5 +1,5 @@
 
-function preprocesssubproblemsets(orderArcSet)
+function preprocesssubproblemsets_cg(orderArcSet)
 
 	#Create copies of all important sets (so they can be modified for the shortest path problem)
 	nodesLookupSP = deepcopy(nodesLookup)
@@ -102,7 +102,7 @@ end
 function preprocesscgsets(orderArcSet)
 
     M = alphatransformation_cg()
-    numnodesSP, arclistSP, nodesLookupSP, arcLookupSP, dummyorig, dummydest = preprocesssubproblemsets(orderArcSet)
+    numnodesSP, arclistSP, nodesLookupSP, arcLookupSP, dummyorig, dummydest = preprocesssubproblemsets_cg(orderArcSet)
     subproblemsets = (numnodes=numnodesSP, arclist=arclistSP, nodelookup=nodesLookupSP, arclookup=arcLookupSP, dummyorig=dummyorig, dummydest=dummydest)
 
     return M, subproblemsets

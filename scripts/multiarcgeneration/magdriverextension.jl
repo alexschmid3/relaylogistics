@@ -285,7 +285,7 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function preprocesssubproblemsets(orderArcSet)
+function preprocesssubproblemsets_driverext(orderArcSet)
 
 	#Create copies of all important sets (so they can be modified for the shortest path problem)
 	nodesLookupSP = deepcopy(nodesLookup)

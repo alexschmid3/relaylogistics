@@ -2,7 +2,7 @@ function preprocesssubproblemsets(orderArcSet)
 
 	#Create copies of all important sets (so they can be modified for the shortest path problem)
 	nodesLookupSP = deepcopy(nodesLookup)
-	arcsSP, arcLookupSP, nodesLookupSP = Dict(), Dict(), Dict()
+	arcsSP, arcLookupSP = Dict(), Dict()
 	for i in orders
 		arcsSP[i], arcLookupSP[i] = deepcopy(arcs), deepcopy(arcLookup)
 	end

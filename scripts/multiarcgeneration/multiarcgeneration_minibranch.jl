@@ -324,6 +324,55 @@ end
 
 #----------------------------------------------------------------------------------------#
 
+function checkifpathexists(i, myarc, arcset, subproblemsets)
+
+	#Add dummy arcs
+	dummyarcs = setdiff(subproblemsets.arclist[i], 1:extendednumarcs)
+	arcset = union(arcset, dummyarcs)
+	
+	#Split into arcs before and after myarcs
+	startnode, endnode = subproblemsets.arclookup[i][myarc]
+	starttime, endtime = subproblemsets.nodelookup[startnode][2], subproblemsets.nodelookup[endnode][2]
+	arcsbefore = sort([a for a in arcset if subproblemsets.nodelookup[subproblemsets.arclookup[i][a][2]][2] <= starttime], by=x->subproblemsets.nodelookup[subproblemsets.arclookup[i][x][1]][2])
+	arcsafter = sort([a for a in arcset if subproblemsets.nodelookup[subproblemsets.arclookup[i][a][1]][2] >= endtime], by=x->subproblemsets.nodelookup[subproblemsets.arclookup[i][x][1]][2])
+
+	#Initialize shortest path algorithm 
+	currdistance = repeat([999999999.0],outer=[subproblemsets.numnodes])
+	currdistance[subproblemsets.dummyorig] = 0
+
+	#Loop over time-space arcs *before* in order of start time
+	for a in arcsbefore
+		n_end, n_start = subproblemsets.arclookup[i][a][2], subproblemsets.arclookup[i][a][1]
+		if currdistance[n_end] > currdistance[n_start] + 0.000001
+			currdistance[n_end] = currdistance[n_start]
+		end
+	end
+
+	#Get distance to myarc
+	distancetomyarc = currdistance[startnode]
+
+	#Reset shortest path and ensure we pass through myarc
+	currdistance = repeat([999999999.0],outer=[subproblemsets.numnodes])
+	currdistance[endnode] = distancetomyarc
+
+	#Loop over time-space arcs *after* in order of start time
+	for a in arcsafter  
+		n_end, n_start = subproblemsets.arclookup[i][a][2], subproblemsets.arclookup[i][a][1]
+		if currdistance[n_end] > currdistance[n_start] + 0.000001
+			currdistance[n_end] = currdistance[n_start]
+		end
+	end
+
+	if currdistance[subproblemsets.dummydest] < 1e-4
+		return true
+	else
+		return false
+	end
+
+end
+
+#----------------------------------------------------------------------------------------#
+
 function updatearcsets(magarcs, addarcs)
 
     newarcs = []
@@ -583,7 +632,9 @@ function multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, sta
 	#------------------------------------------------------#
 
 	#Pre-processing
+	println("Starting...")
     M, subproblemsets = preprocessmagsets(orderarcs.A);
+	println("Length of subproblemsets.nodelookup = ", length(subproblemsets.nodelookup))
 
 	#------------------------------------------------------#
 
@@ -596,6 +647,10 @@ function multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, sta
 	addcutsthisiter_flag = 0
 	cuttime = 0
     bestlowerbound = 0
+	arcsbeforevarsetting = (A=Dict(), A_space=Dict())
+	for i in orders
+		arcsbeforevarsetting.A[i] = []
+	end
 
     #------------------------------------------------------#
 
@@ -783,6 +838,12 @@ function multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, sta
 		elseif (minimum(minreducedcosts) >= -0.0001) & (currvarfixingiter < varsettingiterations) & (cutsaddedthisiter == 0)
 			println("NO NEGATIVE REDUCED COSTS FOUND!")	
             println("PROCEEDING TO VARIABLE SETTING...")
+
+			if currvarfixingiter == 0
+				for i in orders, a in magarcs.A[i]
+					push!(arcsbeforevarsetting.A[i], a)
+				end 
+			end
 			
 			#fractionalhistogram(x, z, magarcs, string("outputs/activevars_x_", currvarfixingiter,".png"), string("outputs/activevars_z_", currvarfixingiter,".png"))
            
@@ -851,6 +912,8 @@ function multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, sta
 	
 	end
 
+	arcsbeforecolmgmt = (A=[copy(magarcs.A[i]) for i in orders], A_space=Dict())
+
     if currvarfixingiter == 0
         
         println("Before arcs = ", sum(length(magarcs.A[i]) for i in orders))
@@ -866,7 +929,20 @@ function multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, sta
             end
         end
 
-        println("After arcs = ", sum(length(magarcs.A[i]) for i in orders))
+		println("After arcs = ", sum(length(magarcs.A[i]) for i in orders))
+
+		#Clear out any unusable arcs
+		for i in orders, a in intersect(1:numarcs, magarcs.A[i])
+			if !(checkifpathexists(i, a, magarcs.A[i], subproblemsets))
+				remove!(magarcs.A[i], a)
+                remove!(magarcs.A_space[i], a)
+                n_start, n_end = arcLookup[a]
+                remove!(magarcs.A_minus[i, n_end], a)
+                remove!(magarcs.A_plus[i, n_start], a)
+			end
+		end
+
+        println("After after arcs = ", sum(length(magarcs.A[i]) for i in orders))
 
     end
         
@@ -876,7 +952,7 @@ function multiarcgeneration_minibranch!(magarcs, hasdriverarcs, startercuts, sta
 
 	#-------------------------------#
 
-    return bestlowerbound, smp, x, y, z, w, magarcs, sum(smptimes), sum(pptimes), sum(pptimes_par), totalarcs, cg_iter, mastercuts, cuttime
+    return bestlowerbound, smp, x, y, z, w, magarcs, sum(smptimes), sum(pptimes), sum(pptimes_par), totalarcs, cg_iter, mastercuts, cuttime, arcsbeforecolmgmt, arcsbeforevarsetting
     
 end
 
