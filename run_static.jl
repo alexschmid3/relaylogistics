@@ -88,6 +88,7 @@ finallegtimepenalty = 0.30							# Time/delay penalty assessed for orders that f
 dummyendtime = 1000									# Dummy time assigned to the "beyond the horizon" nodes
 maxnightsaway = 1
 driveroffdays_flag = 0
+vizflag = 0
 
 #Travel time calculation parameters
 excludeoutliers_flag = 1							# 0 = include outliers in travel time calculation, 1 = exclude outliers
@@ -131,7 +132,7 @@ include("scripts/knapsackcuts/solvelpwithcuts.jl")
 include("scripts/knapsackcuts/solveipwithcuts.jl")
 
 #Import miscellaneous functions
-if maketimespacevizfiles + makespatialvizfiles + makeadvancedvizfiles + vizflag >= 1
+if vizflag == 1
 	include("scripts/visualizations/timespacenetwork.jl")
 end
 include("scripts/directoryinitialization.jl")
