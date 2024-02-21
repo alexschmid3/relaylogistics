@@ -89,6 +89,7 @@ dummyendtime = 1000									# Dummy time assigned to the "beyond the horizon" no
 maxnightsaway = 1
 driveroffdays_flag = 0
 vizflag = 0
+saveconvergencedata_flag = 1
 
 #Travel time calculation parameters
 excludeoutliers_flag = 1							# 0 = include outliers in travel time calculation, 1 = exclude outliers
