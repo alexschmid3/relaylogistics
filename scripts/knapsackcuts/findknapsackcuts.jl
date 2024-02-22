@@ -82,17 +82,20 @@ end
 
 #---------------------------------------------------------------------------------------#
 
-#This is equivalent to the optimization above, but is faster and doesn't use Gurobi as much on the cluster
+#Iterate over all possible lifting coefficients for journey j in the min cover cut described by variables in the set ss and a right-hand side of rhs
+#This is equivalent to the optimization above, but is faster and doesn't call Gurobi as much
 function findliftcoeffs(ss, j, rhs, l, s)
 
     sortedss = sort(ss, by=x->fragdrivinghours[l,s,x])
-    for n in rhs:-1:0
-        #Check whether we could choose j plus the n journeys with the fewest working hours and still satisfy the knapsack   
+    for n in rhs:-1:0 #Max coeff is rhs, min coeff is 0
+
+        #Check whether we could choose j plus the n journeys with the fewest working hours and still satisfy the cut   
         if (n == 0) & (fragdrivinghours[l,s,j] <= maxweeklydriverhours)
             return rhs
         elseif (n>0) & (sum(fragdrivinghours[l,s,f] for f in sortedss[1:n]) + fragdrivinghours[l,s,j] <= maxweeklydriverhours)
             return rhs - n
         end
+
     end
 
     #If journey j does not satify the knapsack, it's lifting coeff should be ∞ 
@@ -105,6 +108,7 @@ end
 
 function sequentiallifting(ss, coeff, usedjourneys, journeysubset, bestrhs, l, s)
     
+    #Iterate over all journeys and try to lift each coefficient
     for j2 in union(setdiff(usedjourneys, journeysubset), setdiff(workingfragments[l,s], usedjourneys))
         liftcoeff = findliftcoeffs(ss, j2, bestrhs, l, s)
         if liftcoeff > 1e-4
@@ -119,6 +123,7 @@ end
 
 #---------------------------------------------------------------------------------------#
 
+#Parameters described in section 4 of Gu, Nemhauser, and Savelsbergh (2000)
 function calcparametersforseqindeplift(cover, covermap, l, s)
 
     r = length(cover)
@@ -156,8 +161,6 @@ function g(z, r, μ, λ, ρ)
             end
         end
     end
-
-    println("Your g function is wrong, girl!") 
 
 end
 
@@ -199,29 +202,45 @@ function findminimalcovercuts(z, lifting_flag)
     cutindex = 0
     cutvars, cutrhs = Dict(), Dict()
     cutcoeff = Dict()
+
+    #Search for cuts over each driver
     for d in drivers
-        #println("Searching driver $d...")
         l, s = driverHomeLocs[d], drivershift[d]
+
+        #List the journeys used in current solutions
         usedjourneys = [f for f in workingfragments[l,s] if value(z[d,f]) > 0]
+
+        #Enumerate over all subsets of used journeys to identify minimal covers
         for journeysubset in powerset(usedjourneys)
-            if length(journeysubset) >= 2                
+            if length(journeysubset) >= 2 
+                
+                #If identical cover found, check whether the min cover cut is violated by current solution
                 if checkminimalcover(l,s,journeysubset)
+
                     bestrhs = length(journeysubset) - 1
+
+                    #If min cover cut is violated, format and lift the cut
                     if sum(value(z[d,f]) for f in journeysubset) > bestrhs + 1e-4
 
+                        #Save min cover cut info (all coefficients are 1)
                         ss = copy(journeysubset)
                         coeff = Dict()
                         for j in ss
                             coeff[j] = 1
                         end
 
+                        #Lifting
                         if lifting_flag == 1
                             ss, coeff = sequentiallifting(ss, coeff, usedjourneys, journeysubset, bestrhs, l, s)
                         elseif lifting_flag == 2
                             ss, coeff = sequenceindependentlifting(ss, coeff, journeysubset, l, s)
                         end
 
+                       
+                        #Add the cut for all drivers identical to driver d to avoid adding the same cut for another driver in a future iteration
                         for d_sym in driversets[l,s]
+                           
+                            #Format and save the cut information (variables, coeffs, rhs)
                             cutindex += 1
                             cutvars[cutindex] = [(d_sym,i) for i in ss]
                             cutrhs[cutindex] = bestrhs
@@ -286,17 +305,17 @@ end
 
 function findknapsackcuts(z, cuttype)
 
-    if cuttype == 1
+    if cuttype == 1        #Find pairs of journeys that can be rounded for a cut
         numcuts, cutvars, cutrhs = findjourneypaircuts(z)
-    elseif cuttype == 2
+    elseif cuttype == 2    #Find journey triplets that can be rounded for a cut
         numcuts, cutvars, cutrhs = findjourneytripletcuts(z)
-    elseif cuttype == 3
+    elseif cuttype == 3    #Find all subsets of journeys that can be rounded for a cut
         numcuts, cutvars, cutrhs = findallcuts(z)
-    elseif cuttype == 4
+    elseif cuttype == 4    #Minimal cover cuts, no lifting
         numcuts, cutvars, cutrhs, cutcoeff = findminimalcovercuts(z, 0)
-    elseif cuttype == 5
+    elseif cuttype == 5    #Minimal cover cuts + sequential lifting
         numcuts, cutvars, cutrhs, cutcoeff = findminimalcovercuts(z, 1)
-    elseif cuttype == 6
+    elseif cuttype == 6    #Minimal cover cuts + sequence independent lifting
         numcuts, cutvars, cutrhs, cutcoeff = findminimalcovercuts(z, 2)
     end
 
