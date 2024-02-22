@@ -49,7 +49,7 @@ lambda2 = expparms[experiment_id, 12]
 println("Experiment = ", experiment_id)
 
 #Read algorithm control parameters from file
-solutionmethod = "ip" #expparms[experiment_id, 3]		
+solutionmethod = expparms[experiment_id, 3]		
 variablefixing_ub = expparms[experiment_id, 18]
 variablefixing_lb = expparms[experiment_id, 17]
 variablefixingthreshold = (variablefixing_lb, variablefixing_ub)
@@ -178,10 +178,10 @@ arcLookup, nodesLookup, arcfinishtime, dummyarc, allarcs = calcarcfinishtimes()
 
 #----------------------------------CREATE ARC SETS-----------------------------------# 
 
-primaryarcs, extendedtimearcs, orderarcs, driverarcs, hasdriverarcs = initializearcsets(A_space, A_plus, A_minus)
-R_off = findreturnhomearcsets(driverarcs)
-magarcs = initializeorderarcsets(k)
-driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = initializejourneymodel(maxnightsaway)
+primaryarcs, extendedtimearcs, orderarcs, driverarcs, hasdriverarcs = initializearcsets(A_space, A_plus, A_minus, orders, Origin, Destination, driverStartNodes, T_off)
+R_off = findreturnhomearcsets(driverarcs, T_off_constr)
+magarcs = initializeorderarcsets(k, orders, originloc, destloc, Origin, Destination, shortesttriptimes)
+driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = initializejourneymodel(maxnightsaway, T_off, T_on_0)
 nocuts=(vars=[], rhs=[], coeff=[])
 
 #---------------------------------------SOLVE----------------------------------------# 
@@ -192,7 +192,7 @@ if solutionmethod == "lp"
 	timeslist = (mp=lp_time, pp=0, pppar=0, ip=0, cut=0)
 	writeresultsforrun(resultsfilename, 0, "LP", lp_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_lp, z_lp)
 
-	include("scripts/visualizations/timespacenetwork.jl")
+	#=include("scripts/visualizations/timespacenetwork.jl")
 	for i in orders
 		lparcs = [a for a in orderarcs.A[i] if value(x_lp[i,a]) > 1e-4]
 
@@ -205,7 +205,7 @@ if solutionmethod == "lp"
 		colorlist = [(190,190,190), (0,0,0)] 
 		thicknesslist = [3,11]
 		timespacenetwork(string("outputs/viz/order", i,"_lp.png"), arclistlist, colorlist, thicknesslist, fractlist, 2400, 1800)
-	end
+	end=#
 	
 elseif solutionmethod == "lpcuts"
 
@@ -302,7 +302,7 @@ elseif (solutionmethod == "ip") & (knapsackcuttype != 0)
 
 elseif solutionmethod == "ipred"
 
-	reducedarcs = initializeorderarcsets(k)
+	reducedarcs = initializeorderarcsets(k, orders, originloc, destloc, Origin, Destination, shortesttriptimes)
 	ipk_obj, x_ipk, z_ipk, ipk_time, ipk_bound = solvejourneymodel(0, opt_gap, reducedarcs, numeffshifts, nocuts)
 	timeslist = (mp=0, pp=0, pppar=0, ip=ipk_time, cut=0)
 	writeresultsforrun(resultsfilename, 0, "IPreduced", ipk_obj, timeslist, sum(length(reducedarcs.A[i]) for i in orders), x_ipk, z_ipk)
