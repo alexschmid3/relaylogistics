@@ -8,12 +8,18 @@ function solveipwithcuts(opt_gap, orderarcs, numeffshifts)
 
     #Define callback function for adding knapsack cuts
     function my_callback_function(cb_data)
-        z_val = Dict()
+        
+		#Get z-var values
+		z_val = Dict()
         for d in drivers, f in 1:numfragments[driverHomeLocs[d], drivershift[d]]
             z_val[d,f] = callback_value(cb_data, z[d,f])
         end
-        numcuts, cutvars, cutrhs, cutcoeff = findminimalcovercuts(z_val, 1)
-        for i in 1:numcuts
+
+		#Find cuts
+        numcuts, cutvars, cutrhs, cutcoeff = findminimalcovercuts(z_val, 2)
+        
+		#Build constraints for IP
+		for i in 1:numcuts
             con = @build_constraint( sum(cutcoeff[i][d,j] * z[d,j] for (d,j) in cutvars[i]) <= cutrhs[i] )
             MOI.submit(ip, MOI.UserCut(cb_data), con)
         end

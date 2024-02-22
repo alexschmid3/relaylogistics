@@ -1,11 +1,5 @@
 
-function solvelpwithcuts(opt_gap, orderarcs, startcuttype)
-
-    if startcuttype == 2
-        cuttype = 1
-    else
-        cuttype = startcuttype
-    end
+function solvelpwithcuts(opt_gap, orderarcs, cuttype)
 
     lp = Model(Gurobi.Optimizer)
 	set_optimizer_attribute(lp, "TimeLimit", 60*60*40)
@@ -66,82 +60,36 @@ function solvelpwithcuts(opt_gap, orderarcs, startcuttype)
 	@constraint(lp, driverMaxHours[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(fragworkinghours[l,s,f] * z[d,f] for f in 1:numfragments[l,s]) <= maxhours)
 	@constraint(lp, maxhours <= maxweeklydriverhours)
     
-    #Simple cuts
-    #@constraint(lp, simplecuts[d in drivers, l = driverHomeLocs[d], s = drivershift[d], jl = tstep:tstep:24],
-    # sum(z[d,f] for f in 1:numfragments[l,s] if fragworkinghours[l,s,f] == jl) <= floor(maxweeklydriverhours/jl))
-
-    #Begin loop of cuts
+    #Initialize cutting plane algorithm
     mastercuts = (vars=Dict(), rhs=Dict(), coeff=Dict())
     cutiter = 1
     originallpopt = 0
+
+    #Iteratively add cuts until convergence
     while 1==1
 
+        println("-------------- ITER $cutiter --------------")
+        
+        #Solve and save original objective, pre-cuts
         optimize!(lp)
         if cutiter == 1
             originallpopt += objective_value(lp)
         end
-
-        println("-------------- ITER $cutiter --------------")
         println("Objective = ", objective_value(lp))
 
-        #Knapsack cuts
+        #Find knapsack cuts
         cuts = findknapsackcuts(z, cuttype)
-        #cuts_nolift = findknapsackcuts(z, 4)
-        #cuts_lift = findknapsackcuts(z, 5)
         
-        if (cuts.numcuts == 0) & (cuttype == startcuttype) 
+        #Termination condition
+        if (cuts.numcuts == 0) 
             println("No cuts to add!")
-            println("------------------------------------")
             break
-        elseif (cuts.numcuts == 0) & (cuttype == 1) & (startcuttype == 2) 
-            cuttype += 1
-            cuts = findknapsackcuts(z, cuttype)
-            if (cuts.numcuts == 0) 
-                println("No cuts to add!")
-                println("------------------------------------")
-                break
-            end
         end
 
-        if cuttype == 10
-            varsforviz = Dict()
-            for d in drivers
-                varsforviz[d] = []
-            end
-            for i in 1:cuts.numcuts
-                a,b,c = cuts.vars[i]
-                push!(varsforviz[a[1]], (a[2], b[2], c[2]))
-            end
-
-            for d in drivers
-                lparcs, cutarcs = [], []
-                for f in 1:numfragments[driverHomeLocs[d], drivershift[d]]
-                    if value(z[d,f]) > 1e-4
-                        for a in 1:numarcs
-                            if f in fragmentscontaining[driverHomeLocs[d],drivershift[d],a]
-                                push!(lparcs, a)
-                            end
-                        end
-                    end
-                end
-                for (f1,f2,f3) in varsforviz[d]
-                    for f in [f1,f2,f3]
-                        for a in 1:numarcs
-                            if f in fragmentscontaining[driverHomeLocs[d],drivershift[d],a]
-                                push!(cutarcs, a)
-                            end
-                        end
-                    end
-                end
-                
-                arclistlist = [driverarcs.A[d], lparcs, cutarcs]
-                colorlist = [(200,200,200),(0,0,0), (255,0,0)] 
-                thicknesslist = [5,11,5]
-                timespacenetwork(string("outputs/viz/driver", d,"_iter", cutiter,".png"), arclistlist, colorlist, thicknesslist, 2400, 1800)
-            end
-        end
-        
+        #Add the cuts to the LP        
         @constraint(lp, [i in 1:cuts.numcuts], sum(cuts.coeff[i][d,j] * z[d,j] for (d,j) in cuts.vars[i]) <= cuts.rhs[i])
+        
+        #Add the cuts to the master list
         cutindex = length(mastercuts.rhs)+1
         for i in 1:cuts.numcuts
             mastercuts.vars[cutindex] = cuts.vars[i]
@@ -149,17 +97,20 @@ function solvelpwithcuts(opt_gap, orderarcs, startcuttype)
             mastercuts.coeff[cutindex] = cuts.coeff[i]
             cutindex += 1
         end
-        println("Added ", cuts.numcuts, " cuts of type $cuttype")        
+        println("Added ", cuts.numcuts, " cuts of type $cuttype") 
+        
+        #Iterate
         cutiter += 1
         
     end
 
 	lp_obj = objective_value(lp)
+    println("LP objective = ", originallpopt)
 	println("LP w/ cuts objective = ", lp_obj)
     println("Increased bound by ", round(100*(lp_obj - originallpopt)/originallpopt, digits=3), "%")
 	println("Time = ", solve_time(lp))
 
-    #Find the basis arcs
+    #Find the LP basis arcs
 	orderArcSet_basis, orderArcSet_space_basis, A_plus_i_basis, A_minus_i_basis = getnonzeroarcs(value.(x), orderarcs)
 	basisarcs = (A=orderArcSet_basis, A_space=orderArcSet_space_basis, A_minus=A_minus_i_basis, A_plus=A_plus_i_basis, available=[], closelocs=[]);
 
