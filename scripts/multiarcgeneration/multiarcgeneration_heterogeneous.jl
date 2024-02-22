@@ -529,8 +529,6 @@ end
 
 function multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, startercuts, starterfixedvars, variableusecount, currvarfixingiter, cg_iter_start)
 
-	#currvarfixingiter, cg_iter_start = 0, 1
-
     smp = Model(Gurobi.Optimizer)
 	set_optimizer_attribute(smp, "TimeLimit", 60*60)
 	set_optimizer_attribute(smp, "OutputFlag", 0)
@@ -658,7 +656,8 @@ function multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, startercuts, 
 
 		#-----------SOLVE SMP-----------#
 
-		println("-------- ITERATION $cg_iter --------")             
+		println("-------- ITERATION $cg_iter --------")  
+		#Solve master problem           
 		status = optimize!(smp)
 		if termination_status(smp) != MOI.OPTIMAL
 			println(termination_status(smp))
@@ -869,22 +868,15 @@ function multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, startercuts, 
                 end
                 push!(masterfixedvars.varsettingiter, fixedvalue)
 
-                println("Variables used before var setting = ", sum(values(variableusecount)))
-
                 #Run MAG with the new fixed variables
                 println("------------------- SETTING VARIABLES - ", masterfixedvars.varsettingiter, " -------------------")
                 obj_fix, smp_fix, x_fix, y_fix, z_fix, w_fix, magarcs_fix, smptm_fix, pptm_fix, pppar_fix, arcs_fix, cgiter_fix, cuts_fix, cuttime = multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, mastercuts, masterfixedvars, variableusecount, currvarfixingiter+1, cg_iter+1)
                 cg_iter += - cg_iter + cgiter_fix 
 
-                println("Variables used after var setting = ", sum(values(variableusecount)))
-
                 #Add the generated arcs to the master list
-                println("Arcs before var setting = ", sum(length(magarcs.A[i]) for i in orders))
                 magarcs = combineorderarcsets(magarcs, magarcs_fix)
-                println("Arcs after var setting = ", sum(length(magarcs.A[i]) for i in orders))
                 
                 #Add the generated cuts to the master list
-                println("Cuts before var setting = ", length(mastercuts.rhs))
                 cutindex = length(mastercuts.rhs)+1
                 for i in 1:length(cuts_fix.rhs)
                     mastercuts.vars[cutindex] = cuts_fix.vars[i]
@@ -892,7 +884,6 @@ function multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, startercuts, 
                     mastercuts.rhs[cutindex] = cuts_fix.rhs[i]
                     cutindex += 1
                 end
-                println("Cuts after var setting = ", length(mastercuts.rhs))
                                     
             end
 
@@ -912,13 +903,15 @@ function multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, startercuts, 
 	
 	end
 
+	#------------COL MGMT-----------#
+
 	arcsbeforecolmgmt = (A=[copy(magarcs.A[i]) for i in orders], A_space=Dict())
 
     if currvarfixingiter == 0
         
-        println("Before arcs = ", sum(length(magarcs.A[i]) for i in orders))
+        println("Before CM arcs = ", sum(length(magarcs.A[i]) for i in orders))
         
-        #Column management
+        #Column management - remove arcs not selected often enough over the course of MAG
         for i in orders, a in intersect(1:numarcs, magarcs.A[i])
             if variableusecount[i,a] / 100 <= postmagcolumndeletionthreshold
                 remove!(magarcs.A[i], a)
@@ -929,9 +922,9 @@ function multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, startercuts, 
             end
         end
 
-		println("After arcs = ", sum(length(magarcs.A[i]) for i in orders))
+		println("After CM arcs = ", sum(length(magarcs.A[i]) for i in orders))
 
-		#Clear out any unusable arcs
+		#Clear out any unusable arcs - arcs that are not part of *any* path from order origin to destination
 		for i in orders, a in intersect(1:numarcs, magarcs.A[i])
 			if !(checkifpathexists(i, a, magarcs.A[i], subproblemsets))
 				remove!(magarcs.A[i], a)
@@ -942,7 +935,7 @@ function multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, startercuts, 
 			end
 		end
 
-        println("After after arcs = ", sum(length(magarcs.A[i]) for i in orders))
+        println("Usable arcs = ", sum(length(magarcs.A[i]) for i in orders))
 
     end
         

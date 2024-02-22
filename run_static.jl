@@ -49,7 +49,7 @@ lambda2 = expparms[experiment_id, 12]
 println("Experiment = ", experiment_id)
 
 #Read algorithm control parameters from file
-solutionmethod = expparms[experiment_id, 3]		
+solutionmethod = "ip" #expparms[experiment_id, 3]		
 variablefixing_ub = expparms[experiment_id, 18]
 variablefixing_lb = expparms[experiment_id, 17]
 variablefixingthreshold = (variablefixing_lb, variablefixing_ub)
@@ -59,7 +59,7 @@ strengthenedreducedcost_flag = expparms[experiment_id, 14]
 columnmemorylength = expparms[experiment_id, 16] #Forget unused columns after this many iterations
 postmagcolumndeletioniterationpercent = expparms[experiment_id, 19] 
 postmagcolumndeletionthreshold = expparms[experiment_id, 20] 
-knapsackcuttype = expparms[experiment_id, 21] 
+knapsackcuttype = 6 #expparms[experiment_id, 21] 
 symmetrybreaking_flag = expparms[experiment_id, 22] 
 if knapsackcuttype > 0
 	knapsackcuts_flag = 1
