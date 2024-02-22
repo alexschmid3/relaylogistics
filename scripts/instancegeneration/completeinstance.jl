@@ -1,5 +1,5 @@
 
-function findtraveltimesanddistances()
+function findtraveltimesanddistances(orders, Origin, Destination)
 	
 	#Calculate shortest paths in miles between all pairs of locations
 	distbetweenlocs, shortestpatharclists = cacheShortestDistance(numlocs, prearcs)
@@ -34,7 +34,7 @@ end
 
 #---------------------------------------------------------------------------------------#
 
-function extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c, Destination)
+function extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c)
 
 	#Add final legs for orders that are unfinished at the end of the horizon
 	extendednodes, extendednumnodes, extendedarcs, extendednumarcs = copy(nodes), copy(numnodes), copy(arcs), copy(numarcs)
@@ -53,18 +53,27 @@ function extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c, Dest
 		push!(A_plus[n1], extendednumarcs + 1)
 		extendednumarcs += 1
 	end
-	for i in orders
-		destinationlocation = nodesLookup[Destination[i][1]][1]
-		push!(Destination[i], extendednodes[destinationlocation, dummyendtime])
-	end
 
-	return nodesLookup, arcLookup, A_minus, A_plus, c, Destination, extendednodes, extendednumnodes, extendedarcs, extendednumarcs
+	return nodesLookup, arcLookup, A_minus, A_plus, c, extendednodes, extendednumnodes, extendedarcs, extendednumarcs
 
 end
 
 #---------------------------------------------------------------------------------------#
 
-function findreturnhomearcsets(driverarcs)
+function extendDestination(orders, Destination, extendednodes)
+
+	for i in orders
+		destinationlocation = nodesLookup[Destination[i][1]][1]
+		push!(Destination[i], extendednodes[destinationlocation, dummyendtime])
+	end
+
+	return Destination
+
+end
+
+#---------------------------------------------------------------------------------------#
+
+function findreturnhomearcsets(driverarcs, T_off_constr)
 
 	#Find return home arc sets
 	R_off = Dict()
@@ -144,7 +153,7 @@ end
 
 #---------------------------------------------------------------------------------------#
 
-function findorderstartsandtransits()
+function findorderstartsandtransits(orders, Origin)
 
 	orderOriginalStartTime = Dict()
 	for i in orders
@@ -163,7 +172,7 @@ end
 #---------------------------------------------------------------------------------------#
 
 #Reserve trucks for the in transit orders
-function findtrucksintransit()
+function findtrucksintransit(ordersinprogress, originloc, available)
 	placeholder, loctruckcounter, trucksintransit = Dict(), zeros(numlocs), []
 	for i in ordersinprogress
 		currentloc, availtime = originloc[i][1], available[i][1]

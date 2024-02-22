@@ -1,5 +1,5 @@
 
-function orderarcreduction()
+function orderarcreduction(orders, Origin, Destination)
 	
 	#For now, we are using shortest path regardless of driver availability (this would be more time consuming to do)
 	traveltime_rdd = cacheShortestTravelTimes(numlocs, prearcs, "rdd time")
@@ -82,7 +82,7 @@ end
 
 #---------------------------------------------------------------------------------------#
 
-function driverarcreduction()
+function driverarcreduction(driverStartNodes, T_off)
 
 	traveltime = cacheShortestTravelTimes(numlocs, prearcs, "rdd time")
 	homeArcSet, homeArcSet_space, availableDrivers, A_plus_d, A_minus_d = Dict(), Dict(), Dict(), Dict(), Dict()
@@ -150,7 +150,7 @@ function driverarcreduction()
 			end
 		end
 	end
-
+	
 	#Add stay-at-home arcs for driver's off hours
 	for d in drivers, t in setdiff(T_off[drivershift[d]], [horizon]), l in closelocs[d]
 		startnode, endnode = nodes[l, t], nodes[l, t + tstep]
@@ -208,17 +208,17 @@ end
 
 #---------------------------------------------------------------------------------------#
 
-function initializearcsets(A_space, A_plus, A_minus)
+function initializearcsets(A_space, A_plus, A_minus, orders, Origin, Destination, driverStartNodes, T_off)
     
     #Order arc sets - viable paths from origin to destination
-    orderarcset_full, orderarcset_space_full, A_plus_i_full, A_minus_i_full = orderarcreduction()
+    orderarcset_full, orderarcset_space_full, A_plus_i_full, A_minus_i_full = orderarcreduction(orders, Origin, Destination)
 
     #Identify feasible arcs for each driver and trucks
     if solutionmethod == "nr"
         driverarcset, driverarcset_space, availabledrivers, A_plus_d, A_minus_d, closelocs = driverArcSetsByDriver_nonrelay(numlocs, numarcs, numnodes, prearcs, drivers, tstep, horizon, nodes, arcs, assignedDrivers, A_minus, A_plus, T_off, drivershift, driverHomeLocs, T_off_0, shiftlength)
         A_hasdriver, yupperbound, A_hasdriver_space, A_plus_hd, A_minus_hd = truckarcreduction(A_space, A_plus, A_minus, availabledrivers)
     else
-        driverarcset, driverarcset_space, availabledrivers, A_plus_d, A_minus_d, closelocs = driverarcreduction()
+        driverarcset, driverarcset_space, availabledrivers, A_plus_d, A_minus_d, closelocs = driverarcreduction(driverStartNodes, T_off)
         A_hasdriver, yupperbound, A_hasdriver_space, A_plus_hd, A_minus_hd = truckarcreduction(A_space, A_plus, A_minus, availabledrivers)
     end
 

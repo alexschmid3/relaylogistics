@@ -1,5 +1,5 @@
 
-function orderarcs_dummyonly()
+function orderarcs_dummyonly(orders, originloc, destloc, Origin, Destination)
 	
 	orderArcSet, orderArcSet_space, A_plus_i, A_minus_i = Dict(), Dict(), Dict(), Dict()
 
@@ -32,7 +32,7 @@ end
 
 #---------------------------------------------------------------------------------------#
 
-function orderarcs_warmstart(k)
+function orderarcs_warmstart(k, orders, originloc, destloc, Origin, Destination, shortesttriptimes)
 	
 	#For now, we are using shortest path regardless of driver availability (this would be more time consuming to do)
 	traveltime_rdd = cacheShortestTravelTimes(numlocs, prearcs, "rdd time")
@@ -229,12 +229,12 @@ end
 
 #---------------------------------------------------------------------------------------#
 
-function initializeorderarcsets(k)
+function initializeorderarcsets(k, orders, originloc, destloc, Origin, Destination, shortesttriptimes)
 
 	if k == -1
-		orderarcset, orderarcset_space, A_minus_i, A_plus_i = orderarcs_dummyonly()
+		orderarcset, orderarcset_space, A_minus_i, A_plus_i = orderarcs_dummyonly(orders, originloc, destloc, Origin, Destination)
 	else
-		orderarcset, orderarcset_space, A_minus_i, A_plus_i = orderarcs_warmstart(k)
+		orderarcset, orderarcset_space, A_minus_i, A_plus_i = orderarcs_warmstart(k, orders, originloc, destloc, Origin, Destination, shortesttriptimes)
 	end
 
 	magarcs = (A=orderarcset, A_space=orderarcset_space, A_minus=A_minus_i, A_plus=A_plus_i, available=[])

@@ -1,6 +1,5 @@
 
-
-function createdriversets()
+function createdriversets(T_off)
 		
 	#Find the effective shifts 
 	#i.e. For a three day horizon starting on a Monday, a MTWTF driver looks the same as a MTWR+Su driver
@@ -103,9 +102,9 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function initializejourneymodel(maxnightsaway)
+function initializejourneymodel(maxnightsaway, T_off, T_on_0)
 
-	driversets, driverSetStartNodes, numeffshifts, effshift, shiftsincluded = createdriversets()
+	driversets, driverSetStartNodes, numeffshifts, effshift, shiftsincluded = createdriversets(T_off)
 
 	adjacentlocs = [[] for l in 1:numlocs]
 	for pa in prearcs

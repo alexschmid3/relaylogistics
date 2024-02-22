@@ -6,6 +6,9 @@ using JuMP, Gurobi, Random, CSV, DataFrames, Statistics, Dates, SparseArrays
 include("scripts/instancegeneration/readrivigodata.jl")
 include("scripts/instancegeneration/shortestpath.jl")
 include("scripts/instancegeneration/constraintmatrix.jl")
+include("scripts/instancegeneration/completeinstance.jl")
+include("scripts/instancegeneration/initializearcsets.jl")
+include("scripts/multiarcgeneration/initializeorderarcsets.jl")
 include("scripts/journeybasedmodel/initializejourneymodel.jl")
 include("scripts/metrics/writeresultsforrun.jl")
 
@@ -164,19 +167,17 @@ Origin, Destination = formatorders(numorders, originloc, destloc, available, due
 N_flow_i = flowbalancenodesets_i(orders, numnodes, Origin, Destination)
 
 #Derive additional sets needed for various algorithms
-include("scripts/instancegeneration/completeinstance.jl")
-orderOriginalStartTime, orderintransit_flag = findorderstartsandtransits()
-loctruckcounter, trucksintransit = findtrucksintransit()
+orderOriginalStartTime, orderintransit_flag = findorderstartsandtransits(orders, Origin)
+loctruckcounter, trucksintransit = findtrucksintransit(ordersinprogress, originloc, available)
 m_0 = adjust_m_0(m_0, loctruckcounter)
 driversintransit, drivers, driverStartNodes, driverEndNodes, driverHomeLocs, assignedDrivers, N_flow_t, N_flow_d, alltimeswithinview, T_off_Monday8am, T_off, drivershift, T_off_0, T_off_constr, numshifts, T_on_0 = getdriverandshiftinfo()
-distbetweenlocs, shortesttriptimes, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr = findtraveltimesanddistances()
-nodesLookup, arcLookup, A_minus, A_plus, c, Destination, extendednodes, extendednumnodes, extendedarcs, extendednumarcs = extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c, Destination)
+distbetweenlocs, shortesttriptimes, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr = findtraveltimesanddistances(orders, Origin, Destination)
+nodesLookup, arcLookup, A_minus, A_plus, c, extendednodes, extendednumnodes, extendedarcs, extendednumarcs = extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c)
+Destination = extendDestination(orders, Destination, extendednodes)
 arcLookup, nodesLookup, arcfinishtime, dummyarc, allarcs = calcarcfinishtimes()
 
 #----------------------------------CREATE ARC SETS-----------------------------------# 
 
-include("scripts/instancegeneration/initializearcsets.jl")
-include("scripts/multiarcgeneration/initializeorderarcsets.jl")
 primaryarcs, extendedtimearcs, orderarcs, driverarcs, hasdriverarcs = initializearcsets(A_space, A_plus, A_minus)
 R_off = findreturnhomearcsets(driverarcs)
 magarcs = initializeorderarcsets(k)
