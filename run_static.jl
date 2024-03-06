@@ -33,7 +33,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 
 #Read experiment parameters from file
 experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/table3.csv"
+paramsfilename = "data/table2.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
 ex = expparms[experiment_id, 2]		
@@ -109,7 +109,7 @@ runid = string("ex", ex, "_exp", experiment_id, "_", solutionmethod, "_rundate",
 
 #File names					
 vizfoldername = string("visualizations/static/run ", runid)
-csvfoldername = string("outputs/table3/")
+csvfoldername = string("outputs/table2/")
 resultsfilename = string(csvfoldername, runid, "_output.csv")
 convergencedatafilename = string(csvfoldername, "convergence_exp", runid, ".csv")
 
