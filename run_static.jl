@@ -32,7 +32,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters from file
-experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+experiment_id = 258 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 paramsfilename = "data/table2.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
@@ -47,6 +47,10 @@ lambda = expparms[experiment_id, 10]
 maxweeklydriverhours = expparms[experiment_id, 11]
 lambda2 = expparms[experiment_id, 12]
 println("Experiment = ", experiment_id)
+
+#Manual parameters for response/appendix experiments
+deadlines_flag = 1
+deadlineasmultipleofshortestpath = 2  #1 - deadline is shortest path time, 2 - deadline is twice shortest path time, etc.
 
 #Read algorithm control parameters from file
 solutionmethod = expparms[experiment_id, 3]		
@@ -135,6 +139,9 @@ include("scripts/knapsackcuts/findknapsackcuts.jl")
 include("scripts/knapsackcuts/solvelpwithcuts.jl")
 include("scripts/knapsackcuts/solveipwithcuts.jl")
 
+#Import extensions
+include("scripts/extensions/calcorderdeadlines.jl")
+
 #Import miscellaneous functions
 if vizflag == 1
 	include("scripts/visualizations/timespacenetwork.jl")
@@ -172,6 +179,7 @@ loctruckcounter, trucksintransit = findtrucksintransit(ordersinprogress, originl
 m_0 = adjust_m_0(m_0, loctruckcounter)
 driversintransit, drivers, driverStartNodes, driverEndNodes, driverHomeLocs, assignedDrivers, N_flow_t, N_flow_d, alltimeswithinview, T_off_Monday8am, T_off, drivershift, T_off_0, T_off_constr, numshifts, T_on_0 = getdriverandshiftinfo()
 distbetweenlocs, shortesttriptimes, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr = findtraveltimesanddistances(orders, Origin, Destination)
+orderdeadline = calcorderdeadlines(shortesttriptimes)
 nodesLookup, arcLookup, A_minus, A_plus, c, extendednodes, extendednumnodes, extendedarcs, extendednumarcs = extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c)
 Destination = extendDestination(orders, Destination, extendednodes)
 arcLookup, nodesLookup, arcfinishtime, dummyarc, allarcs = calcarcfinishtimes()
@@ -323,7 +331,10 @@ elseif solutionmethod == "basisip"
 	timeslist2 = (mp=0, pp=0, pppar=0, ip=bip_time, cut=0)
 	writeresultsforrun(resultsfilename, 1, "IP", bip_obj, timeslist2, sum(length(lpbasisarcs.A[i]) for i in orders), x_bip, z_bip)
 	
+	println("IP-LP gap = ", round(100*(bip_obj-lp_obj)/lp_obj, digits=2), "%")
+
 	#=
+	
 	include("scripts/visualizations/timespacenetwork.jl")
 	for i in orders
 		arclistlist = [lpbasisarcs.A[i], [a for a in lpbasisarcs.A[i] if value(x_bip[i,a]) > 1e-4]]

@@ -13,11 +13,16 @@ function solvelpwithcuts(opt_gap, orderarcs, cuttype)
     @variable(lp, w[a in primaryarcs.A_space] >= 0)
 	@variable(lp, ordtime[orders])
 	@variable(lp, maxhours)
+	@variable(lp, orderdelay[orders] >= 0)    #only used when deadlines turned on
 
 	#Objective
-	@objective(lp, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) 
-		+ sum(sum(c[a]*x[i,a] for a in orderarcs.A[i]) for i in orders) + sum(c[a]*(y[a]) for a in hasdriverarcs.A) + sum(u[a]*(w[a]) for a in primaryarcs.A_space) 
-		+ lambda2 * maxhours)
+	#Objective
+	if deadlines_flag == 0
+		@objective(lp, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) + sum(sum(c[a]*x[i,a] for a in orderarcs.A[i]) for i in orders) + sum(c[a]*(y[a]) for a in hasdriverarcs.A) + sum(u[a]*(w[a]) for a in primaryarcs.A_space)  + lambda2 * maxhours)
+    elseif deadlines_flag == 1
+		@objective(lp, Min, lambda * sum(orderdelay[i] for i in orders) + sum(sum(c[a]*x[i,a] for a in orderarcs.A[i]) for i in orders) + sum(c[a]*(y[a]) for a in hasdriverarcs.A) + sum(u[a]*(w[a]) for a in primaryarcs.A_space)  + lambda2 * maxhours)
+		@constraint(lp, absolutedelay[i in orders], orderdelay[i] >= ordtime[i] - orderdeadline[i])
+    end
 
 	#Order constraints
 	@constraint(lp, orderFlowBalance[i = orders, n in setdiff([n2 for n2 in 1:numnodes], union(Origin[i], Destination[i]))], sum(x[i,a] for a in orderarcs.A_minus[i,n]) - sum(x[i,a] for a in orderarcs.A_plus[i,n]) == 0)
@@ -64,6 +69,7 @@ function solvelpwithcuts(opt_gap, orderarcs, cuttype)
     mastercuts = (vars=Dict(), rhs=Dict(), coeff=Dict())
     cutiter = 1
     originallpopt = 0
+	starttime = time()
 
     #Iteratively add cuts until convergence
     while 1==1
@@ -75,7 +81,7 @@ function solvelpwithcuts(opt_gap, orderarcs, cuttype)
         if cutiter == 1
             originallpopt += objective_value(lp)
         end
-        println("Objective = ", objective_value(lp))
+		println("Objective = ", objective_value(lp))
 
         #Find knapsack cuts
         cuts = findknapsackcuts(z, cuttype)
@@ -104,16 +110,17 @@ function solvelpwithcuts(opt_gap, orderarcs, cuttype)
         
     end
 
+	totalsolvetime = time() - starttime
 	lp_obj = objective_value(lp)
     println("LP objective = ", originallpopt)
 	println("LP w/ cuts objective = ", lp_obj)
     println("Increased bound by ", round(100*(lp_obj - originallpopt)/originallpopt, digits=3), "%")
-	println("Time = ", solve_time(lp))
+	println("Time = ", totalsolvetime)
 
     #Find the LP basis arcs
 	orderArcSet_basis, orderArcSet_space_basis, A_plus_i_basis, A_minus_i_basis = getnonzeroarcs(value.(x), orderarcs)
 	basisarcs = (A=orderArcSet_basis, A_space=orderArcSet_space_basis, A_minus=A_minus_i_basis, A_plus=A_plus_i_basis, available=[], closelocs=[]);
 
-    return lp_obj, value.(x), value.(z), solve_time(lp), objective_bound(lp), mastercuts, basisarcs
+    return lp_obj, value.(x), value.(z), totalsolvetime, objective_bound(lp), mastercuts, basisarcs
 
 end
