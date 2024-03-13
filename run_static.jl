@@ -51,6 +51,7 @@ println("Experiment = ", experiment_id)
 #Manual parameters for response/appendix experiments
 deadlines_flag = 0
 deadlineasmultipleofshortestpath = 2  #1 - deadline is shortest path time, 2 - deadline is twice shortest path time, etc.
+roundeddrivinghours_flag = 0
 
 #Read algorithm control parameters from file
 solutionmethod = expparms[experiment_id, 3]		
@@ -335,7 +336,6 @@ elseif solutionmethod == "basisip"
 	println("IP-LP gap = ", round(100*(bip_obj-lp_obj)/lp_obj, digits=2), "%")
 
 	#=
-	
 	include("scripts/visualizations/timespacenetwork.jl")
 	for i in orders
 		arclistlist = [lpbasisarcs.A[i], [a for a in lpbasisarcs.A[i] if value(x_bip[i,a]) > 1e-4]]

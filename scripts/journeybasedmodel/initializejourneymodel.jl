@@ -202,7 +202,12 @@ function initializejourneymodel(maxnightsaway, T_off, T_on_0)
 
 							for a in fragarcs
 								l1,t1 = nodesLookup[arcLookup[a][1]]
-								l2,t2 = nodesLookup[arcLookup[a][2]]
+								l2 = nodesLookup[arcLookup[a][2]][1]
+								if (roundeddrivinghours_flag == 1) || (l1 == l2)
+									t2 = nodesLookup[arcLookup[a][2]][2]
+								elseif roundeddrivinghours_flag == 0
+									t2 = t1+arcLength_raw[l1,l2]
+								end
 								if !(t1 in T_off[s]) & (l1 != l2)
 									fragdrivinghours[l,s,fragindex] += t2-t1
 									fragworkinghours[l,s,fragindex] += t2-t1
