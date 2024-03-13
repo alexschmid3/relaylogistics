@@ -32,7 +32,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters from file
-experiment_id = 258 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 paramsfilename = "data/table2.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
@@ -49,7 +49,7 @@ lambda2 = expparms[experiment_id, 12]
 println("Experiment = ", experiment_id)
 
 #Manual parameters for response/appendix experiments
-deadlines_flag = 1
+deadlines_flag = 0
 deadlineasmultipleofshortestpath = 2  #1 - deadline is shortest path time, 2 - deadline is twice shortest path time, etc.
 
 #Read algorithm control parameters from file
@@ -63,7 +63,7 @@ strengthenedreducedcost_flag = expparms[experiment_id, 14]
 columnmemorylength = expparms[experiment_id, 16] #Forget unused columns after this many iterations
 postmagcolumndeletioniterationpercent = expparms[experiment_id, 19] 
 postmagcolumndeletionthreshold = expparms[experiment_id, 20] 
-knapsackcuttype = 6 #expparms[experiment_id, 21] 
+knapsackcuttype = expparms[experiment_id, 21] 
 symmetrybreaking_flag = expparms[experiment_id, 22] 
 if knapsackcuttype > 0
 	knapsackcuts_flag = 1
@@ -81,6 +81,7 @@ maxdrivers = round(driverlist[ex] / driverfactor, digits = 0)
 numtrucks = round(trucklist[ex] / driverfactor, digits = 0)
 randomseedval = seedlist[ex]
 Random.seed!(randomseedval)
+
 
 #Problem/optimization parameters (all hard coded values we decided on at the beginning)
 shiftlength = 12									# Length of each driver shift in hours
