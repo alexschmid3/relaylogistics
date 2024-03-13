@@ -16,7 +16,6 @@ function solvelpwithcuts(opt_gap, orderarcs, cuttype)
 	@variable(lp, orderdelay[orders] >= 0)    #only used when deadlines turned on
 
 	#Objective
-	#Objective
 	if deadlines_flag == 0
 		@objective(lp, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) + sum(sum(c[a]*x[i,a] for a in orderarcs.A[i]) for i in orders) + sum(c[a]*(y[a]) for a in hasdriverarcs.A) + sum(u[a]*(w[a]) for a in primaryarcs.A_space)  + lambda2 * maxhours)
     elseif deadlines_flag == 1
