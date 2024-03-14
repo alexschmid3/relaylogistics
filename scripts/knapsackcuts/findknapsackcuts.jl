@@ -185,9 +185,17 @@ function sequenceindependentlifting(ss, coeff, journeysubset, l, s)
 
     #Lift all coefficients at the same time
     for j2 in setdiff(workingfragments[l,s], journeysubset)
-        if liftcoeffforhours[fragworkinghours[l,s,j2]] > 1e-4
-            push!(ss, j2)
-            coeff[j2] = liftcoeffforhours[fragworkinghours[l,s,j2]]
+        if roundeddrivinghours_flag == 1
+            if liftcoeffforhours[fragworkinghours[l,s,j2]] > 1e-4
+                push!(ss, j2)
+                coeff[j2] = liftcoeffforhours[fragworkinghours[l,s,j2]]
+            end
+        elseif roundeddrivinghours_flag == 0
+            mycoeff = g(fragworkinghours[l,s,j2], r, μ, λ, ρ)
+            if mycoeff > 1e-4
+                push!(ss, j2)
+                coeff[j2] = mycoeff
+            end
         end
     end
 
@@ -305,7 +313,9 @@ end
 
 function findknapsackcuts(z, cuttype)
 
-    if cuttype == 1        #Find pairs of journeys that can be rounded for a cut
+    if cuttype == 0
+        numcuts, cutvars, cutrhs, cutcoeff = 0, (), (), ()
+    elseif cuttype == 1        #Find pairs of journeys that can be rounded for a cut
         numcuts, cutvars, cutrhs = findjourneypaircuts(z)
     elseif cuttype == 2    #Find journey triplets that can be rounded for a cut
         numcuts, cutvars, cutrhs = findjourneytripletcuts(z)
