@@ -103,6 +103,7 @@ function solvelpwithcuts(opt_gap, orderarcs, cuttype)
             cutindex += 1
         end
         println("Added ", cuts.numcuts, " cuts of type $cuttype") 
+		println("Cumulative time = ", time() - starttime, " seconds")
         
         #Iterate
         cutiter += 1

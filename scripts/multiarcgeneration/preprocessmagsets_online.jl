@@ -1,17 +1,16 @@
 
-
-function preprocesssubproblemsets(orderArcSet)
+function preprocesssubproblemsets(orderArcSet, currstate)
 
 	#Create copies of all important sets (so they can be modified for the shortest path problem)
 	nodesLookupSP = deepcopy(nodesLookup)
 	arcsSP, arcLookupSP = Dict(), Dict()
-	for i in orders
+	for i in currstate.orders
 		arcsSP[i], arcLookupSP[i] = deepcopy(arcs), deepcopy(arcLookup)
 	end
 
 	#Create arclists
 	arclistSP = Dict()
-	for i in orders
+	for i in currstate.orders
 		arclistSP[i] = deepcopy(setdiff(orderArcSet[i], dummyarc))
 	end
 
@@ -22,12 +21,12 @@ function preprocesssubproblemsets(orderArcSet)
 	nodesLookupSP[dummyorig], nodesLookupSP[dummydest] = (-1,-1), (-1,99999)
 
 	#Add dummy arcs
-	for i in orders
+	for i in currstate.orders
 		index = extendednumarcs + 2
 
 		#Add arcs from dummy origin to all origin nodes in pickup window
-		for j in 1:length(Origin[i])
-			n = Origin[i][j]
+		for j in 1:length(currstate.Origin[i])
+			n = currstate.Origin[i][j]
 			arcsSP[i][dummyorig, n] = index
 			arcLookupSP[i][index] = (dummyorig, n)
 			pushfirst!(arclistSP[i], index)
@@ -35,7 +34,7 @@ function preprocesssubproblemsets(orderArcSet)
 		end
 
 		#Add arcs from all destination nodes in delivery window to the dummy destination
-		for n in Destination[i]
+		for n in currstate.Destination[i]
 			arcsSP[i][n, dummydest] = index
 			arcLookupSP[i][index] = (n, dummydest) 
 			push!(arclistSP[i], index)
@@ -44,7 +43,7 @@ function preprocesssubproblemsets(orderArcSet)
 	end
 
 	#Remove arcs that are not feasible because they are longer than the driver shift
-	for i in orders, a in 1:numarcs
+	for i in currstate.orders, a in 1:numarcs
 		arctime = nodesLookup[arcLookup[a][2]][2] - nodesLookup[arcLookup[a][1]][2]
 		if arctime > shiftlength
 			remove!(arclistSP[i], a)
@@ -57,39 +56,39 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function alphatransformation()
+function alphatransformation(currstate)
 
     M_alpha = Dict()
-    for i in orders
+    for i in currstate.orders
         M_alpha[i] = spzeros(extendednumarcs, extendednumnodes)
-        for n in setdiff([n2 for n2 in 1:numnodes], union(Origin[i], Destination[i])), a in A_minus[n]
+        for n in setdiff([n2 for n2 in 1:numnodes], union(currstate.Origin[i], currstate.Destination[i])), a in A_minus[n]
             M_alpha[i][a,n] -= 1
         end
-        for n in setdiff([n2 for n2 in 1:numnodes], union(Origin[i], Destination[i])), a in A_plus[n]
+        for n in setdiff([n2 for n2 in 1:numnodes], union(currstate.Origin[i], currstate.Destination[i])), a in A_plus[n]
             M_alpha[i][a,n] += 1
         end
     end
 
     M_beta = Dict()
-    for i in orders
+    for i in currstate.orders
         M_beta[i] = spzeros(extendednumarcs)
-        for n in Origin[i], a in intersect(union(A_space, dummyarc), A_plus[n])
+        for n in currstate.Origin[i], a in intersect(union(A_space, dummyarc), A_plus[n])
             M_beta[i][a] -= 1
         end
-        if !(i in ordersinprogress)
-            a = extendedarcs[last(Origin[i]), last(Destination[i])]
+        if !(i in currstate.ordersinprogress)
+            a = extendedarcs[last(currstate.Origin[i]), last(currstate.Destination[i])]
             M_beta[i][a] -= 1
         else
-            for n in Origin[i], a in setdiff(A_plus[n], union(A_space, dummyarc))
+            for n in currstate.Origin[i], a in setdiff(A_plus[n], union(A_space, dummyarc))
                 M_beta[i][a] -= 1
             end
         end
     end
 
     M_gamma = Dict()
-    for i in orders
+    for i in currstate.orders
         M_gamma[i] = spzeros(extendednumarcs)
-        for n in Destination[i], a in A_minus[n]
+        for n in currstate.Destination[i], a in A_minus[n]
             if ((a == dummyarc) || (nodesLookup[arcLookup[a][1]][1] != nodesLookup[arcLookup[a][2]][1]))
                 M_gamma[i][a] -= 1
             end
@@ -117,9 +116,9 @@ function alphatransformation()
 	end
 
     M_psi = Dict() 
-    for i in orders
+    for i in currstate.orders
         M_psi[i] = spzeros(extendednumarcs)
-        for n in Destination[i], a in A_minus[n]
+        for n in currstate.Destination[i], a in A_minus[n]
 		    M_psi[i][a] += arcfinishtime[a]
         end
 	end
@@ -137,10 +136,10 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function preprocessmagsets(orderArcSet)
+function preprocessmagsets(orderArcSet, currstate)
 
-    M = alphatransformation()
-    numnodesSP, arclistSP, nodesLookupSP, arcLookupSP, dummyorig, dummydest = preprocesssubproblemsets(orderArcSet)
+    M = alphatransformation(currstate)
+    numnodesSP, arclistSP, nodesLookupSP, arcLookupSP, dummyorig, dummydest = preprocesssubproblemsets(orderArcSet, currstate)
     subproblemsets = (numnodes=numnodesSP, arclist=arclistSP, nodelookup=nodesLookupSP, arclookup=arcLookupSP, dummyorig=dummyorig, dummydest=dummydest)
 
     return M, subproblemsets

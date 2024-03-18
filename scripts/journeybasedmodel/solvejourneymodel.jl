@@ -166,6 +166,9 @@ function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts, cuts)
 	totalmiles = sum(sum(c[a]*value(x[i,a]) for a in orderarcs.A[i]) for i in orders) + sum(c[a]*(value(y[a])) for a in hasdriverarcs.A) + sum(u[a]*(value(w[a]) ) for a in primaryarcs.A_space) 
 	totaldelay = sum((value(ordtime[i]) - shortesttriptimes[i])/shortesttriptimes[i] for i in orders)
 
+	println("Miles = $totalmiles")
+	println("Delay = $totaldelay")
+
 	#Find the basis arcs
 	orderArcSet_basis, orderArcSet_space_basis, A_plus_i_basis, A_minus_i_basis = getnonzeroarcs(value.(x), orderarcs)
 	basisarcs = (A=orderArcSet_basis, A_space=orderArcSet_space_basis, A_minus=A_minus_i_basis, A_plus=A_plus_i_basis, available=[], closelocs=[]);

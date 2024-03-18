@@ -35,7 +35,6 @@ function getdualvalues(smpconstraints)
     psi = Array(dual.(smpconstraints.con_deliveryTime))
 
     return alpha, beta, gamma, theta, nu, mu, xi, psi
-    #end
 
 end
 

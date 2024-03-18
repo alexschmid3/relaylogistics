@@ -162,6 +162,11 @@ function g(z, r, μ, λ, ρ)
         end
     end
 
+    #Catch all for any journeys that are longer than the max hours
+    if z >= (maxnightsaway + 1) * shiftlength
+        return 0
+    end
+
 end
 
 #---------------------------------------------------------------------------------------#

@@ -34,7 +34,7 @@ end
 
 #---------------------------------------------------------------------------------------#
 
-function extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c)
+function extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c, distbetweenlocs)
 
 	#Add final legs for orders that are unfinished at the end of the horizon
 	extendednodes, extendednumnodes, extendedarcs, extendednumarcs = copy(nodes), copy(numnodes), copy(arcs), copy(numarcs)

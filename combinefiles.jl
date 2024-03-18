@@ -1,5 +1,5 @@
 
-figuredirectory = string("outputs/table3")
+figuredirectory = string("outputs/delete")
 
 #Get list of files
 filelist = readdir(figuredirectory)

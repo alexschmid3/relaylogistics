@@ -31,7 +31,6 @@ hubdataisbfilename = "data/hub_data_isb_connect.csv"
 vntdataisbfilename = "data/vnt_data_isb_connect_clean.csv"
 lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 
-
 #-----------------------------------ONLINE PARAMETERS-----------------------------------#  	
 
 becomesavailablehours = 24*3 	
@@ -46,9 +45,9 @@ maxorderdelayhours = onlinetimehorizon * 2
 
 #Read experiment parameters from file
 experiment_id = 1 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/table3.csv"
+paramsfilename = "data/onlineruns.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
-formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
+formulation = "homogeneous" #expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
 ex = 1 #expparms[experiment_id, 2]		
 weekstart = expparms[experiment_id, 4]
 horizon = expparms[experiment_id, 5] * 24
@@ -129,24 +128,8 @@ convergencedatafilename = string(csvfoldername, "convergence_exp", runid, ".csv"
 #---------------------------------IMPORT FINAL SCRIPTS----------------------------------# 
 
 #Import algorithm functions
-if formulation == "heterogeneous"
-	include("scripts/journeybasedmodel/solvejourneymodel.jl")
-	include("scripts/journeybasedmodel/solvejourneymodel_paths.jl")
-	include("scripts/multiarcgeneration/multiarcgeneration_heterogeneous.jl")
-	include("scripts/columngeneration/columngeneration.jl")
-	include("scripts/arcbasedmodel/solvearcbasedmodel_heterogeneous.jl")
-elseif formulation == "homogeneous"
-	include("scripts/journeybasedmodel/solvejourneymodel_homogeneous.jl")
-	include("scripts/multiarcgeneration/multiarcgeneration_homogeneous.jl")
-	include("scripts/columngeneration/columngeneration_homogeneous.jl")
-	include("scripts/journeybasedmodel/solvejourneymodel_paths_homogeneous.jl")
-	include("scripts/arcbasedmodel/solvearcbasedmodel_homogeneous.jl")
-end
-
-#Import cut functions
-include("scripts/knapsackcuts/findknapsackcuts.jl")
-include("scripts/knapsackcuts/solvelpwithcuts.jl")
-include("scripts/knapsackcuts/solveipwithcuts.jl")
+include("scripts/journeybasedmodel/solvejourneymodel_online.jl")
+include("scripts/multiarcgeneration/multiarcgeneration_online.jl")
 
 #Import miscellaneous functions
 if vizflag == 1
@@ -180,22 +163,28 @@ currarcs, currfragments, primaryarcs, extendedtimearcs, numeffshifts = initializ
 
 #---------------------------------------SOLVE----------------------------------------# 
 
-for currtime in 0:timedelta:timedelta*(numiterations_online-1)
+for currtime in 0:timedelta:0 #timedelta*(numiterations_online-1)
 
 	println("------------------------------------BEGIN ITERATION CURRTIME = $currtime------------------------------------")
-
-    nocuts=(vars=[], rhs=[], coeff=[])
-
+	#=
     #Solve current instance
     if (solutionmethod == "mag") || (solutionmethod == "sag")
-
-        variableusecount, startercuts, starterfixedvars = initmagsets(currarcs.magarcs)	
-        mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts, cuttime, arcsbeforecolmgmt, arcsbeforevarsetting = multiarcgeneration_heterogeneous!(currarcs.magarcs, currarcs.hasdriverarcs, startercuts, starterfixedvars, variableusecount, 0, 1)    
-        magip_obj, x_magip, z_magip, magip_time, magip_bound = solvejourneymodel(0, opt_gap, magarcs, numeffshifts, knapsackcuts)
-    
+        mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs = multiarcgeneration!(currstate, currfragments, currarcs)    
+        magip_obj, x_magip, z_magip, magip_time, magip_bound = solvejourneymodel(0, opt_gap, currstate, currarcs, currfragments, magarcs)
     end
 
-    #=
+	if (solutionmethod == "mvg") || (solutionmethod == "otdf") || (solutionmethod == "rrf")
+		
+		#Save most recently executed segments for visualization and reporting
+		driverarcstaken = updatepastsegments_fragment(timedelta, x_ip, y_ip, z_ip, w_ip, restrictedArcSet, driversets, driversingroup)
+		
+		#Update whether each driver was at home or away from home during their last off hours
+		updateawaylastnight_fragment(z_ip, driverarcstaken)
+		
+	end
+
+
+    
 	if (solutionmethod == "mvg") || (solutionmethod == "otdf") || (solutionmethod == "rrf")
 		#Save most recently executed segments for visualization and reporting
 		driverarcstaken = updatepastsegments_fragment(timedelta, x_ip, y_ip, z_ip, w_ip, restrictedArcSet, driversets, driversingroup)
@@ -331,3 +320,9 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
     =#
 
 end
+
+
+#---------------------------------------------------------------------------#
+
+println("Done!")
+

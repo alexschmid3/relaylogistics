@@ -2,7 +2,7 @@
 using Plots
 using Base.Iterators: partition
 
-include("preprocessmagsets.jl")
+include("preprocessmagsets_online.jl")
 
 #----------------------------------------------------------------------------------------#
 
@@ -163,30 +163,6 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-### TEST FOR SPEED (MAYBE SCALE UP INSTANCE?)
-
-function findarcvariablereducedcosts_varsetting(M, smpconstraints, setvariables)
-
-    alpha, beta, gamma, theta, nu, mu, xi, psi = getdualvalues(smpconstraints)
-    
-    arcredcosts = zeros(length(currstate.orders), extendednumarcs)
-    for i in currstate.orders
-        arcredcosts[i,:] += c[1:extendednumarcs] + M.alpha[i] * alpha[i,:] + M.beta[i] * beta[i] + M.gamma[i] * gamma[i] + M.psi[i] * psi[i]
-        arcredcosts[i,:] += M.theta * theta + M.nu * nu + M.mu * mu + M.xi * xi
-    end
-
-	if varsettingtype == "x"
-		for (i,a) in setvariables
-        	arcredcosts[i,a] = 0.0 
-		end
-    end
-
-	return arcredcosts
-
-end
-
-#----------------------------------------------------------------------------------------#
-
 function sagsubproblem(i, arcredcosts)
 
     spstarttime = time()
@@ -319,100 +295,7 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function setvarsformag(setvariables, x, z, magarcs)
-
-	if varsettingtype == "x"
-		varssetfor = [[] for i in currstate.orders]
-		varssetcount = 0
-		for i in currstate.orders, a in magarcs.A[i]
-			if variablefixingthreshold[1] + 1e-4 < value(x[i,a]) < variablefixingthreshold[2] - 1e-4 
-				push!(setvariables, (i,a))
-				push!(varssetfor[i], a)
-				varssetcount += 1
-			end
-		end
-		
-	elseif varsettingtype == "z"
-		varssetfor = [[] for d in drivers]
-		varssetcount = 0
-		for d in drivers, f in 1:numfragments[driverHomeLocs[d], drivershift[d]]
-			if variablefixingthreshold[1] + 1e-4 < value(z[d,f]) < variablefixingthreshold[2] - 1e-4 
-				push!(setvariables, (d,f))
-				push!(varssetfor[d], f)
-				varssetcount += 1
-			end
-		end
-		
-	end
-
-	return setvariables, varssetfor, varssetcount
-
-end
-
-#----------------------------------------------------------------------------------------#
-
-function fractionalhistogram(x, z, magarcs, filenamex, filenamez)
-
-	vals = []
-	for i in currstate.orders, a in magarcs.A[i] 
-		if value(x[i,a]) > 1e-4
-			push!(vals, value(x[i,a]))
-		end
-	end
-	hist = histogram(vals, bins = 0:0.05:1.1)
-	savefig(hist, filenamex)
-
-	vals = []
-	for d in drivers, f in 1:numfragments[driverHomeLocs[d], drivershift[d]]
-		if value(z[d,f]) > 1e-4
-			push!(vals, value(z[d,f]))
-		end
-	end
-	hist = histogram(vals, bins = 0:0.05:1.1)
-	savefig(hist, filenamez)
-
-end
-
-#----------------------------------------------------------------------------------------#
-
-function initmagsets(magarcs)
-    
-    variableusecount = Dict()
-	for i in currstate.orders, a in magarcs.A[i]
-		variableusecount[i,a] = 0
-	end
-    startercuts = (vars=Dict(), rhs=Dict(), coeff=Dict())
-	starterfixedvars = (varsettingiter=[], allvars=[], d=[], f=[], value=[])
-
-    return variableusecount, startercuts, starterfixedvars
-end
-
-#----------------------------------------------------------------------------------------#
-
-function combineorderarcsets(arcset, newarcsset)
-    
-    for i in currstate.orders
-        newarcs = setdiff(newarcsset.A[i], arcset.A[i])
-        for a in newarcs
-            push!(arcset.A[i], a)
-            n1,n2 = arcLookup[a]
-            l1,t1 = nodesLookup[n1]
-            l2,t2 = nodesLookup[n2]
-            if !(l1 == l2)
-                push!(arcset.A_space[i], a)
-            end
-            push!(arcset.A_plus[i,n1], a)
-            push!(arcset.A_minus[i,n2], a)
-        end
-    end
-
-    return arcset
-
-end
-
-#----------------------------------------------------------------------------------------#
-
-function multiarcgeneration_heterogeneous!(currstate, currfragments, currarcs, startercuts, starterfixedvars, variableusecount, currvarfixingiter, cg_iter_start)
+function multiarcgeneration!(currstate, currfragments, currarcs)
 
     smp = Model(Gurobi.Optimizer)
 	set_optimizer_attribute(smp, "TimeLimit", 60*60)
@@ -421,48 +304,47 @@ function multiarcgeneration_heterogeneous!(currstate, currfragments, currarcs, s
 
 	#Variables
 	x = Dict()
-	for i in currstate.orders, a in magarcs.A[i]
+	for i in currstate.orders, a in currarcs.magarcs.A[i]
 	    global x[i,a] = @variable(smp, lower_bound = 0) #, upper_bound = 1) <-- UB implied by order origin/dest con & messes up reduced cost sign
 	    set_name(x[i,a], string("x[",i,",",a,"]")) 
 	end
 	@variable(smp, y[currarcs.hasdriverarcs.A] >= 0)
-    @variable(smp, 0 <= z[d = drivers, f = 1:numfragments[driverHomeLocs[d], drivershift[d]]] <= 1)
+    @variable(smp, 0 <= z[d = drivers, f = 1:currfragments.numfragments[driverHomeLocs[d], drivershift[d]]] <= 1)
 	@variable(smp, w[a in primaryarcs.A_space] >= 0)
 	@variable(smp, ordtime[currstate.orders])
-    @variable(smp, maxhours)
 
 	#Objective
-	@objective(smp, Min, lambda * sum((ordtime[i] - currstate.shortesttriptimes[i])/currstate.shortesttriptimes[i] for i in currstate.orders) + sum(sum(c[a]*x[i,a] for a in magarcs.A[i]) for i in currstate.orders) + sum(c[a]*y[a] for a in currarcs.hasdriverarcs.A) + sum(u[a]*w[a] for a in primaryarcs.A_space) + lambda2 * maxhours)
+	@objective(smp, Min, lambda * sum((ordtime[i] - currstate.shortesttriptimes[i])/currstate.shortesttriptimes[i] for i in currstate.orders) + sum(sum(c[a]*x[i,a] for a in currarcs.magarcs.A[i]) for i in currstate.orders) + sum(c[a]*y[a] for a in currarcs.hasdriverarcs.A) + sum(u[a]*w[a] for a in primaryarcs.A_space))
 		
 	#Order constraints
-	@constraint(smp, orderFlowBalance[i = currstate.orders, n in setdiff([n2 for n2 in 1:numnodes], union(currstate.Origin[i], currstate.Destination[i]))], sum(x[i,a] for a in magarcs.A_minus[i,n]) - sum(x[i,a] for a in magarcs.A_plus[i,n]) == 0)
-	@constraint(smp, arriveDestin[i = currstate.orders], sum(sum(x[i,a] for a in magarcs.A_minus[i,n] if ((a == dummyarc) || (nodesLookup[arcLookup[a][1]][1] != nodesLookup[arcLookup[a][2]][1]))) for n in currstate.Destination[i]) == 1)
-	@constraint(smp, departOrigin[i = currstate.orders], sum(sum(x[i,a] for a in intersect(union(primaryarcs.A_space, dummyarc), magarcs.A_plus[i,n])) for n in currstate.Origin[i]) == 1)
+	@constraint(smp, orderFlowBalance[i = currstate.orders, n in setdiff([n2 for n2 in 1:numnodes], union(currstate.Origin[i], currstate.Destination[i]))], sum(x[i,a] for a in currarcs.magarcs.A_minus[i,n]) - sum(x[i,a] for a in currarcs.magarcs.A_plus[i,n]) == 0)
+	@constraint(smp, arriveDestin[i = currstate.orders], sum(sum(x[i,a] for a in currarcs.magarcs.A_minus[i,n] if ((a == dummyarc) || (nodesLookup[arcLookup[a][1]][1] != nodesLookup[arcLookup[a][2]][1]))) for n in currstate.Destination[i]) == 1)
+	@constraint(smp, departOrigin[i = currstate.orders], sum(sum(x[i,a] for a in intersect(union(primaryarcs.A_space, dummyarc), currarcs.magarcs.A_plus[i,n])) for n in currstate.Origin[i]) == 1)
 	for i in setdiff(currstate.orders, currstate.ordersinprogress)
 		extendedorderarc = extendedarcs[last(currstate.Origin[i]), last(currstate.Destination[i])]
-		if extendedorderarc in magarcs.A[i]
+		if extendedorderarc in currarcs.magarcs.A[i]
 			set_normalized_coefficient(departOrigin[i], x[i,extendedorderarc], 1)
 		end
 	end
 	
 	#Add in "stay where you are" arc for each in transit order - MAINLY NEEDED FOR ONLINE IMPLEMENTATION
 	for i in intersect(currstate.orders, currstate.ordersinprogress), n in currstate.Origin[i], a in setdiff(primaryarcs.A_plus[n], union(primaryarcs.A_space, dummyarc))
-		if a in magarcs.A[i]
+		if a in currarcs.magarcs.A[i]
 			set_normalized_coefficient(departOrigin[i], x[i,a], 1)
 		end
 	end
 
 	#Order delivery constraints
-	@constraint(smp, deliveryTime[i in currstate.orders], ordtime[i] - sum(sum(arcfinishtime[a] * x[i,a] for a in magarcs.A_minus[i,n]) for n in currstate.Destination[i]) == - orderOriginalStartTime[i])
+	@constraint(smp, deliveryTime[i in currstate.orders], ordtime[i] - sum(sum(arcfinishtime[a] * x[i,a] for a in currarcs.magarcs.A_minus[i,n]) for n in currstate.Destination[i]) == - orderOriginalStartTime[i])
 
 	#Truck constraints
-	@constraint(smp, initialTrucks[n in N_0], sum(sum(x[i,a] for a in setdiff(magarcs.A_plus[i,n], dummyarc)) for i in currstate.orders) + sum(y[a] for a in currarcs.hasdriverarcs.A_plus[n]) == currstate.m_0[n])
-	@constraint(smp, finalTrucks[n in N_end], sum(sum(x[i,a] for a in setdiff(magarcs.A_minus[i,n], dummyarc)) for i in currstate.orders) + sum(y[a] for a in currarcs.hasdriverarcs.A_minus[n]) >= currstate.m_end[n])
-	@constraint(smp, truckFlowBalance[n in N_flow_t], sum(sum(x[i,a] for a in setdiff(magarcs.A_minus[i,n], dummyarc)) for i in currstate.orders) + sum(y[a] for a in currarcs.hasdriverarcs.A_minus[n])- sum(sum(x[i,a] for a in setdiff(magarcs.A_plus[i,n],dummyarc)) for i in currstate.orders) - sum(y[a] for a in currarcs.hasdriverarcs.A_plus[n]) == 0)
+	@constraint(smp, initialTrucks[n in N_0], sum(sum(x[i,a] for a in setdiff(currarcs.magarcs.A_plus[i,n], dummyarc)) for i in currstate.orders) + sum(y[a] for a in currarcs.hasdriverarcs.A_plus[n]) == currstate.m_0[n])
+	@constraint(smp, finalTrucks[n in N_end], sum(sum(x[i,a] for a in setdiff(currarcs.magarcs.A_minus[i,n], dummyarc)) for i in currstate.orders) + sum(y[a] for a in currarcs.hasdriverarcs.A_minus[n]) >= currstate.m_end[n])
+	@constraint(smp, truckFlowBalance[n in N_flow_t], sum(sum(x[i,a] for a in setdiff(currarcs.magarcs.A_minus[i,n], dummyarc)) for i in currstate.orders) + sum(y[a] for a in currarcs.hasdriverarcs.A_minus[n])- sum(sum(x[i,a] for a in setdiff(currarcs.magarcs.A_plus[i,n],dummyarc)) for i in currstate.orders) - sum(y[a] for a in currarcs.hasdriverarcs.A_plus[n]) == 0)
 
 	#Linking constraints
-	@constraint(smp, driverAvailability[a in primaryarcs.A_space], sum(sum(z[d,f] for f in fragmentscontaining[driverHomeLocs[d], drivershift[d],a]) for d in drivers) == w[a]  )
-	for i in currstate.orders, a in magarcs.A_space[i]
+	@constraint(smp, driverAvailability[a in primaryarcs.A_space], sum(sum(z[d,f] for f in currfragments.fragmentscontaining[driverHomeLocs[d], drivershift[d],a]) for d in drivers) == w[a]  )
+	for i in currstate.orders, a in currarcs.magarcs.A_space[i]
 		set_normalized_coefficient(driverAvailability[a], x[i,a], -1)
 	end
 	for a in currarcs.hasdriverarcs.A_space
@@ -470,25 +352,8 @@ function multiarcgeneration_heterogeneous!(currstate, currfragments, currarcs, s
 	end
 
 	#Driver constraints
-    @constraint(smp, driverStartingLocs[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(sum(z[d,f] for f in F_plus_ls[l,s,n]) for n in driverSetStartNodes[l,s]) == 1)
-	@constraint(smp, driverFlowBalance[d in drivers, l = driverHomeLocs[d], s = drivershift[d], n in N_flow_ls[l,s]], sum(z[d,f] for f in F_minus_ls[l,s,n]) - sum(z[d,f] for f in F_plus_ls[l,s,n]) == 0)
-	@constraint(smp, driverMaxHours[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(fragworkinghours[l,s,f] * z[d,f] for f in 1:numfragments[l,s]) <= maxhours)
-	@constraint(smp, maxhours <= maxweeklydriverhours)
-
-    if symmetrybreaking_flag == 1
-		for l in 1:numlocs, s in 1:numeffshifts
-			for j in 1:length(driversets[l,s])-1
-				d1, d2 = driversets[l,s][j], driversets[l,s][j+1]
-				@constraint(ip, sum(z[d1,f] for f in setdiff(1:numfragments[l,s], workingfragments[l,s])) <= sum(z[d2,f] for f in setdiff(1:numfragments[l,s], workingfragments[l,s])) )
-			end
-		end
-	end
-
-    #Add any existing cuts
-    @constraint(smp, [i in 1:length(startercuts.vars)], sum(startercuts.coeff[i][d,j] * z[d,j] for (d,j) in startercuts.vars[i]) <= startercuts.rhs[i])
-
-    #Fix any existing variables     
-    @constraint(smp, [i in starterfixedvars.allvars], z[starterfixedvars.d[i], starterfixedvars.f[i]] == starterfixedvars.value[i])
+    @constraint(smp, driverStartingLocs[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(sum(z[d,f] for f in currfragments.F_plus_ls[l,s,n]) for n in currfragments.driverSetStartNodes[l,s]) == 1)
+	@constraint(smp, driverFlowBalance[d in drivers, l = driverHomeLocs[d], s = drivershift[d], n in currfragments.N_flow_ls[l,s]], sum(z[d,f] for f in currfragments.F_minus_ls[l,s,n]) - sum(z[d,f] for f in currfragments.F_plus_ls[l,s,n]) == 0)
 
 	#Return named tuple of constraints needed for column generation
 	smpconstraints = (con_orderFlowBalance = orderFlowBalance,
@@ -504,36 +369,26 @@ function multiarcgeneration_heterogeneous!(currstate, currfragments, currarcs, s
 	#------------------------------------------------------#
 
 	#Initialize column generation 
-	cg_iter = cg_iter_start
+	cg_iter = 1
 	smpobjectives, smptimes, pptimes, pptimes_par, lowerbounds = [], [], [], [], []
 	listlength = convert(Int64, ceil(length(currstate.orders)/4))
 	shuffle_partition(N; chunk_size=listlength) = (collect ∘ partition)(shuffle(1:N), chunk_size)
-
-	#Master list of knapsack cuts 
-	mastercuts = startercuts #(vars=[], coeff=[], rhs=[])
 
 	#------------------------------------------------------#
 
 	#Pre-processing
 	println("Starting...")
-    M, subproblemsets = preprocessmagsets(currarcs.orderarcs.A);
+    M, subproblemsets = preprocessmagsets(currarcs.orderarcs.A, currstate);
 	println("Length of subproblemsets.nodelookup = ", length(subproblemsets.nodelookup))
 
 	#------------------------------------------------------#
 
-    setvariables = []
     variableselected = Dict()
     for i in currstate.orders
         variableselected[i] = []
     end
 	columnmemory, allremovedarcs = Dict(), []
-	addcutsthisiter_flag = 0
-	cuttime = 0
     bestlowerbound = 0
-	arcsbeforevarsetting = (A=Dict(), A_space=Dict())
-	for i in currstate.orders
-		arcsbeforevarsetting.A[i] = []
-	end
 
     #------------------------------------------------------#
 
@@ -548,15 +403,6 @@ function multiarcgeneration_heterogeneous!(currstate, currfragments, currarcs, s
 			return 100000000, smp, x, y, z, w, currarcs.magarcs, 0, 0, 0, 0, 0, (vars=Dict(), rhs=Dict(), coeff=Dict()), 0
 		end
 		smpobj, smptime = objective_value(smp), solve_time(smp)
-    
-        #Update chosen variables
-        for i in currstate.orders, a in currarcs.magarcs.A[i]
-            if value(x[i,a]) > 1e-4
-                push!(variableselected[i], a)
-				variableusecount[i,a] += max(1,cg_iter/20) #More weight to later iterations
-            end
-        end
-		
 		push!(smpobjectives, copy(smpobj))
 		push!(smptimes, copy(smptime))	
 		println("Solved SMP with objective = ", smpobj, " in iteration $cg_iter (", sum(length(currarcs.magarcs.A[i]) for i in currstate.orders), " arcs)")
@@ -564,11 +410,7 @@ function multiarcgeneration_heterogeneous!(currstate, currfragments, currarcs, s
         #------------SUBPROBLEMS------------#
 
 		#Calculate reduced costs
-        if setvariables == []
-            arcredcosts = findarcvariablereducedcosts(M, smpconstraints)
-        else
-            arcredcosts = findarcvariablereducedcosts_varsetting(M, smpconstraints, setvariables)
-        end
+        arcredcosts = findarcvariablereducedcosts(M, smpconstraints)
 		if strengthenedreducedcost_flag == 1
 			arcredcosts = strengthenreducedcosts(arcredcosts, z)
 		end
@@ -606,35 +448,6 @@ function multiarcgeneration_heterogeneous!(currstate, currfragments, currarcs, s
 			push!(lowerbounds, smpobj)
 		end
 
-		#------COUNT ARCS AND PATHS-----#
-
-		if saveconvergencedata_flag >= 0
-			totalorderarcs = sum(length(currarcs.magarcs.A[i]) for i in currstate.orders)
-			totalorderpaths = sum([findallpaths(currarcs.magarcs.A_plus, i) for i in currstate.orders])
-			maximprove = minimum(minreducedcosts) * sum(sum(value(x[i,a]) for a in currarcs.magarcs.A[i]) for i in currstate.orders)
-			write_cg_conv(convergencedatafilename, cg_iter, maximprove, totalorderarcs, totalorderpaths, smpobj)
-		end
-
-		#-----------ADD CUTS-----------#
-	
-		if addcutsthisiter_flag == 1
-			cutstarttime = time()
-			cuts = findknapsackcuts(z, knapsackcuttype)
-			@constraint(smp, [i in 1:cuts.numcuts], sum(cuts.coeff[i][d,j] * z[d,j] for (d,j) in cuts.vars[i]) <= cuts.rhs[i])
-			cutindex = length(mastercuts.rhs)+1
-			for i in 1:cuts.numcuts
-				mastercuts.vars[cutindex] = cuts.vars[i]
-				mastercuts.coeff[cutindex] = cuts.coeff[i]
-				mastercuts.rhs[cutindex] = cuts.rhs[i]
-				cutindex += 1
-			end
-			cutsaddedthisiter = cuts.numcuts
-			cuttime += time() - cutstarttime
-			println("Added ", cuts.numcuts, " cuts")
-		else 
-			cutsaddedthisiter = -1 * knapsackcuts_flag
-		end
-
 		#-------ADD NEW VARIABLES-------#
 
 		#Add new arcs to order arc sets
@@ -648,15 +461,12 @@ function multiarcgeneration_heterogeneous!(currstate, currfragments, currarcs, s
 		#Add new arcs to model as x-variables
 		for (i,a) in newarcs
 
-			push!(columnmemory[i,cg_iter], a)
-			variableusecount[i,a] = currvarfixingiter*100 #Never remove arcs added via variable fixing
-
 			#Create a new variable for the arc
 			global x[i,a] = @variable(smp, lower_bound = 0) #, upper_bound = 1)
 			set_name(x[i,a], string("x[",i,",",a,"]")) 
 
 			#Add to the objective
-			set_objective_function(smp, objective_function(smp) + c[a]*x[i,a])
+			set_objective_coefficient(smp, x[i,a], c[a])
 
 			#Find the entering and exiting nodes for arc a (ex. n_plus is the node for which a belongs to A_plus[n])
 			n_plus = arcLookup[a][1]
@@ -712,81 +522,9 @@ function multiarcgeneration_heterogeneous!(currstate, currfragments, currarcs, s
 
 		#----------TERMINATION----------#
 
-        if (currvarfixingiter == 0) & (minimum(minreducedcosts) >= -0.0001) & (cutsaddedthisiter == 0)
-            bestlowerbound += smpobj
-        end
-
-		if (minimum(minreducedcosts) >= -0.0001) & (cutsaddedthisiter == -1) 
-			addcutsthisiter_flag += 1
-		elseif (minimum(minreducedcosts) >= -0.0001) & (currvarfixingiter < varsettingiterations) & (cutsaddedthisiter == 0)
-			println("NO NEGATIVE REDUCED COSTS FOUND!")	
-            println("PROCEEDING TO VARIABLE SETTING...")
-
-			if currvarfixingiter == 0
-				for i in currstate.orders, a in currarcs.magarcs.A[i]
-					push!(arcsbeforevarsetting.A[i], a)
-				end 
-			end
-			
-			#fractionalhistogram(x, z, currarcs.magarcs, string("outputs/activevars_x_", currvarfixingiter,".png"), string("outputs/activevars_z_", currvarfixingiter,".png"))
-           
-            #Select the variables to fix based on pre-defined thresholds
-            setvariables, varssetfor, varssetcount = setvarsformag(setvariables, x, z, currarcs.magarcs)
-            
-            #If no variables are within the thresholds, then this round of MAG is complete 
-            if (variablefixingthreshold[2] == 1.0) || (varssetcount == 0)
-                println("NO VARIABLES TO SET")
-                break
-            end
-
-            #Kick-off two new MAG nodes, one setting the fixed vars to 1 and the other to 0
-            for fixedvalue in [1,0]
-
-                #Format the fixed variable info to pass along to the new node
-                masterfixedvars = deepcopy(starterfixedvars) 
-                for d in drivers, f in varssetfor[d]
-                    push!(masterfixedvars.allvars, length(masterfixedvars.allvars)+1)
-                    push!(masterfixedvars.d, d)
-                    push!(masterfixedvars.f, f)
-                    push!(masterfixedvars.value, fixedvalue)
-                end
-                push!(masterfixedvars.varsettingiter, fixedvalue)
-
-                println("Variables used before var setting = ", sum(values(variableusecount)))
-
-                #Run MAG with the new fixed variables
-                println("------------------- SETTING VARIABLES - ", masterfixedvars.varsettingiter, " -------------------")
-                obj_fix, smp_fix, x_fix, y_fix, z_fix, w_fix, magarcs_fix, smptm_fix, pptm_fix, pppar_fix, arcs_fix, cgiter_fix, cuts_fix, cuttime = multiarcgeneration_heterogeneous!(currarcs.magarcs, currarcs.hasdriverarcs, mastercuts, masterfixedvars, variableusecount, currvarfixingiter+1, cg_iter+1)
-                cg_iter += - cg_iter + cgiter_fix 
-
-                println("Variables used after var setting = ", sum(values(variableusecount)))
-
-                #Add the generated arcs to the master list
-                println("Arcs before var setting = ", sum(length(currarcs.magarcs.A[i]) for i in currstate.orders))
-                currarcs.magarcs = combineorderarcsets(currarcs.magarcs, magarcs_fix)
-                println("Arcs after var setting = ", sum(length(currarcs.magarcs.A[i]) for i in currstate.orders))
-                
-                #Add the generated cuts to the master list
-                println("Cuts before var setting = ", length(mastercuts.rhs))
-                cutindex = length(mastercuts.rhs)+1
-                for i in 1:length(cuts_fix.rhs)
-                    mastercuts.vars[cutindex] = cuts_fix.vars[i]
-                    mastercuts.coeff[cutindex] = cuts_fix.coeff[i]
-                    mastercuts.rhs[cutindex] = cuts_fix.rhs[i]
-                    cutindex += 1
-                end
-                println("Cuts after var setting = ", length(mastercuts.rhs))
-                                    
-            end
-
-            println("COMPLETED ALL VAR SETTING NODES")
-            break
-
-        elseif (minimum(minreducedcosts) >= -0.0001) & (currvarfixingiter >= varsettingiterations) & (cutsaddedthisiter == 0)
+		if (minimum(minreducedcosts) >= -0.0001) 
 			println("NO NEGATIVE REDUCED COSTS FOUND!")	
 			break
-		elseif (minimum(minreducedcosts) >= -0.0001) & (cutsaddedthisiter >= 1)
-			println("Keep adding cuts")
 		end
 
 		#------------ITERATE------------#
@@ -794,40 +532,6 @@ function multiarcgeneration_heterogeneous!(currstate, currfragments, currarcs, s
 		cg_iter += 1
 	
 	end
-
-	arcsbeforecolmgmt = (A=[copy(currarcs.magarcs.A[i]) for i in currstate.orders], A_space=Dict())
-
-    if currvarfixingiter == 0
-        
-        println("Before arcs = ", sum(length(currarcs.magarcs.A[i]) for i in currstate.orders))
-        
-        #Column management
-        for i in currstate.orders, a in intersect(1:numarcs, currarcs.magarcs.A[i])
-            if variableusecount[i,a] / 100 <= postmagcolumndeletionthreshold
-                remove!(currarcs.magarcs.A[i], a)
-                remove!(currarcs.magarcs.A_space[i], a)
-                n_start, n_end = arcLookup[a]
-                remove!(currarcs.magarcs.A_minus[i, n_end], a)
-                remove!(currarcs.magarcs.A_plus[i, n_start], a)
-            end
-        end
-
-		println("After arcs = ", sum(length(currarcs.magarcs.A[i]) for i in currstate.orders))
-
-		#Clear out any unusable arcs
-		for i in currstate.orders, a in intersect(1:numarcs, currarcs.magarcs.A[i])
-			if !(checkifpathexists(i, a, currarcs.magarcs.A[i], subproblemsets))
-				remove!(currarcs.magarcs.A[i], a)
-                remove!(currarcs.magarcs.A_space[i], a)
-                n_start, n_end = arcLookup[a]
-                remove!(currarcs.magarcs.A_minus[i, n_end], a)
-                remove!(currarcs.magarcs.A_plus[i, n_start], a)
-			end
-		end
-
-        println("After after arcs = ", sum(length(currarcs.magarcs.A[i]) for i in currstate.orders))
-
-    end
         
     #-------------------------------#
 
@@ -835,7 +539,7 @@ function multiarcgeneration_heterogeneous!(currstate, currfragments, currarcs, s
 
 	#-------------------------------#
 
-    return bestlowerbound, smp, x, y, z, w, currarcs.magarcs, sum(smptimes), sum(pptimes), sum(pptimes_par), totalarcs, cg_iter, mastercuts, cuttime, arcsbeforecolmgmt, arcsbeforevarsetting
+    return bestlowerbound, smp, x, y, z, w, currarcs.magarcs, sum(smptimes), sum(pptimes), sum(pptimes_par), totalarcs
     
 end
 

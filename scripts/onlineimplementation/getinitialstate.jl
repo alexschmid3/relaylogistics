@@ -20,10 +20,11 @@ function getinitialstate(nodesLookup, arcLookup, A_minus, A_plus, c)
     
     #Initialize drivers
     driversintransit, drivers, driverStartNodes, driverEndNodes, driverHomeLocs, assignedDrivers, N_flow_t, N_flow_d, alltimeswithinview, T_off_Monday8am, T_off, drivershift, T_off_0, T_off_constr, numshifts, T_on_0 = getdriverandshiftinfo()
+    awaylastnight = [0 for d in 1:length(drivers)]
 
     #Distances
     distbetweenlocs, shortesttriptimes, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr = findtraveltimesanddistances(orders, Origin, Destination)
-    nodesLookup, arcLookup, A_minus, A_plus, c, extendednodes, extendednumnodes, extendedarcs, extendednumarcs = extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c)
+    nodesLookup, arcLookup, A_minus, A_plus, c, extendednodes, extendednumnodes, extendedarcs, extendednumarcs = extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c, distbetweenlocs)
     Destination = extendDestination(orders, Destination, extendednodes)
 
     #Define full state
@@ -32,7 +33,8 @@ function getinitialstate(nodesLookup, arcLookup, A_minus, A_plus, c)
     alltimeswithinview=alltimeswithinview, T_off=T_off, T_off_0=T_off_0, T_off_constr=T_off_constr, T_on_0=T_on_0,
     available=available, duedate=duedate, usedorderidlist=usedorderidlist, psseq=psseq, ordersinprogress=ordersinprogress, 
     shortesttriptimes=shortesttriptimes, orderintransit_flag=orderintransit_flag,
-    driverStartNodes=driverStartNodes, driverEndNodes=driverEndNodes, assignedDrivers=assignedDrivers)
+    driverStartNodes=driverStartNodes, driverEndNodes=driverEndNodes, assignedDrivers=assignedDrivers,
+    awaylastnight=awaylastnight)
 
     return currstate, includeorderidlist, drivers, driverHomeLocs, drivershift, N_flow_t, T_off_Monday8am, numshifts, originloc, destloc, orderOriginalStartLoc, orderOriginalStartTime, highestorderindex, distbetweenlocs, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr, nodesLookup, arcLookup, A_minus, A_plus, c, extendednodes, extendednumnodes, extendedarcs, extendednumarcs
 

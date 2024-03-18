@@ -5,8 +5,8 @@ include("scripts/instancegeneration/readrivigodata.jl")
 
 #--------------------------------------------------------------------------------------------------#
 
-thickest, thinnest = 16, 2
-shiftpixels = 8
+thickest, thinnest = 20, 1
+pixelshift = 22
 maxlocs = 66
 hubCoords, hubsLookup, hubsReverseLookup, hubsTravelTimeIndex, numlocs = readlocations(hubdataisbfilename, maxlocs)
 
@@ -22,32 +22,34 @@ function getrivigotriphistory(lhdataisbfilename)
     end
     hubsList = collect(values(hubsLookup))
 	for i in 1:size(data_agg)[1]
-		orig, dest = data_agg[!,26][i], data_agg[!,27][i]
-		psseq_raw = data_agg[i,8]
-		psseq = split(psseq_raw, "-")
+		if data_agg[i,1] in [7882,8502,8388,7221,2723,5581,2606,8,737,1219]
+			orig, dest = data_agg[!,26][i], data_agg[!,27][i]
+			psseq_raw = data_agg[i,8]
+			psseq = split(psseq_raw, "-")
 
-        #Check whether all intermediate nodes from the Rivigo pitstop sequence are included in the subset of locs
-        intermedlocs_flag = 0
-        stopsequence = []
-        for ps in psseq
-            if ps in hubsList
-                loc = hubsReverseLookup[ps]
-                if loc > numlocs
-                    intermedlocs_flag = 1
-                    break
-                else
-                    push!(stopsequence, loc)
-                end	
-            else
-                intermedlocs_flag = 1
-                break
-            end
-        end
+			#Check whether all intermediate nodes from the Rivigo pitstop sequence are included in the subset of locs
+			intermedlocs_flag = 0
+			stopsequence = []
+			for ps in psseq
+				if ps in hubsList
+					loc = hubsReverseLookup[ps]
+					if loc > numlocs
+						intermedlocs_flag = 1
+						break
+					else
+						push!(stopsequence, loc)
+					end	
+				else
+					intermedlocs_flag = 1
+					break
+				end
+			end
 
-		if (orig != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & (intermedlocs_flag == 0) #& (orderwindowstart <= start_avail_ts <= orderwindowend) 
-			for i in 1:length(stopsequence)-1
-                tripson[stopsequence[i], stopsequence[i+1]] += 1
-            end
+			if (orig != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & (intermedlocs_flag == 0) #& (orderwindowstart <= start_avail_ts <= orderwindowend) 
+				for i in 1:length(stopsequence)-1
+					tripson[stopsequence[i], stopsequence[i+1]] += 1
+				end
+			end
 		end
 	end
 
@@ -149,7 +151,7 @@ function spatialnetwork(drawingname, lhdataisbfilename, xdim, ydim)
 
 	#Add pit stop labels
 	#for item in listofpoints_labels
-	#	label(item[2], :E , Point(item[1]))
+ 	#	label(item[2], :E , Point(item[1]))
 	#end
 
     #Legend box
@@ -160,10 +162,11 @@ function spatialnetwork(drawingname, lhdataisbfilename, xdim, ydim)
 
     #Arcs for the legend
     fontsize(70)
-    numlegendarcs = 3
+    numlegendarcs = 4
     meantrips = convert(Int,round(mean([k for k in values(tripson) if k > 0]), digits=0))
-    legendthicknesses = [mintrips, meantrips, maxtrips]
-    legendlabels = ["$mintrips trip (min.)", "$meantrips trips (mean)", "$maxtrips trips (max.)"]
+	trips90 = convert(Int,round(percentile([k for k in values(tripson) if k > 0], 90), digits=0))
+    legendthicknesses = [mintrips, meantrips, trips90, maxtrips]
+    legendlabels = ["$mintrips trip (min)", "$meantrips trips (mean)", "$trips90 trips (p90)", "$maxtrips trips (max)"]
     for legendarc in 1:numlegendarcs
         startPoint = Point(legendstartx + 0.03*xdim, legendstarty + (legendarc-0.5)/numlegendarcs * 0.25*ydim)
         endPoint = startPoint + Point(xdim/20, 0)
@@ -200,3 +203,5 @@ function spatialnetwork(drawingname, lhdataisbfilename, xdim, ydim)
 end
 
 spatialnetwork("figures/orderhistorymap.png", lhdataisbfilename, 2000, 1900)
+
+spatialnetwork("figures/truck18path.png", lhdataisbfilename, 2000, 1900)

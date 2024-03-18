@@ -58,7 +58,7 @@ solutionmethod = expparms[experiment_id, 3]
 variablefixing_ub = expparms[experiment_id, 18]
 variablefixing_lb = expparms[experiment_id, 17]
 variablefixingthreshold = (variablefixing_lb, variablefixing_ub)
-varsettingiterations = expparms[experiment_id, 13]
+varsettingiterations = 2 #expparms[experiment_id, 13]
 varsettingtype = "z" 
 strengthenedreducedcost_flag = expparms[experiment_id, 14]
 columnmemorylength = expparms[experiment_id, 16] #Forget unused columns after this many iterations
@@ -182,7 +182,7 @@ m_0 = adjust_m_0(m_0, loctruckcounter)
 driversintransit, drivers, driverStartNodes, driverEndNodes, driverHomeLocs, assignedDrivers, N_flow_t, N_flow_d, alltimeswithinview, T_off_Monday8am, T_off, drivershift, T_off_0, T_off_constr, numshifts, T_on_0 = getdriverandshiftinfo()
 distbetweenlocs, shortesttriptimes, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr = findtraveltimesanddistances(orders, Origin, Destination)
 orderdeadline = calcorderdeadlines(shortesttriptimes)
-nodesLookup, arcLookup, A_minus, A_plus, c, extendednodes, extendednumnodes, extendedarcs, extendednumarcs = extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c)
+nodesLookup, arcLookup, A_minus, A_plus, c, extendednodes, extendednumnodes, extendedarcs, extendednumarcs = extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c, distbetweenlocs)
 Destination = extendDestination(orders, Destination, extendednodes)
 arcLookup, nodesLookup, arcfinishtime, dummyarc, allarcs = calcarcfinishtimes()
 
