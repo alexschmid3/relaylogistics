@@ -275,7 +275,7 @@ elseif solutionmethod == "lpcuts"
 		timespacenetwork(string("outputs/viz/driver", d,".png"), arclistlist, colorlist, thicknesslist, fractlist, 2000, 1200)
 	end=#
 
-elseif (solutionmethod == "ip") & (knapsackcuttype == 0)
+elseif (solutionmethod == "ip") #& (knapsackcuttype == 0)
 
 	lp_obj, x_lp, z_lp, lp_time, lp_bound = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts, nocuts)
 	timeslist = (mp=0, pp=0, pppar=0, ip=lp_time, cut=0)
