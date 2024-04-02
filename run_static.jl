@@ -351,7 +351,7 @@ elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 	
 	#mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts, cuttime = multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 
-	magip_obj, x_magip, z_magip, magip_time, magip_bound = solvejourneymodel(0, opt_gap, magarcs, numeffshifts, knapsackcuts)
+	magip_obj, x_magip, z_magip, magip_time, magip_bound = solvejourneymodel(0, opt_gap, magarcs, numeffshifts, nocuts)
 
 	timeslist1 = (mp=smptime, pp=pptime, pppar=pptime_par, ip=0, cut=cuttime)
 	writeresultsforrun(resultsfilename, 0, mag_iter, mag_obj, timeslist1, totalmagarcs, x_smp, z_smp)
