@@ -71,6 +71,7 @@ if knapsackcuttype > 0
 else
 	knapsackcuts_flag = 0
 end
+mip_focus = expparms[experiment_id, 23]  
 
 #Transform date
 weekstart = DateTime(weekstart) + Dates.Hour(8)
@@ -83,7 +84,6 @@ numtrucks = round(trucklist[ex] / driverfactor, digits = 0)
 randomseedval = seedlist[ex]
 Random.seed!(randomseedval)
 
-
 #Problem/optimization parameters (all hard coded values we decided on at the beginning)
 shiftlength = 12									# Length of each driver shift in hours
 taxicostpct = 2.0                          			# Cost to taxi along an arc as a percentage of cost to drive a truck along that arc (should be > 1.0)
@@ -92,8 +92,8 @@ drivershifttstep = 12								# How many hours between start of driver shifts, (e
 tstepforordercreation = 12 							# Should be same as timedelta in equivalent online instance; used to round order available time stamps from Rivigo data (ex. round observed available time to previous 12 hour block)
 inprogressdummyarc_flag = 0						# 1 = allow in progress orders to be assigned to the dummy arc, 0 = do not (Should be assigned to 0 to ensure feasibility/continuity of online iterations)
 truearcfinishtime_flag = 0							# 1 = use unrounded arc travel times to assess order delivery delay (still has some bugs), 0 = use travel times rounded up to the next time step
-finallegdistancepenalty = 0.40						# Distance penalty assessed for orders that finish beyond the planning horizon
-finallegtimepenalty = 0.30							# Time/delay penalty assessed for orders that finish beyond the planning horizon
+finallegdistancepenalty = 0.80 #0.40						# Distance penalty assessed for orders that finish beyond the planning horizon
+finallegtimepenalty = 0.70 #0.30							# Time/delay penalty assessed for orders that finish beyond the planning horizon
 dummyendtime = 1000									# Dummy time assigned to the "beyond the horizon" nodes
 maxnightsaway = 1
 driveroffdays_flag = 0

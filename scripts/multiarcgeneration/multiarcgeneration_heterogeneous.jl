@@ -450,11 +450,14 @@ function setvarsformag(setvariables, x, z, magarcs)
 	elseif varsettingtype == "z"
 		varssetfor = [[] for d in drivers]
 		varssetcount = 0
-		for d in drivers, f in 1:numfragments[driverHomeLocs[d], drivershift[d]]
-			if variablefixingthreshold[1] + 1e-4 < value(z[d,f]) < variablefixingthreshold[2] - 1e-4 
-				push!(setvariables, (d,f))
-				push!(varssetfor[d], f)
-				varssetcount += 1
+		for d in drivers
+			for f in 1:numfragments[driverHomeLocs[d], drivershift[d]]
+				if (variablefixingthreshold[1] + 1e-4 < value(z[d,f]) < variablefixingthreshold[2] - 1e-4) #& (rand() > 0.5)
+					push!(setvariables, (d,f))
+					push!(varssetfor[d], f)
+					varssetcount += 1
+					break
+				end
 			end
 		end
 		

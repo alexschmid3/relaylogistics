@@ -75,6 +75,7 @@ function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts, cuts)
 	set_optimizer_attribute(ip, "TimeLimit", 60*60*40)
 	set_optimizer_attribute(ip, "OutputFlag", 1)
 	set_optimizer_attribute(ip, "MIPGap", opt_gap)
+	set_optimizer_attribute(ip, "MIPFocus", mip_focus)
 
 	#Variables
     if lprelax_flag == 0
