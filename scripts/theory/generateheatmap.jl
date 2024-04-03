@@ -10,12 +10,18 @@ for item in tempHueList
 		push!(hueList, item) 
 	end
 end
+
+inputfilename = "outputs/heatmapdata/heatmapdata.csv"
+outputfilename = "heatmap.png"
+currstdev = 0.5
+stepsize = 0.1
+size_x, size_y = 2000,2000
 	
 #---------------------------------------------------------------------------------------#
 
-function generateheatmap(inputfilename, outputfilename, coastbalance, stepsize, size_x, size_y)
+function generateheatmap(inputfilename, outputfilename, currstdev, stepsize, size_x, size_y)
 
-	buffer_xy = 300
+    buffer_xy = 300
 
 	#Find coordinates for each workstation and pod storage location
 	boxwidth = (size_x - buffer_xy) / (length(0:stepsize:1)+1)
@@ -31,7 +37,8 @@ function generateheatmap(inputfilename, outputfilename, coastbalance, stepsize, 
 	#-------------------------------------------------------------------------#
 
 	#Read the input file
-	data = CSV.read(inputfilename, DataFrame)
+	mapdata = CSV.read(inputfilename, DataFrame)
+    filtereddata = filter(:stdev => n -> n == currstdev, mapdata)
 	mileslookup, pctlookup = Dict(), Dict()
 
 	for ab in 0:stepsize:1, db in 0:stepsize:1
@@ -39,13 +46,11 @@ function generateheatmap(inputfilename, outputfilename, coastbalance, stepsize, 
 	end
 
 	allmiles = []
-	for line in 1:size(data)[1]
-		if data[line,3] == coastbalance
-			ab, db = round(stepsize * round(data[line,1] / stepsize), digits=2), round(stepsize * round(data[line,2] / stepsize),digits=2)
-			mileslookup[ab,db] = (data[line,5] - data[line,4])  
-			pctlookup[ab,db] = 100 * (data[line,4] - data[line,5]) / data[line,5] 
-			push!(allmiles, data[line,5] - data[line,4])
-		end
+	for row in 1:size(filtereddata)[1]
+		ab, db = round(stepsize * round(filtereddata[row,1] / stepsize), digits=2), round(stepsize * round(filtereddata[row,2] / stepsize),digits=2)
+		mileslookup[ab,db] = (filtereddata[row,7] - filtereddata[row,6])  
+		pctlookup[ab,db] = 100 * (filtereddata[row,7] - filtereddata[row,6]) / filtereddata[row,7] 
+		push!(allmiles, filtereddata[row,7] - filtereddata[row,6])
 	end	
 
 	maxmiles, minmiles = maximum(allmiles), minimum(allmiles)
@@ -73,7 +78,7 @@ function generateheatmap(inputfilename, outputfilename, coastbalance, stepsize, 
 			lamb = mileslookup[ab,db] / maxmiles
 			boxcolor = (98 * lamb + 255 * (1-lamb), 151 * lamb + 255 * (1-lamb), 236 * lamb + 255 * (1-lamb))
 			textcolor = ((98 * lamb + 255 * (1-lamb)) / 2, (151 * lamb + 255 * (1-lamb)) / 2, (236 * lamb + 255 * (1-lamb)) / 2)
-			actualtext = string(convert(Int, round(pctlookup[ab,db],digits=0)), "%")
+			actualtext = string(convert(Int, -1*round(pctlookup[ab,db],digits=0)), "%")
 			push!(locationsquares, (corner, boxcolor, boxwidth, boxheight, thickness))
 			push!(textsquares, (center, textcolor, actualtext, 20))
 			counter +=1
@@ -82,7 +87,7 @@ function generateheatmap(inputfilename, outputfilename, coastbalance, stepsize, 
 			lamb = mileslookup[ab,db] / minmiles
 			boxcolor = (247 * lamb + 255 * (1-lamb), 91 * lamb + 255 * (1-lamb), 95 * lamb + 255 * (1-lamb))
 			textcolor = ((247 * lamb + 255 * (1-lamb)) / 2, (91 * lamb + 255 * (1-lamb)) / 2, (95 * lamb + 255 * (1-lamb)) / 2)
-			actualtext = string("+",convert(Int,round(pctlookup[ab,db],digits=0)), "%")
+			actualtext = string("+",convert(Int,-1*round(pctlookup[ab,db],digits=0)), "%")
 			push!(locationsquares, (corner, boxcolor, boxwidth, boxheight, thickness))
 			push!(textsquares, (center, textcolor, actualtext, 20))
 			counter +=1
@@ -108,7 +113,7 @@ function generateheatmap(inputfilename, outputfilename, coastbalance, stepsize, 
 		fontsize(lbl[4])
 		r_val, g_val, b_val = lbl[2]
 		setcolor(convert(Colors.HSV, Colors.RGB(r_val/255, g_val/255, b_val/255)))
-		text(lbl[3], lbl[1], halign=:center,   valign = :middle)
+		Luxor.text(lbl[3], lbl[1], halign=:center,   valign = :middle)
 		#label(lbl[3], :0, lbl[1])
 	end
 
@@ -142,8 +147,8 @@ function generateheatmap(inputfilename, outputfilename, coastbalance, stepsize, 
 	end
 
 	fontsize(60)
-	text("Aggregate balance", Point(0.5 * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_x - buffer_xy) - 0.5 * (size_x - buffer_xy),  0.5 * (size_y - buffer_xy)) + buffer_xy/2 - 20, halign=:center, valign = :bottom)
-	text("Disaggregate balance", Point(- 0.5 * (size_x - buffer_xy) - buffer_xy/2 + 35, 0.5 * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_y - buffer_xy) - 0.5 * (size_y - buffer_xy)), halign=:center,   valign = :middle, angle = -pi/2)
+	Luxor.text("Aggregate balance", Point(0.5 * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_x - buffer_xy) - 0.5 * (size_x - buffer_xy),  0.5 * (size_y - buffer_xy)) + buffer_xy/2 - 20, halign=:center, valign = :bottom)
+	Luxor.text("Disaggregate balance", Point(- 0.5 * (size_x - buffer_xy) - buffer_xy/2 + 35, 0.5 * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_y - buffer_xy) - 0.5 * (size_y - buffer_xy)), halign=:center,   valign = :middle, angle = -pi/2)
 
 	finish()
 	preview()

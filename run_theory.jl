@@ -19,6 +19,8 @@ stdev_base = params[experiment_id, 6]
 aggbalance = params[experiment_id, 4] 
 disaggbalance = params[experiment_id, 3] 
 coastbalance = params[experiment_id, 2] 
+randomseedval = params[experiment_id, 7] 
+Random.seed!(randomseedval)
 
 demandlocs = union(W,E)
 allpairs = []
