@@ -334,7 +334,7 @@ for α in 0:0.1:1
 end
 
 #--------------------------------------------------------------#
-
+#=
 using Hungarian
 
 weights = Array{Union{Missing, Float64}}(undef,length(U), length(V)) 
@@ -346,14 +346,14 @@ end
 assignments, cost = hungarian(weights)
 
 ptp_exact = M - cost
-
+=#
 #--------------------------------------------------------------#
 
 if 1==1
     println("--------------------------------")
     println("Minimum possible miles = ", M)
     println("Point-to-point miles = ", ptp_obj)
-    println("Point-to-point bound (exact) = ", ptp_exact)
+    #println("Point-to-point bound (exact) = ", ptp_exact)
     #println("   Empty (ptp) = ", ptp_empties)
     println("Point-to-point bound (new) = ", ptp_bound2) 
     println("Point-to-point bound = ", ptp_bound) 
