@@ -1,7 +1,7 @@
 
 function realizedemands(d_bar, stdev)
 
-    numlocs = length(alllocs)
+    numlocs = length(demandlocs)
 
     demand = zeros(numlocs, numlocs, T)
     for (i,j) in allpairs, t in 1:T

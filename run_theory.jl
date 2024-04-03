@@ -20,7 +20,7 @@ aggbalance = params[experiment_id, 4]
 disaggbalance = params[experiment_id, 3] 
 coastbalance = params[experiment_id, 2] 
 
-alllocs = union(W,E)
+demandlocs = union(W,E)
 allpairs = []
 for i in W, j in E
     push!(allpairs, (i,j))
@@ -30,6 +30,7 @@ for i in E, j in W
 end
 
 coordinates, P = networkinfo()
+alllocs = union(demandlocs, P)
 
 function Tmod(a)
     return mod(a-1,T)+1
@@ -42,7 +43,7 @@ demand = realizedemands(d_bar, stdev)
 
 #--------------------------------------------------------------#
 
-tripdistance = zeros(length(pitstops), length(pitstops))
+tripdistance = zeros(length(alllocs), length(alllocs))
 for i in alllocs, j in alllocs
     tripdistance[i,j] = sqrt((coordinates[i,1] - coordinates[j,1])^2 + (coordinates[i,2] - coordinates[j,2])^2)
     tripdistance[j,i] = sqrt((coordinates[i,1] - coordinates[j,1])^2 + (coordinates[i,2] - coordinates[j,2])^2)
@@ -184,14 +185,14 @@ end
 model = Model(Gurobi.Optimizer)
 set_optimizer_attribute(model, "OutputFlag", 0)
 @variable(model, y[j in journeys] >= 0, Int)
-@variable(model, demandheld[i in alllocs,j in receivinglocs[i],1:T,1:T] >= 0, Int)
+@variable(model, demandheld[i in demandlocs, j in receivinglocs[i],1:T,1:T] >= 0, Int)
 @objective(model, Min, sum(journeydist[j] * y[j] for j in journeys))
 
 #Delay
-@constraint(model, [i in alllocs, j in receivinglocs[i], t in 1:T], sum(demandheld[i,j,t,t2] for t2 in 1:T) == demand[i,j,t])
-@constraint(model, totaldelay, sum(sum(sum(sum(periodsdelay(t,t2) * demandheld[i,j,t,t2] for t2 in 1:T) for t in 1:T) for j in receivinglocs[i]) for i in alllocs) <= maxdelay)
-#@constraint(model, [i in alllocs,j in receivinglocs[i], t in 1:T], demandheld[i,j,t,t] == demand[i,j,t])
-#@constraint(model, [i in alllocs,j in receivinglocs[i], t in 1:T, t2 in setdiff(1:T,t)], demandheld[i,j,t,t2] == 0)
+@constraint(model, [i in demandlocs, j in receivinglocs[i], t in 1:T], sum(demandheld[i,j,t,t2] for t2 in 1:T) == demand[i,j,t])
+@constraint(model, totaldelay, sum(sum(sum(sum(periodsdelay(t,t2) * demandheld[i,j,t,t2] for t2 in 1:T) for t in 1:T) for j in receivinglocs[i]) for i in demandlocs) <= maxdelay)
+#@constraint(model, [i in demandlocs,j in receivinglocs[i], t in 1:T], demandheld[i,j,t,t] == demand[i,j,t])
+#@constraint(model, [i in demandlocs,j in receivinglocs[i], t in 1:T, t2 in setdiff(1:T,t)], demandheld[i,j,t,t2] == 0)
 
 #Flow
 @constraint(model, [i in W, t in 1:T], sum(y[jrny] for jrny in journeyscovering[i,7,t]) >= sum(sum(demandheld[i,j,t2,t] for j in E) for t2 in 1:T) )
@@ -280,7 +281,7 @@ ptp_bound = max(we_bound, ew_bound) + sum(sum(sum(tripdistance[i,j]*demand[i,j,t
 
 #PTP bound 2
 α = 0.5
-M = 2*sum(sum(sum(demand[i,j,t] * tripdistance[i,j] for t in 1:T) for j in alllocs) for i in alllocs)
+M = 2*sum(sum(sum(demand[i,j,t] * tripdistance[i,j] for t in 1:T) for j in demandlocs) for i in demandlocs)
 
 #Bipartite graph - vertices
 vertexid, vertexdesc = Dict(), Dict()
@@ -364,7 +365,7 @@ if 1==1
     println("Relay miles = ", relay_obj)
     #println("   Empty (relay) = ", relay_empties)
     println("Relay miles w/ delay = ", relay_delay_obj)
-    #println("   Strategic delay = ", sum(sum(sum(sum(periodsdelay(t,t2) * value(demandheld[i,j,t,t2]) for t2 in 1:T) for t in 1:T) for j in receivinglocs[i]) for i in alllocs))
+    #println("   Strategic delay = ", sum(sum(sum(sum(periodsdelay(t,t2) * value(demandheld[i,j,t,t2]) for t2 in 1:T) for t in 1:T) for j in receivinglocs[i]) for i in demandlocs))
     println("Minimum possible miles = ", sum(sum(sum(tripdistance[i,j]*demand[i,j,t] for t in 1:T) for j in E) for i in W) + sum(sum(sum(tripdistance[i,j]*demand[i,j,t] for t in 1:T) for j in W) for i in E) )
 end
 
