@@ -1,5 +1,5 @@
 
-figuredirectory = string("outputs/delete")
+figuredirectory = string("outputs/lasthope7")
 
 #Get list of files
 filelist = readdir(figuredirectory)
