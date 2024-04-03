@@ -42,6 +42,14 @@ demand = realizedemands(d_bar, stdev)
 
 #--------------------------------------------------------------#
 
+tripdistance = zeros(length(pitstops), length(pitstops))
+for i in alllocs, j in alllocs
+    tripdistance[i,j] = sqrt((coordinates[i,1] - coordinates[j,1])^2 + (coordinates[i,2] - coordinates[j,2])^2)
+    tripdistance[j,i] = sqrt((coordinates[i,1] - coordinates[j,1])^2 + (coordinates[i,2] - coordinates[j,2])^2)
+end
+
+#--------------------------------------------------------------#
+
 #Point-to-point
 journeyscovering, journeydist = Dict(), Dict()
 for i in W, j in E, t in 1:T
@@ -53,7 +61,7 @@ journeyarclookup = Dict()
 for i in W, j in E, t in 1:T, i2 in W, j2 in E
     push!(journeyscovering[i,j,t], jindex)
     push!(journeyscovering[j2,i2,mod(t+C-1,T)+1], jindex)
-    journeydist[jindex] = sqrt(3^2 + (0.5*abs(mod(i,3)-mod(j,3)))^2) + sqrt(3^2 + (0.5*abs(mod(i2,3)-mod(j2,3)))^2) + 0.5*abs(i-i2) + 0.5*abs(j-j2)
+    journeydist[jindex] = tripdistance[i,j] + tripdistance[i2,j2] + tripdistance[i,i2] + tripdistance[j,j2] 
     
     journeyarcs = []
     for (orig,dest,t_orig,t_dest) in [(i,j,t,Tmod(t+C)), (j,j2,Tmod(t+C),Tmod(t+C)), (j2,i2,Tmod(t+C),Tmod(t+2C)), (i2,i,Tmod(t+2*C),Tmod(t+2*C))]
@@ -111,11 +119,6 @@ for i in E, j in W, t in 1:T
     flow[i,8,t] += demand[i,j,t]
     flow[8,7,Tmod(t+1)] += demand[i,j,t]
     flow[7,j,Tmod(t+2)] += demand[i,j,t] 
-end
-tripdistance = zeros(length(pitstops), length(pitstops))
-for i in 1:8, j in 1:8
-    tripdistance[i,j] = sqrt((coordinates[i,1] - coordinates[j,1])^2 + (coordinates[i,2] - coordinates[j,2])^2)
-    tripdistance[j,i] = sqrt((coordinates[i,1] - coordinates[j,1])^2 + (coordinates[i,2] - coordinates[j,2])^2)
 end
 
 journeyscovering, journeydist = Dict(), Dict()

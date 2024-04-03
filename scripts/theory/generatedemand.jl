@@ -55,8 +55,6 @@ function generatedemand(totalflow, aggbalance, disaggbalance, coastbalance)
 
 	optimize!(model)
 
-	println(objective_value(model))
-
 	#---------------------------------------------#
 
 	demandflow = Array(value.(x))
