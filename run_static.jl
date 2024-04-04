@@ -49,7 +49,7 @@ lambda2 = expparms[experiment_id, 12]
 println("Experiment = ", experiment_id)
 
 #Manual parameters for response/appendix experiments
-deadlines_flag = 0
+deadlines_flag = 1
 deadlineasmultipleofshortestpath = 2  #1 - deadline is shortest path time, 2 - deadline is twice shortest path time, etc.
 roundeddrivinghours_flag = 0
 

@@ -548,10 +548,19 @@ function multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, startercuts, 
 	@variable(smp, w[a in primaryarcs.A_space] >= 0)
 	@variable(smp, ordtime[orders])
     @variable(smp, maxhours)
+	@variable(smp, orderdelay[orders] >= 0)    #only used when deadlines turned on
 
 	#Objective
 	@objective(smp, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) + sum(sum(c[a]*x[i,a] for a in magarcs.A[i]) for i in orders) + sum(c[a]*y[a] for a in hasdriverarcs.A) + sum(u[a]*w[a] for a in primaryarcs.A_space) + lambda2 * maxhours)
-		
+
+	#Objective
+	if deadlines_flag == 0
+		@objective(smp, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) + sum(sum(c[a]*x[i,a] for a in magarcs.A[i]) for i in orders) + sum(c[a]*y[a] for a in hasdriverarcs.A) + sum(u[a]*w[a] for a in primaryarcs.A_space) + lambda2 * maxhours)
+	elseif deadlines_flag == 1
+		@objective(smp, Min, lambda * sum(orderdelay[i] for i in orders) + sum(sum(c[a]*x[i,a] for a in magarcs.A[i]) for i in orders) + sum(c[a]*y[a] for a in hasdriverarcs.A) + sum(u[a]*w[a] for a in primaryarcs.A_space) + lambda2 * maxhours)
+		@constraint(smp, absolutedelay[i in orders], orderdelay[i] >= ordtime[i] - orderdeadline[i])
+    end
+
 	#Order constraints
 	@constraint(smp, orderFlowBalance[i = orders, n in setdiff([n2 for n2 in 1:numnodes], union(Origin[i], Destination[i]))], sum(x[i,a] for a in magarcs.A_minus[i,n]) - sum(x[i,a] for a in magarcs.A_plus[i,n]) == 0)
 	@constraint(smp, arriveDestin[i = orders], sum(sum(x[i,a] for a in magarcs.A_minus[i,n] if ((a == dummyarc) || (nodesLookup[arcLookup[a][1]][1] != nodesLookup[arcLookup[a][2]][1]))) for n in Destination[i]) == 1)

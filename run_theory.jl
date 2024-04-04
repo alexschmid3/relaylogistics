@@ -12,14 +12,14 @@ E = [4,5,6]
 T = 8
 C = 5
 
-experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+experiment_id = 1001 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 params = CSV.read("data/theory.csv", DataFrame)
-totalflow = params[experiment_id, 5] 
-stdev_base = params[experiment_id, 6] 
-aggbalance = params[experiment_id, 4] 
-disaggbalance = params[experiment_id, 3] 
-coastbalance = params[experiment_id, 2] 
-randomseedval = params[experiment_id, 7] 
+totalflow = 500 #params[experiment_id, 5] 
+stdev_base = 0 #params[experiment_id, 6] 
+aggbalance = 1 #params[experiment_id, 4] 
+disaggbalance = 1 #params[experiment_id, 3] 
+coastbalance = 1 #params[experiment_id, 2] 
+randomseedval = 123 #params[experiment_id, 7] 
 Random.seed!(randomseedval)
 
 demandlocs = union(W,E)
