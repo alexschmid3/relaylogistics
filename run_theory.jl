@@ -41,7 +41,16 @@ end
 #--------------------------------------------------------------#
 
 d_bar, stdev, actualAB, actualDB, actualCB = generatedemand(totalflow, aggbalance, disaggbalance, coastbalance) 
-demand = realizedemands(d_bar, stdev)
+#demand = realizedemands(d_bar, stdev)
+demand = zeros(6,6,T)
+for t in 1:T
+    demand[1,4,t] = 1
+    demand[2,5,t] = 1
+    demand[3,6,t] = 1
+    demand[4,2,t] = 1
+    demand[5,3,t] = 1
+    demand[6,1,t] = 1
+end
 
 #--------------------------------------------------------------#
 
@@ -357,7 +366,7 @@ ptp_exact = M - cost
 
 if 1==1
     println("--------------------------------")
-    println("Minimum possible miles = ", M)
+    println("Maximum possible miles = ", M)
     println("Point-to-point miles = ", ptp_obj)
     #println("Point-to-point bound (exact) = ", ptp_exact)
     #println("   Empty (ptp) = ", ptp_empties)
