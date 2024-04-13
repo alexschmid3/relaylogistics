@@ -9,15 +9,15 @@ include("scripts/visualizations/theorynetwork.jl")
 
 W = [1,2,3]
 E = [4,5,6]
-T = 8
+T = 5
 C = 5
 
-experiment_id = 1001 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+experiment_id = 1002 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 params = CSV.read("data/theory.csv", DataFrame)
 totalflow = 500 #params[experiment_id, 5] 
-stdev_base = 0 #params[experiment_id, 6] 
+stdev_base = 10 #params[experiment_id, 6] 
 aggbalance = 1 #params[experiment_id, 4] 
-disaggbalance = 1 #params[experiment_id, 3] 
+disaggbalance = 0.7 #params[experiment_id, 3] 
 coastbalance = 1 #params[experiment_id, 2] 
 randomseedval = 123 #params[experiment_id, 7] 
 Random.seed!(randomseedval)
@@ -41,16 +41,16 @@ end
 #--------------------------------------------------------------#
 
 d_bar, stdev, actualAB, actualDB, actualCB = generatedemand(totalflow, aggbalance, disaggbalance, coastbalance) 
-#demand = realizedemands(d_bar, stdev)
-demand = zeros(6,6,T)
-for t in 1:T
-    demand[1,4,t] = 1
-    demand[2,5,t] = 1
-    demand[3,6,t] = 1
-    demand[4,2,t] = 1
-    demand[5,3,t] = 1
-    demand[6,1,t] = 1
-end
+demand = realizedemands(d_bar, stdev)
+#demand = zeros(6,6,T)
+#for t in 1:T
+#    demand[1,4,t] = 1
+#    demand[2,5,t] = 1
+#    demand[3,6,t] = 1
+#    demand[4,2,t] = 1
+#    demand[5,3,t] = 1
+#    demand[6,1,t] = 1
+#end
 
 #--------------------------------------------------------------#
 

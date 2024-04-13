@@ -36,7 +36,7 @@ experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 paramsfilename = "data/table2.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
-ex = expparms[experiment_id, 2]		
+ex = 1 #expparms[experiment_id, 2]		
 weekstart = expparms[experiment_id, 4]
 horizon = expparms[experiment_id, 5] * 24
 tstep = expparms[experiment_id, 6]
@@ -49,7 +49,7 @@ lambda2 = expparms[experiment_id, 12]
 println("Experiment = ", experiment_id)
 
 #Manual parameters for response/appendix experiments
-deadlines_flag = 1
+deadlines_flag = 0
 deadlineasmultipleofshortestpath = 2  #1 - deadline is shortest path time, 2 - deadline is twice shortest path time, etc.
 roundeddrivinghours_flag = 0
 
@@ -115,7 +115,7 @@ runid = string("ex", ex, "_exp", experiment_id, "_", solutionmethod, "_rundate",
 
 #File names					
 vizfoldername = string("visualizations/static/run ", runid)
-csvfoldername = string("outputs/table2/")
+csvfoldername = string("outputs/table2_hom/")
 resultsfilename = string(csvfoldername, runid, "_output.csv")
 convergencedatafilename = string(csvfoldername, "convergence_exp", runid, ".csv")
 
@@ -323,6 +323,18 @@ elseif solutionmethod == "arcip"
 	timeslist = (mp=0, pp=0, pppar=0, ip=arcip_time, cut=0)
 	writeresultsforrun(resultsfilename, 0, "ArcIP", arcip_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_arcip, z_arcip)
 		
+elseif (solutionmethod == "basisip") & (formulation == "homogeneous")
+
+	lp_obj, x_lp, z_lp, lp_time, lp_bound, lpbasisarcs = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts, nocuts)
+	bip_obj, x_bip, z_bip, bip_time, bip_bound = solvejourneymodel(0, opt_gap, lpbasisarcs, numeffshifts, nocuts)
+
+	timeslist1 = (mp=lp_time, pp=0, pppar=0, ip=0, cut=0)
+	writeresultsforrun(resultsfilename, 0, "LP", lp_obj, timeslist1, sum(length(lpbasisarcs.A[i]) for i in orders), x_lp, z_lp)
+	timeslist2 = (mp=0, pp=0, pppar=0, ip=bip_time, cut=0)
+	writeresultsforrun(resultsfilename, 1, "IP", bip_obj, timeslist2, sum(length(lpbasisarcs.A[i]) for i in orders), x_bip, z_bip)
+	
+	println("IP-LP gap = ", round(100*(bip_obj-lp_obj)/lp_obj, digits=2), "%")
+
 elseif solutionmethod == "basisip"
 
 	lp_obj, x_lp, z_lp, lp_time, lp_bound, knapsackcuts, lpbasisarcs = solvelpwithcuts(opt_gap, orderarcs, knapsackcuttype)
@@ -344,6 +356,16 @@ elseif solutionmethod == "basisip"
 	end
 	=#
 
+elseif ((solutionmethod == "mag") || (solutionmethod == "sag")) & (formulation == "homogeneous")
+
+	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter = multiarcgeneration!(magarcs, hasdriverarcs) 
+	magip_obj, x_magip, z_magip, magip_time, magip_bound = solvejourneymodel(0, opt_gap, magarcs, numeffshifts, nocuts)
+
+	timeslist1 = (mp=smptime, pp=pptime, pppar=pptime_par, ip=0, cut=0)
+	writeresultsforrun(resultsfilename, 0, mag_iter, mag_obj, timeslist1, totalmagarcs, x_smp, z_smp)
+	timeslist2 = (mp=0, pp=0, pppar=0, ip=magip_time, cut=0)
+	writeresultsforrun(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs, x_magip, z_magip)
+	
 elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 
 	variableusecount, startercuts, starterfixedvars = initmagsets(magarcs)	
@@ -426,9 +448,21 @@ elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 	end
 	=#
 
+elseif (solutionmethod == "cg") & (formulation == "homogeneous")
+
+	dummypath = 1
+	cg_obj, rmp, x_rmp, y_rmp, z_rmp, w_rmp, cgpaths, delta, rmptime, pptime, pptime_par, totalcgpaths, cg_iter = columngeneration!(orderarcs, hasdriverarcs, nocuts)
+	cgip_obj, x_cgip, z_cgip, cgip_time, cgip_bound = solvejourneymodel_paths(0, opt_gap, cgpaths, delta, numeffshifts)
+
+	timeslist1 = (mp=rmptime, pp=pptime, pppar=pptime_par, ip=0, cut=0)
+	writeresultsforrun(resultsfilename, 0, cg_iter, cg_obj, timeslist1, totalcgpaths, x_cgip, z_cgip)
+	timeslist2 = (mp=0, pp=0, pppar=0, ip=cgip_time, cut=0)
+	writeresultsforrun(resultsfilename, 1, "IP", cgip_obj, timeslist2, totalcgpaths, x_cgip, z_cgip)
+
 elseif solutionmethod == "cg"
 
 	dummypath = 1
+	
 	cg_obj, rmp, x_rmp, y_rmp, z_rmp, w_rmp, cgpaths, delta, rmptime, pptime, pptime_par, totalcgpaths, cg_iter, knapsackcuts, cgcuttime = columngeneration!(orderarcs, hasdriverarcs, nocuts)
 	cgip_obj, x_cgip, z_cgip, cgip_time, cgip_bound = solvejourneymodel_paths(0, opt_gap, cgpaths, delta, numeffshifts, knapsackcuts)
 

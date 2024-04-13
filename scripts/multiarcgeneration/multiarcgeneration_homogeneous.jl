@@ -168,7 +168,7 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
+function multiarcgeneration!(magarcs, hasdriverarcs)
 
 	#Build sparse master problem
 	#smp, x, y, z, w, smpconstraints = sparsemasterproblem(magarcs, hasdriverarcs, 60*60)
@@ -272,11 +272,11 @@ function multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 		smpobj, smptime = objective_value(smp), solve_time(smp)
 
         #Update chosen variables
-        for i in orders, a in magarcs.A[i]
-            if value(x[i,a]) > 1e-4
-                variableselected[i] = union(variableselected[i], a)
-            end
-        end
+        #for i in orders, a in magarcs.A[i]
+        #    if value(x[i,a]) > 1e-4
+        #        variableselected[i] = union(variableselected[i], a)
+        #    end
+        #end
 
         #Visualization
         #for i in orders

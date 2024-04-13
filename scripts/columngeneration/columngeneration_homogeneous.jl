@@ -111,7 +111,7 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function columngeneration!(orderarcs, hasdriverarcs)
+function columngeneration!(orderarcs, hasdriverarcs, cuts)
 	
 	#Initialize paths
 	delta, paths = initialfeasiblepaths(orderarcs)

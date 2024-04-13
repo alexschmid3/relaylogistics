@@ -70,6 +70,8 @@ end
 
 function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts, cuts)
 
+    println("Homogeneous model running!")
+
 	ip = Model(Gurobi.Optimizer)
 	set_optimizer_attribute(ip, "TimeLimit", 60*60*40)
 	set_optimizer_attribute(ip, "OutputFlag", 1)
