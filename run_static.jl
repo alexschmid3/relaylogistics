@@ -36,7 +36,7 @@ experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 paramsfilename = "data/table2.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
-ex = 1 #expparms[experiment_id, 2]		
+ex = expparms[experiment_id, 2]		
 weekstart = expparms[experiment_id, 4]
 horizon = expparms[experiment_id, 5] * 24
 tstep = expparms[experiment_id, 6]
