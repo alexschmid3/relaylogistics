@@ -49,7 +49,7 @@ lambda2 = expparms[experiment_id, 12]
 println("Experiment = ", experiment_id)
 
 #Manual parameters for response/appendix experiments
-deadlines_flag = 0
+deadlines_flag = 1
 deadlineasmultipleofshortestpath = 2  #1 - deadline is shortest path time, 2 - deadline is twice shortest path time, etc.
 roundeddrivinghours_flag = 1
 
@@ -92,8 +92,8 @@ drivershifttstep = 12								# How many hours between start of driver shifts, (e
 tstepforordercreation = 12 							# Should be same as timedelta in equivalent online instance; used to round order available time stamps from Rivigo data (ex. round observed available time to previous 12 hour block)
 inprogressdummyarc_flag = 0						# 1 = allow in progress orders to be assigned to the dummy arc, 0 = do not (Should be assigned to 0 to ensure feasibility/continuity of online iterations)
 truearcfinishtime_flag = 0							# 1 = use unrounded arc travel times to assess order delivery delay (still has some bugs), 0 = use travel times rounded up to the next time step
-finallegdistancepenalty = 0.40 #0.80						# Distance penalty assessed for orders that finish beyond the planning horizon
-finallegtimepenalty = 0.30 #0.70							# Time/delay penalty assessed for orders that finish beyond the planning horizon
+finallegdistancepenalty = 0.80 #0.40						# Distance penalty assessed for orders that finish beyond the planning horizon
+finallegtimepenalty = 0.70 #0.30							# Time/delay penalty assessed for orders that finish beyond the planning horizon
 dummyendtime = 1000									# Dummy time assigned to the "beyond the horizon" nodes
 maxnightsaway = 1
 driveroffdays_flag = 0
@@ -115,7 +115,7 @@ runid = string("ex", ex, "_exp", experiment_id, "_", solutionmethod, "_rundate",
 
 #File names					
 vizfoldername = string("visualizations/static/run ", runid)
-csvfoldername = string("outputs/table2_hom/")
+csvfoldername = string("outputs/table2_het/")
 resultsfilename = string(csvfoldername, runid, "_output.csv")
 convergencedatafilename = string(csvfoldername, "convergence_exp", runid, ".csv")
 
