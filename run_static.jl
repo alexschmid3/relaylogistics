@@ -90,10 +90,10 @@ taxicostpct = 2.0                          			# Cost to taxi along an arc as a p
 roundup_flag = 1			 					 	# 0 = round down to find discretized travel times, 1 = round up
 drivershifttstep = 12								# How many hours between start of driver shifts, (ex. drivershifttstep=12 means each driver's first shift starts at time 0 or time 12, drivershifttstep=6 means a driver's first shift could start at time 0, 6, 12, or 18)
 tstepforordercreation = 12 							# Should be same as timedelta in equivalent online instance; used to round order available time stamps from Rivigo data (ex. round observed available time to previous 12 hour block)
-inprogressdummyarc_flag = 0						# 1 = allow in progress orders to be assigned to the dummy arc, 0 = do not (Should be assigned to 0 to ensure feasibility/continuity of online iterations)
+inprogressdummyarc_flag = 0					    	# 1 = allow in progress orders to be assigned to the dummy arc, 0 = do not (Should be assigned to 0 to ensure feasibility/continuity of online iterations)
 truearcfinishtime_flag = 0							# 1 = use unrounded arc travel times to assess order delivery delay (still has some bugs), 0 = use travel times rounded up to the next time step
-finallegdistancepenalty = 0.80 #0.40						# Distance penalty assessed for orders that finish beyond the planning horizon
-finallegtimepenalty = 0.70 #0.30							# Time/delay penalty assessed for orders that finish beyond the planning horizon
+finallegdistancepenalty = 0.80 #0.40				# Distance penalty assessed for orders that finish beyond the planning horizon
+finallegtimepenalty = 0.70 #0.30					# Time/delay penalty assessed for orders that finish beyond the planning horizon
 dummyendtime = 1000									# Dummy time assigned to the "beyond the horizon" nodes
 maxnightsaway = 1
 driveroffdays_flag = 0
