@@ -285,8 +285,9 @@ function columngeneration!(orderarcs, hasdriverarcs, startercuts)
 		if addcutsthisiter_flag == 1
 			cutstarttime = time()
 			cuts = findknapsackcuts(z, knapsackcuttype)
-			@constraint(smp, [i in 1:cuts.numcuts], sum(cuts.coeff[i][d,j] * z[d,j] for (d,j) in cuts.vars[i]) <= cuts.rhs[i])
+			@constraint(rmp, [i in 1:cuts.numcuts], sum(cuts.coeff[i][d,j] * z[d,j] for (d,j) in cuts.vars[i]) <= cuts.rhs[i])
 			cutindex = length(mastercuts.rhs)+1
+			println("Num cuts = ", cuts.numcuts)
 			for i in 1:cuts.numcuts
 				mastercuts.vars[cutindex] = cuts.vars[i]
 				mastercuts.coeff[cutindex] = cuts.coeff[i]

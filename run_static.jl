@@ -49,9 +49,9 @@ lambda2 = expparms[experiment_id, 12]
 println("Experiment = ", experiment_id)
 
 #Manual parameters for response/appendix experiments
-deadlines_flag = 1
+deadlines_flag = 0
 deadlineasmultipleofshortestpath = 2  #1 - deadline is shortest path time, 2 - deadline is twice shortest path time, etc.
-roundeddrivinghours_flag = 1
+roundeddrivinghours_flag = 0
 
 #Read algorithm control parameters from file
 solutionmethod = expparms[experiment_id, 3]		
@@ -115,7 +115,7 @@ runid = string("ex", ex, "_exp", experiment_id, "_", solutionmethod, "_rundate",
 
 #File names					
 vizfoldername = string("visualizations/static/run ", runid)
-csvfoldername = string("outputs/table2_het/")
+csvfoldername = string("outputs/table2_hom/")
 resultsfilename = string(csvfoldername, runid, "_output.csv")
 convergencedatafilename = string(csvfoldername, "convergence_exp", runid, ".csv")
 
@@ -278,7 +278,7 @@ elseif solutionmethod == "lpcuts"
 elseif (solutionmethod == "ip") #& (knapsackcuttype == 0)
 
 	lp_obj, x_lp, z_lp, lp_time, lp_bound = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts, nocuts)
-	timeslist = (mp=0, pp=0, pppar=0, ip=lp_time, cut=0)
+	timeslist = (mp=lp_time, pp=0, pppar=0, ip=0, cut=0)
 	writeresultsforrun(resultsfilename, 0, "LP", lp_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_lp, z_lp)
 
 	ip_obj, x_ip, z_ip, ip_time, ip_bound = solvejourneymodel(0, opt_gap, orderarcs, numeffshifts, nocuts)
@@ -462,8 +462,10 @@ elseif (solutionmethod == "cg") & (formulation == "homogeneous")
 elseif solutionmethod == "cg"
 
 	dummypath = 1
+
+	startercuts = (vars=Dict(), rhs=Dict(), coeff=Dict())
 	
-	cg_obj, rmp, x_rmp, y_rmp, z_rmp, w_rmp, cgpaths, delta, rmptime, pptime, pptime_par, totalcgpaths, cg_iter, knapsackcuts, cgcuttime = columngeneration!(orderarcs, hasdriverarcs, nocuts)
+	cg_obj, rmp, x_rmp, y_rmp, z_rmp, w_rmp, cgpaths, delta, rmptime, pptime, pptime_par, totalcgpaths, cg_iter, knapsackcuts, cgcuttime = columngeneration!(orderarcs, hasdriverarcs, startercuts)
 	cgip_obj, x_cgip, z_cgip, cgip_time, cgip_bound = solvejourneymodel_paths(0, opt_gap, cgpaths, delta, numeffshifts, knapsackcuts)
 
 	timeslist1 = (mp=rmptime, pp=pptime, pppar=pptime_par, ip=0, cut=cgcuttime)

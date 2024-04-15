@@ -85,13 +85,16 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function sagsubproblem(i, arcredcosts)
+function sagsubproblem(i, arcredcosts, numarcsperiter)
 
     spstarttime = time()
 
-    mostnegativearc = setdiff(orderarcs.A[i], dummyarc)[argmin([arcredcosts[i,a] for a in setdiff(orderarcs.A[i], dummyarc)])]
-    minreducedcost = arcredcosts[i, mostnegativearc]
-    shortestpatharcs = [mostnegativearc]
+	arclist = setdiff(orderarcs.A[i], dummyarc)
+
+    #mostnegativearc = [argmin([arcredcosts[i,a] for a in arclist])]
+	mostnegativearcs = sort(arclist, by=x->arcredcosts[i,x])[1:numarcsperiter]
+    minreducedcost = arcredcosts[i, mostnegativearcs[1]]
+    shortestpatharcs = mostnegativearcs
     shortestpathnodes = []
 
     return minreducedcost, shortestpathnodes, shortestpatharcs, time() - spstarttime
@@ -309,7 +312,7 @@ function multiarcgeneration!(magarcs, hasdriverarcs)
 			if solutionmethod == "mag"	
 				minreducedcost, shortestpathnodes, shortestpatharcs, sptime = magsubproblem(i, arcredcosts, subproblemsets)
 			elseif solutionmethod == "sag"
-				minreducedcost, shortestpathnodes, shortestpatharcs, sptime = sagsubproblem(i, arcredcosts)
+				minreducedcost, shortestpathnodes, shortestpatharcs, sptime = sagsubproblem(i, arcredcosts, 5)
 			end
 
 			push!(dptimelist, sptime)

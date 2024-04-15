@@ -13,7 +13,7 @@ end
 
 inputfilename = "outputs/heatmapdata/heatmapdata.csv"
 outputfilename = "heatmap.png"
-currstdev = 1
+currstdev = 0.2
 stepsize = 0.1
 size_x, size_y = 2000,2000
 	
@@ -49,8 +49,8 @@ function generateheatmap(inputfilename, outputfilename, currstdev, stepsize, siz
 
 	allmiles = []
 	for row in 1:size(filtereddata)[1]
-		ab, db = round(stepsize * round(filtereddata[row,1] / stepsize), digits=2), round(stepsize * round(filtereddata[row,2] / stepsize),digits=2)
-		if mileslookup[ab,db] = "X"
+		ab, db = abs(round(stepsize * round(filtereddata[row,1] / stepsize), digits=2)), abs(round(stepsize * round(filtereddata[row,2] / stepsize),digits=2))
+		if mileslookup[ab,db] == "X"
             mileslookup[ab,db] = 0
         end
         mileslookup[ab,db] += (filtereddata[row,7] - filtereddata[row,6])  
@@ -61,6 +61,8 @@ function generateheatmap(inputfilename, outputfilename, currstdev, stepsize, siz
 	end	
 
 	maxmiles, minmiles = maximum(allmiles), minimum(allmiles)
+    maxmiles = max(maxmiles, -1*minmiles)
+    minmiles = min(-1*maxmiles, minmiles)
 
 	#-------------------------------------------------------------------------#
 	
@@ -82,19 +84,19 @@ function generateheatmap(inputfilename, outputfilename, currstdev, stepsize, siz
 			push!(textsquares, (center, textcolor, actualtext, 36))
 		elseif mileslookup[ab,db] >= 0 
 			println("$ab, $db")
-			lamb = mileslookup[ab,db] / maxmiles
+			lamb = mileslookup[ab,db] / (countlookup[ab,db] * maxmiles)
 			boxcolor = (98 * lamb + 255 * (1-lamb), 151 * lamb + 255 * (1-lamb), 236 * lamb + 255 * (1-lamb))
 			textcolor = ((98 * lamb + 255 * (1-lamb)) / 2, (151 * lamb + 255 * (1-lamb)) / 2, (236 * lamb + 255 * (1-lamb)) / 2)
-			actualtext = string(convert(Int, -1*round((mileslookup[ab,db])/denomlookup[ab,db],digits=0)), "%")
+			actualtext = string(convert(Int, -1*round((100 * mileslookup[ab,db])/denomlookup[ab,db],digits=0)), "%")
 			push!(locationsquares, (corner, boxcolor, boxwidth, boxheight, thickness))
 			push!(textsquares, (center, textcolor, actualtext, 20))
 			counter +=1
 		else
 			println("$ab, $db")
-			lamb = mileslookup[ab,db] / minmiles
+			lamb = mileslookup[ab,db] / (countlookup[ab,db] * minmiles)
 			boxcolor = (247 * lamb + 255 * (1-lamb), 91 * lamb + 255 * (1-lamb), 95 * lamb + 255 * (1-lamb))
 			textcolor = ((247 * lamb + 255 * (1-lamb)) / 2, (91 * lamb + 255 * (1-lamb)) / 2, (95 * lamb + 255 * (1-lamb)) / 2)
-			actualtext = string("+",convert(Int,-1*round((mileslookup[ab,db])/denomlookup[ab,db],digits=0)), "%")
+			actualtext = string("+",convert(Int,-1*round((100 * mileslookup[ab,db])/denomlookup[ab,db],digits=0)), "%")
 			push!(locationsquares, (corner, boxcolor, boxwidth, boxheight, thickness))
 			push!(textsquares, (center, textcolor, actualtext, 20))
 			counter +=1

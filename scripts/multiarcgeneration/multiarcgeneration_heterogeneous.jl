@@ -784,7 +784,8 @@ function multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, startercuts, 
 			set_name(x[i,a], string("x[",i,",",a,"]")) 
 
 			#Add to the objective
-			set_objective_function(smp, objective_function(smp) + c[a]*x[i,a])
+			#set_objective_function(smp, objective_function(smp) + c[a]*x[i,a])
+			set_objective_coefficient(smp, x[i,a], c[a])
 
 			#Find the entering and exiting nodes for arc a (ex. n_plus is the node for which a belongs to A_plus[n])
 			n_plus = arcLookup[a][1]
