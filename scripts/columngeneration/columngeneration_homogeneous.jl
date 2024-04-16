@@ -50,7 +50,6 @@ end
 #----------------------------------------------------------------------------------------#
 
 ### TEST FOR SPEED (MAYBE SCALE UP INSTANCE?)
-
 function findarcvariablereducedcosts_cg(M, rmpconstraints)
 
     alpha, beta, epsilon, gamma, eta, psi = getdualvalues_cg(rmpconstraints)

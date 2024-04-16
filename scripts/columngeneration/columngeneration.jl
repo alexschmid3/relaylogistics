@@ -135,9 +135,18 @@ function columngeneration!(orderarcs, hasdriverarcs, startercuts)
 	@variable(rmp, w[a in primaryarcs.A_space] >= 0)
 	@variable(rmp, ordtime[orders])
     @variable(rmp, maxhours)
+	@variable(rmp, orderdelay[orders] >= 0)    #only used when deadlines turned on
 
 	#Objective
-	@objective(rmp, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) + sum(sum(sum(c[a]*delta[i,a,p]*x[i,p] for a in orderarcs.A[i] ) for p in paths[i]) for i in orders) + sum(c[a]*y[a] for a in hasdriverarcs.A) + sum(u[a]*w[a] for a in primaryarcs.A_space) + lambda2 * maxhours)
+	if deadlines_flag == 0
+		@objective(rmp, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) + sum(sum(sum(c[a]*delta[i,a,p]*x[i,p] for a in orderarcs.A[i] ) for p in paths[i]) for i in orders) + sum(c[a]*y[a] for a in hasdriverarcs.A) + sum(u[a]*w[a] for a in primaryarcs.A_space) + lambda2 * maxhours)
+	elseif deadlines_flag == 1
+		@objective(rmp, Min, lambda * sum(orderdelay[i] for i in orders) + + sum(sum(sum(c[a]*delta[i,a,p]*x[i,p] for a in orderarcs.A[i] ) for p in paths[i]) for i in orders) + sum(c[a]*y[a] for a in hasdriverarcs.A) + sum(u[a]*w[a] for a in primaryarcs.A_space) + lambda2 * maxhours)
+		@constraint(rmp, absolutedelay[i in orders], orderdelay[i] >= ordtime[i] - orderdeadline[i])
+    end
+
+	#Objective
+	#@objective(rmp, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) + sum(sum(sum(c[a]*delta[i,a,p]*x[i,p] for a in orderarcs.A[i] ) for p in paths[i]) for i in orders) + sum(c[a]*y[a] for a in hasdriverarcs.A) + sum(u[a]*w[a] for a in primaryarcs.A_space) + lambda2 * maxhours)
 	
 	#Order constraints
 	@constraint(rmp, orderpath[i in orders], sum(x[i,p] for p in paths[i]) == 1)

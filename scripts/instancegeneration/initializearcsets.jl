@@ -3,9 +3,9 @@ function orderarcreduction(orders, Origin, Destination)
 	
 	#For now, we are using shortest path regardless of driver availability (this would be more time consuming to do)
 	traveltime_rdd = cacheShortestTravelTimes(numlocs, prearcs, "rdd time")
-	traveltime_llr = cacheShortestTravelTimes(numlocs, prearcs, "llr time")
+	#traveltime_llr = cacheShortestTravelTimes(numlocs, prearcs, "llr time")
 	orderarcset, orderarcset_space, A_plus_i, A_minus_i = Dict(), Dict(), Dict(), Dict()
-
+	
 	for i in orders
 		orderarcset[i] = [dummyarc]
 		orderarcset_space[i] = []
@@ -22,7 +22,7 @@ function orderarcreduction(orders, Origin, Destination)
 			A_minus_i[i,n] = []
 		end
 	end
-
+	
 	for i in orders
 		destinationlocation = nodesLookup[Destination[i][1]][1]
 		#push!(Destination[i], extendednodes[destinationlocation, dummyendtime])
@@ -34,7 +34,7 @@ function orderarcreduction(orders, Origin, Destination)
 			push!(A_minus_i[i, extendednodes[destinationlocation, dummyendtime]], arc_ext)
 		end
 	end
-
+	
 	prearcs_aug = deepcopy(prearcs)
 	for l in 1:numlocs
 		push!(prearcs_aug, (l, l, tstep, tstep))
@@ -59,7 +59,7 @@ function orderarcreduction(orders, Origin, Destination)
 			end
 		end
 	end
-
+	
 	#Create A_plus and A_minus lists
 	for i in orders, n in 1:numnodes, a in A_plus[n]
 		if (a in orderarcset[i]) & !(a in A_plus_i[i,n])
@@ -71,11 +71,11 @@ function orderarcreduction(orders, Origin, Destination)
 			push!(A_minus_i[i,n], a)
 		end
 	end
-
+	
 	for i in orders
 		orderarcset[i] = union(sort(setdiff(orderarcset[i], dummyarc), by = x -> nodesLookup[arcLookup[x][1]][2]), dummyarc)
 	end
-
+	
 	return orderarcset, orderarcset_space, A_plus_i, A_minus_i
 
 end
@@ -212,15 +212,15 @@ function initializearcsets(A_space, A_plus, A_minus, orders, Origin, Destination
     
     #Order arc sets - viable paths from origin to destination
     orderarcset_full, orderarcset_space_full, A_plus_i_full, A_minus_i_full = orderarcreduction(orders, Origin, Destination)
-
-    #Identify feasible arcs for each driver and trucks
+	
+	#Identify feasible arcs for each driver and trucks
     if solutionmethod == "nr"
         driverarcset, driverarcset_space, availabledrivers, A_plus_d, A_minus_d, closelocs = driverArcSetsByDriver_nonrelay(numlocs, numarcs, numnodes, prearcs, drivers, tstep, horizon, nodes, arcs, assignedDrivers, A_minus, A_plus, T_off, drivershift, driverHomeLocs, T_off_0, shiftlength)
         A_hasdriver, yupperbound, A_hasdriver_space, A_plus_hd, A_minus_hd = truckarcreduction(A_space, A_plus, A_minus, availabledrivers)
     else
         driverarcset, driverarcset_space, availabledrivers, A_plus_d, A_minus_d, closelocs = driverarcreduction(driverStartNodes, T_off)
         A_hasdriver, yupperbound, A_hasdriver_space, A_plus_hd, A_minus_hd = truckarcreduction(A_space, A_plus, A_minus, availabledrivers)
-    end
+	end
 
     #Format arc sets
     primaryarcs = (A=1:numarcs, A_space=A_space, A_minus=A_minus, A_plus=A_plus, available=[], closelocs=[]);
@@ -228,8 +228,8 @@ function initializearcsets(A_space, A_plus, A_minus, orders, Origin, Destination
     orderarcs = (A=orderarcset_full, A_space=orderarcset_space_full, A_minus=A_minus_i_full, A_plus=A_plus_i_full, available=[], closelocs=[]);
     driverarcs = (A=driverarcset, A_space=driverarcset_space, A_minus=A_minus_d, A_plus=A_plus_d, available=availabledrivers, closelocs=closelocs);
     hasdriverarcs = (A=A_hasdriver, A_space=A_hasdriver_space, A_minus=A_minus_hd, A_plus=A_plus_hd, available=[], closelocs=[]);
-
-    return primaryarcs, extendedtimearcs, orderarcs, driverarcs, hasdriverarcs
+	
+	return primaryarcs, extendedtimearcs, orderarcs, driverarcs, hasdriverarcs
 
 end
 

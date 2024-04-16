@@ -15,6 +15,7 @@ include("scripts/metrics/writeresultsforrun.jl")
 #-------------------------------------FOUR INSTANCES------------------------------------#  
 
 inittime = time()
+starttime = time()
 
 loclist = [20, 40, 60, 66, 66]
 driverlist = [70, 300, 1600, 3316, 1600]

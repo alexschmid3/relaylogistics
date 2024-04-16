@@ -265,13 +265,16 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function sagsubproblem(i, arcredcosts)
+function sagsubproblem(i, arcredcosts, numarcsperiter)
 
     spstarttime = time()
 
-    mostnegativearc = setdiff(orderarcs.A[i], dummyarc)[argmin([arcredcosts[i,a] for a in setdiff(orderarcs.A[i], dummyarc)])]
-    minreducedcost = arcredcosts[i, mostnegativearc]
-    shortestpatharcs = [mostnegativearc]
+	arclist = setdiff(orderarcs.A[i], dummyarc)
+
+    #mostnegativearc = [argmin([arcredcosts[i,a] for a in arclist])]
+	mostnegativearcs = sort(arclist, by=x->arcredcosts[i,x])[1:numarcsperiter]
+    minreducedcost = arcredcosts[i, mostnegativearcs[1]]
+    shortestpatharcs = mostnegativearcs
     shortestpathnodes = []
 
     return minreducedcost, shortestpathnodes, shortestpatharcs, time() - spstarttime
@@ -551,9 +554,6 @@ function multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, startercuts, 
 	@variable(smp, orderdelay[orders] >= 0)    #only used when deadlines turned on
 
 	#Objective
-	@objective(smp, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) + sum(sum(c[a]*x[i,a] for a in magarcs.A[i]) for i in orders) + sum(c[a]*y[a] for a in hasdriverarcs.A) + sum(u[a]*w[a] for a in primaryarcs.A_space) + lambda2 * maxhours)
-
-	#Objective
 	if deadlines_flag == 0
 		@objective(smp, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) + sum(sum(c[a]*x[i,a] for a in magarcs.A[i]) for i in orders) + sum(c[a]*y[a] for a in hasdriverarcs.A) + sum(u[a]*w[a] for a in primaryarcs.A_space) + lambda2 * maxhours)
 	elseif deadlines_flag == 1
@@ -708,7 +708,7 @@ function multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, startercuts, 
 			if solutionmethod == "mag"	
 				minreducedcost, shortestpathnodes, shortestpatharcs, sptime = magsubproblem(i, arcredcosts, subproblemsets)
 			elseif solutionmethod == "sag"	
-				minreducedcost, shortestpathnodes, shortestpatharcs, sptime = sagsubproblem(i, arcredcosts)
+				minreducedcost, shortestpathnodes, shortestpatharcs, sptime = sagsubproblem(i, arcredcosts, 2)
 			end
 
 			push!(dptimelist, sptime)
