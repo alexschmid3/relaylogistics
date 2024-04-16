@@ -50,7 +50,7 @@ lambda2 = expparms[experiment_id, 12]
 println("Experiment = ", experiment_id)
 
 #Manual parameters for response/appendix experiments
-deadlines_flag = 0
+deadlines_flag = 1
 deadlineasmultipleofshortestpath = 2  #1 - deadline is shortest path time, 2 - deadline is twice shortest path time, etc.
 roundeddrivinghours_flag = 0
 
@@ -116,7 +116,7 @@ runid = string("ex", ex, "_exp", experiment_id, "_", solutionmethod, "_rundate",
 
 #File names					
 vizfoldername = string("visualizations/static/run ", runid)
-csvfoldername = string("outputs/table2_hom/")
+csvfoldername = string("outputs/table2_het/")
 resultsfilename = string(csvfoldername, runid, "_output.csv")
 convergencedatafilename = string(csvfoldername, "convergence_exp", runid, ".csv")
 
