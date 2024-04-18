@@ -11,12 +11,25 @@ for item in tempHueList
 	end
 end
 
-inputfilename = "outputs/heatmapdata/heatmapdata.csv"
-outputfilename = "heatmap.png"
-currstdev = 0.2
+#Parameters
+currstdev = 0.0
 stepsize = 0.1
 size_x, size_y = 2000,2000
-	
+
+#File names
+if currstdev >= 1
+	outputfilename = string("figures/heatmap_", convert(Int,currstdev*10),".png")
+else
+	outputfilename = string("figures/heatmap_0", convert(Int,currstdev*10),".png")
+end
+if currstdev == 0.0
+	inputfilename = "outputs/heatmapdata/exp_all.csv"
+else
+	inputfilename = "outputs/heatmapdata/heatmapdata.csv"
+end
+
+generateheatmap(inputfilename, outputfilename, currstdev, stepsize, size_x, size_y)
+
 #---------------------------------------------------------------------------------------#
 
 function generateheatmap(inputfilename, outputfilename, currstdev, stepsize, size_x, size_y)
@@ -72,6 +85,9 @@ function generateheatmap(inputfilename, outputfilename, currstdev, stepsize, siz
 
 	counter = 0
 
+	xfont = 40
+	numberfont = 30
+
 	locationsquares, textsquares = [], []
 	for ab in 0:stepsize:1, db in 0:stepsize:1
 		corner = boxPoints[ab,db]
@@ -81,7 +97,7 @@ function generateheatmap(inputfilename, outputfilename, currstdev, stepsize, siz
 			textcolor = (150,150,150)
 			actualtext = "X"
 			push!(locationsquares, (corner, boxcolor, boxwidth, boxheight, thickness))
-			push!(textsquares, (center, textcolor, actualtext, 36))
+			push!(textsquares, (center, textcolor, actualtext, xfont))
 		elseif mileslookup[ab,db] >= 0 
 			println("$ab, $db")
 			lamb = mileslookup[ab,db] / (countlookup[ab,db] * maxmiles)
@@ -89,7 +105,7 @@ function generateheatmap(inputfilename, outputfilename, currstdev, stepsize, siz
 			textcolor = ((98 * lamb + 255 * (1-lamb)) / 2, (151 * lamb + 255 * (1-lamb)) / 2, (236 * lamb + 255 * (1-lamb)) / 2)
 			actualtext = string(convert(Int, -1*round((100 * mileslookup[ab,db])/denomlookup[ab,db],digits=0)), "%")
 			push!(locationsquares, (corner, boxcolor, boxwidth, boxheight, thickness))
-			push!(textsquares, (center, textcolor, actualtext, 20))
+			push!(textsquares, (center, textcolor, actualtext, numberfont))
 			counter +=1
 		else
 			println("$ab, $db")
@@ -98,7 +114,7 @@ function generateheatmap(inputfilename, outputfilename, currstdev, stepsize, siz
 			textcolor = ((247 * lamb + 255 * (1-lamb)) / 2, (91 * lamb + 255 * (1-lamb)) / 2, (95 * lamb + 255 * (1-lamb)) / 2)
 			actualtext = string("+",convert(Int,-1*round((100 * mileslookup[ab,db])/denomlookup[ab,db],digits=0)), "%")
 			push!(locationsquares, (corner, boxcolor, boxwidth, boxheight, thickness))
-			push!(textsquares, (center, textcolor, actualtext, 20))
+			push!(textsquares, (center, textcolor, actualtext, numberfont))
 			counter +=1
 		end		
 	end
@@ -134,7 +150,7 @@ function generateheatmap(inputfilename, outputfilename, currstdev, stepsize, siz
 	#Box
 	Luxor.rect(Point(-(size_x - buffer_xy) / 2, - (size_y - buffer_xy) / 2), size_x - buffer_xy, size_y - buffer_xy, :stroke)	
 
-	#Ticks
+	#Ticks and labels
 	for ab in 0:stepsize:1
 		center = Point(ab * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_x - buffer_xy) - 0.5 * (size_x - buffer_xy),  0.5 * (size_y - buffer_xy))
 		Luxor.line(center, center + Point(0, 10), :stroke)
@@ -142,7 +158,7 @@ function generateheatmap(inputfilename, outputfilename, currstdev, stepsize, siz
 	fontsize(36)
 	for ab in 0:stepsize*2:1
 		center = Point(ab * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_x - buffer_xy) - 0.5 * (size_x - buffer_xy),  0.5 * (size_y - buffer_xy))
-		label(string(ab), :S, center + Point(boxwidth/2, 10))
+		label(string(round(1-ab,digits=1)), :S, center + Point(boxwidth/2, 10))
 	end
 
 	for db in 0:stepsize:1
@@ -152,12 +168,12 @@ function generateheatmap(inputfilename, outputfilename, currstdev, stepsize, siz
 	fontsize(36)
 	for db in 0:stepsize*2:1
 		center = Point(- 0.5 * (size_x - buffer_xy), (1-db) * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_y - buffer_xy) - 0.5 * (size_y - buffer_xy))
-		label(string(db), :W, center + Point(-10, boxheight/2))
+		label(string(round(1-db,digits=1)), :W, center + Point(-10, boxheight/2))
 	end
 
 	fontsize(60)
-	Luxor.text("Aggregate balance", Point(0.5 * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_x - buffer_xy) - 0.5 * (size_x - buffer_xy),  0.5 * (size_y - buffer_xy)) + buffer_xy/2 - 20, halign=:center, valign = :bottom)
-	Luxor.text("Disaggregate balance", Point(- 0.5 * (size_x - buffer_xy) - buffer_xy/2 + 35, 0.5 * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_y - buffer_xy) - 0.5 * (size_y - buffer_xy)), halign=:center,   valign = :middle, angle = -pi/2)
+	Luxor.text("Aggregate imbalance", Point(0.5 * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_x - buffer_xy) - 0.5 * (size_x - buffer_xy),  0.5 * (size_y - buffer_xy)) + buffer_xy/2 - 20, halign=:center, valign = :bottom)
+	Luxor.text("Disaggregate imbalance", Point(- 0.5 * (size_x - buffer_xy) - buffer_xy/2 + 35, 0.5 * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_y - buffer_xy) - 0.5 * (size_y - buffer_xy)), halign=:center,   valign = :middle, angle = -pi/2)
 
 	finish()
 	preview()

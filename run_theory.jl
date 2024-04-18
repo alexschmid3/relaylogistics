@@ -7,20 +7,25 @@ include("scripts/theory/generatedemand.jl")
 include("scripts/theory/realizedemand.jl")
 include("scripts/visualizations/theorynetwork.jl")
 
-W = [1,2,3]
-E = [4,5,6]
+experiment_id += 1 #1001 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+params = CSV.read("data/morelocs.csv", DataFrame)
+
+w = 2
+h = 1/2
+n = params[experiment_id, 2]
 T = 5
 C = 5
 
-experiment_id = 1002 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-params = CSV.read("data/theory.csv", DataFrame)
 totalflow = 500 #params[experiment_id, 5] 
-stdev_base = 10 #params[experiment_id, 6] 
+stdev_base = 0.5 #params[experiment_id, 6] 
 aggbalance = 1 #params[experiment_id, 4] 
-disaggbalance = 0.7 #params[experiment_id, 3] 
+disaggbalance = 0.2 #params[experiment_id, 3] 
 coastbalance = 1 #params[experiment_id, 2] 
-randomseedval = 123 #params[experiment_id, 7] 
+randomseedval = params[experiment_id, 1] #params[experiment_id, 7] 
 Random.seed!(randomseedval)
+
+W = [i for i in 1:n]
+E = [i for i in n+1:2*n]
 
 demandlocs = union(W,E)
 allpairs = []
@@ -32,6 +37,7 @@ for i in E, j in W
 end
 
 coordinates, P = networkinfo()
+p1,p2 = P[1], P[2]
 alllocs = union(demandlocs, P)
 
 function Tmod(a)
@@ -123,14 +129,14 @@ end
 
 flow = zeros(length(union(W,E,P)), length(union(W,E,P)), T)
 for i in W, j in E, t in 1:T
-    flow[i,7,t] += demand[i,j,t]
-    flow[7,8,Tmod(t+1)] += demand[i,j,t]
-    flow[8,j,Tmod(t+2)] += demand[i,j,t] 
+    flow[i,p1,t] += demand[i,j,t]
+    flow[p1,p2,Tmod(t+1)] += demand[i,j,t]
+    flow[p2,j,Tmod(t+2)] += demand[i,j,t] 
 end
 for i in E, j in W, t in 1:T
-    flow[i,8,t] += demand[i,j,t]
-    flow[8,7,Tmod(t+1)] += demand[i,j,t]
-    flow[7,j,Tmod(t+2)] += demand[i,j,t] 
+    flow[i,p2,t] += demand[i,j,t]
+    flow[p2,p1,Tmod(t+1)] += demand[i,j,t]
+    flow[p1,j,Tmod(t+2)] += demand[i,j,t] 
 end
 
 journeyscovering, journeydist = Dict(), Dict()
@@ -206,42 +212,42 @@ set_optimizer_attribute(model, "OutputFlag", 0)
 #@constraint(model, [i in demandlocs,j in receivinglocs[i], t in 1:T, t2 in setdiff(1:T,t)], demandheld[i,j,t,t2] == 0)
 
 #Flow
-@constraint(model, [i in W, t in 1:T], sum(y[jrny] for jrny in journeyscovering[i,7,t]) >= sum(sum(demandheld[i,j,t2,t] for j in E) for t2 in 1:T) )
-@constraint(model, [t in 1:T], sum(y[jrny] for jrny in journeyscovering[7,8,t]) >= sum(sum(sum(demandheld[i,j,Tmod(t2-1),Tmod(t-1)] for j in E) for i in W) for t2 in 1:T) )
-@constraint(model, [j in E, t in 1:T], sum(y[jrny] for jrny in journeyscovering[8,j,t]) >= sum(sum(demandheld[i,j,Tmod(t2-2),Tmod(t-2)] for i in W) for t2 in 1:T) )
+@constraint(model, [i in W, t in 1:T], sum(y[jrny] for jrny in journeyscovering[i,p1,t]) >= sum(sum(demandheld[i,j,t2,t] for j in E) for t2 in 1:T) )
+@constraint(model, [t in 1:T], sum(y[jrny] for jrny in journeyscovering[p1,p2,t]) >= sum(sum(sum(demandheld[i,j,Tmod(t2-1),Tmod(t-1)] for j in E) for i in W) for t2 in 1:T) )
+@constraint(model, [j in E, t in 1:T], sum(y[jrny] for jrny in journeyscovering[p2,j,t]) >= sum(sum(demandheld[i,j,Tmod(t2-2),Tmod(t-2)] for i in W) for t2 in 1:T) )
 
-@constraint(model, [i in E, t in 1:T], sum(y[jrny] for jrny in journeyscovering[i,8,t]) >= sum(sum(demandheld[i,j,t2,t] for j in W) for t2 in 1:T) )
-@constraint(model, [t in 1:T], sum(y[jrny] for jrny in journeyscovering[8,7,t]) >= sum(sum(sum(demandheld[i,j,Tmod(t2-1),Tmod(t-1)] for j in W) for i in E) for t2 in 1:T) )
-@constraint(model, [j in W, t in 1:T], sum(y[jrny] for jrny in journeyscovering[7,j,t]) >= sum(sum(demandheld[i,j,Tmod(t2-2),Tmod(t-2)] for i in E) for t2 in 1:T) )
+@constraint(model, [i in E, t in 1:T], sum(y[jrny] for jrny in journeyscovering[i,p2,t]) >= sum(sum(demandheld[i,j,t2,t] for j in W) for t2 in 1:T) )
+@constraint(model, [t in 1:T], sum(y[jrny] for jrny in journeyscovering[p2,p1,t]) >= sum(sum(sum(demandheld[i,j,Tmod(t2-1),Tmod(t-1)] for j in W) for i in E) for t2 in 1:T) )
+@constraint(model, [j in W, t in 1:T], sum(y[jrny] for jrny in journeyscovering[p1,j,t]) >= sum(sum(demandheld[i,j,Tmod(t2-2),Tmod(t-2)] for i in E) for t2 in 1:T) )
 
 optimize!(model)
 relay_delay_obj = objective_value(model)
 
 #--------------------------------------------------------------#
-
+#=
 #Relay bound
 relay_bound = 0
-for i in W, j in [7]
+for i in W, j in [p1]
     r = [sum(demand[i,j,t] for j in E) for t in 1:T]
     l = [sum(demand[j,i,Tmod(t-2)] for j in E) for t in 1:T]
     minmiles_corr = 2 * tripdistance[i,j] * findminmiles(r, l)
     global relay_bound += minmiles_corr
 end 
-for i in [7], j in [8]
+for i in [p1], j in [p2]
     r = [sum(sum(demand[i,j,Tmod(t-1)] for j in E) for i in W) for t in 1:T]
     l = [sum(sum(demand[i,j,Tmod(t-1)] for j in W) for i in E) for t in 1:T]
     minmiles_corr = 2 * tripdistance[i,j] * findminmiles(r, l)
     global relay_bound += minmiles_corr
 end 
-for i in E, j in [8]
+for i in E, j in [p2]
     r = [sum(demand[i,j,t] for j in W) for t in 1:T]
     l = [sum(demand[j,i,Tmod(t-2)] for j in W) for t in 1:T]
     minmiles_corr = 2 * tripdistance[i,j] * findminmiles(r, l)
     global relay_bound += minmiles_corr
 end 
-
+=#
 #--------------------------------------------------------------#
-
+#=
 #Ptp bound 
 we_bound, ew_bound = 0, 0
 for i in W, j in E, t in 1:T
@@ -347,7 +353,7 @@ for α in 0:0.1:1
     end
     global ptp_bound2 = max(ptp_bound2, M - sum(pvar[u] for u in U) - sum(qvar[v] for v in V))
 end
-
+=#
 #--------------------------------------------------------------#
 #=
 using Hungarian
@@ -364,15 +370,39 @@ ptp_exact = M - cost
 =#
 #--------------------------------------------------------------#
 
+#PTP simple (T=C)
+ptp_bound3 = sum(sum(sum(tripdistance[i,j]*demand[i,j,t] for t in 1:T) for j in E) for i in W) + sum(sum(sum(tripdistance[i,j]*demand[i,j,t] for t in 1:T) for j in W) for i in E) 
+
+disagg = sum(sum(sum(abs(demand[i,j,t] - demand[j,i,t]) for i in W) for j in E) for t in 1:T)
+coastal = sum(abs(sum(sum(demand[i,j,t] for j in E) for i in W) - sum(sum(demand[i,j,t] for j in W) for i in E)) for t in 1:T)
+
+ptp_bound3 += (3*w - h) * coastal + (2*h)/(n-1) * disagg
+
+#Relay simple
+detourdistance = Dict()
+for i in W, j in E
+    detourdistance[i,j] = tripdistance[i,P[1]] + tripdistance[P[1],P[2]] + tripdistance[P[2],j]
+    detourdistance[j,i] = tripdistance[i,P[1]] + tripdistance[P[1],P[2]] + tripdistance[P[2],j]
+end
+relay_bound2 = sum(sum(sum(detourdistance[i,j]*demand[i,j,t] for t in 1:T) for j in E) for i in W) + sum(sum(sum(tripdistance[i,j]*demand[i,j,t] for t in 1:T) for j in W) for i in E) 
+
+agg = sum(sum(abs(sum(demand[i,j,t] - demand[j,i,t] for j in E)) for i in W)  for t in 1:T) + sum(sum(abs(sum(demand[i,j,t] - demand[j,i,t] for j in W)) for i in E) for t in 1:T)
+
+relay_bound2 += w * coastal + sqrt(w^2 + h^2) * agg
+
+#--------------------------------------------------------------#
+
 if 1==1
     println("--------------------------------")
-    println("Maximum possible miles = ", M)
+    #println("Maximum possible miles = ", M)
     println("Point-to-point miles = ", ptp_obj)
     #println("Point-to-point bound (exact) = ", ptp_exact)
     #println("   Empty (ptp) = ", ptp_empties)
-    println("Point-to-point bound (new) = ", ptp_bound2) 
-    println("Point-to-point bound = ", ptp_bound) 
-    println("Relay bound = ", relay_bound) 
+    println("Point-to-point bound (simple) = ", ptp_bound3) 
+    #println("Point-to-point bound (new) = ", ptp_bound2) 
+    #println("Point-to-point bound = ", ptp_bound) 
+    #println("Relay bound = ", relay_bound) 
+    println("Relay bound (simple) = ", relay_bound2) 
     println("Relay miles = ", relay_obj)
     #println("   Empty (relay) = ", relay_empties)
     println("Relay miles w/ delay = ", relay_delay_obj)
@@ -382,5 +412,7 @@ end
 
 #--------------------------------------------------------------#
 
-df = DataFrame(ab=[actualAB], db=[actualDB], cd=[actualCB], flow=[totalflow], stdev=[stdev_base], relay=[relay_delay_obj], ptp=[ptp_obj])
-CSV.write(string("outputs/heatmapdata/exp", experiment_id,".csv"), df)
+#df = DataFrame(ab=[actualAB], db=[actualDB], cd=[actualCB], flow=[totalflow], stdev=[stdev_base], relay=[relay_delay_obj], ptp=[ptp_obj], relay_bound=[relay_bound2], ptp_bound=[ptp_bound3])
+df = DataFrame(n=[n], seed=[randomseedval], ab=[actualAB], db=[actualDB], cd=[actualCB], flow=[totalflow], stdev=[stdev_base], relay=[relay_delay_obj], ptp=[ptp_obj], relay_bound=[relay_bound2], ptp_bound=[ptp_bound3])
+#CSV.write(string("outputs/heatmapdata/exp", experiment_id,".csv"), df)
+CSV.write(string("outputs/heatmapdata/morelocations.csv"), df, append=true)
