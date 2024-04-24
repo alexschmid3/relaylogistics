@@ -40,7 +40,7 @@ function getdualvalues_cg(rmpconstraints)
 	beta = Array(dual.(rmpconstraints.con_initialTrucks))
 	epsilon = Array(dual.(rmpconstraints.con_finalTrucks))
 	gamma = Array(dual.(rmpconstraints.con_truckFlowBalance))
-	eta = dual.(rmpconstraints.con_driverAvailability)
+	eta = Array(dual.(rmpconstraints.con_driverAvailability))
 	psi = dual.(rmpconstraints.con_deliveryTime)
 
     return alpha, beta, epsilon, gamma, eta, psi
@@ -189,15 +189,16 @@ function columngeneration!(orderarcs, hasdriverarcs, cuts)
 
 	#Pre-processing
     M, subproblemsets = preprocesscgsets(orderarcs.A);
+	fullalgstart = time()
 
     #------------------------------------------------------#
-
-	while cg_iter <= 10000
+	
+	while cg_iter <= 100000
+		lasttime = time()
 
 		#-------------SOLVE RMP-------------#
-
 		println("-------- ITERATION $cg_iter --------")
-		status = optimize!(rmp)
+		@time status = optimize!(rmp)
 		if termination_status(rmp) != MOI.OPTIMAL
 			println(termination_status(rmp))
 			return 100000000, rmp, x, y, z, w, paths, delta
@@ -208,16 +209,20 @@ function columngeneration!(orderarcs, hasdriverarcs, cuts)
 		println("Solved RMP with objective = ", rmpobj, " in iteration $cg_iter (", sum(length(paths[i]) for i in orders), " paths)")
 
 		#Count number of arcs and paths
-		if saveconvergencedata_flag >= 0
-			totalorderarcs = sum(sum(min(1, sum(delta[i,a,p] for p in paths[i])) for a in orderarcs.A[i]) for i in orders)
-			totalorderpaths = sum(length(paths[i]) for i in orders)
-			totalusedpaths = sum(sum(value(x[i,p]) for p in paths[i]) for i in orders)
-		end
+		#if saveconvergencedata_flag >= 0
+		#	totalorderarcs = sum(sum(min(1, sum(delta[i,a,p] for p in paths[i])) for a in orderarcs.A[i]) for i in orders)
+		#	totalorderpaths = sum(length(paths[i]) for i in orders)
+		#	totalusedpaths = sum(sum(value(x[i,p]) for p in paths[i]) for i in orders)
+		#end
+		println("Checkpoint 1 = ", time()-lasttime)
+		lasttime = time()
 
         #------------SUBPROBLEMS------------#
 
 		#Calculate reduced costs
         arcredcosts, alpha = findarcvariablereducedcosts_cg(M, rmpconstraints)
+		println("Checkpoint 2 = ", time()-lasttime)
+		lasttime = time()
 
 		#Run shortest path for each order to find new arcs
 		shortestpathnodes, shortestpatharcs = Dict(), Dict()
@@ -247,6 +252,8 @@ function columngeneration!(orderarcs, hasdriverarcs, cuts)
 				shortestpatharcs[i] = sparcs			
 			end
 		end
+		println("Checkpoint 3 = ", time()-lasttime)
+		lasttime = time()
 		
 		#"Parallelize" subproblem times
 		shuffleddptimes = shuffle_partition(length(orders))
@@ -260,6 +267,8 @@ function columngeneration!(orderarcs, hasdriverarcs, cuts)
 		catch
 			push!(lowerbounds, rmpobj)
 		end
+		println("Checkpoint 4 = ", time()-lasttime)
+		lasttime = time()
 
 		#------COUNT ARCS AND PATHS-----#
 
@@ -267,7 +276,8 @@ function columngeneration!(orderarcs, hasdriverarcs, cuts)
 			maximprove = minimum(minreducedcosts) * totalusedpaths
 			write_cg_conv(convergencedatafilename, cg_iter, maximprove, totalorderarcs, totalorderpaths, rmpobj)
 		end
-	
+		println("Checkpoint 5 = ", time()-lasttime)
+		lasttime = time()
 		#-------ADD NEW VARIABLES-------#
 
 		for row in newpaths
@@ -280,7 +290,8 @@ function columngeneration!(orderarcs, hasdriverarcs, cuts)
 			set_name(x[i,p], string("x[",i,",",p,"]")) 
 
 			#Add to objective
-			set_objective_function(rmp, objective_function(rmp) + cost*x[i,p]) 
+			#set_objective_function(rmp, objective_function(rmp) + cost*x[i,p]) 
+			set_objective_coefficient(rmp, x[i,p], cost) 
 
 			#Add new variable to order path constraints
 			set_normalized_coefficient(rmpconstraints.con_orderpath[i], x[i,p], 1.0)
@@ -314,19 +325,22 @@ function columngeneration!(orderarcs, hasdriverarcs, cuts)
 			end
 
 		end	
-
+		println("Checkpoint 6 = ", time()-lasttime)
+		lasttime = time()
 		#----------TERMINATION----------#
 
 		if (minimum(minreducedcosts) >= -0.0001) 
 			println("NO NEGATIVE REDUCED COSTS FOUND!")	
 			break
 		end
-
+		println("Checkpoint 7 = ", time()-lasttime)
 		#------------ITERATE------------#
 
 		cg_iter += 1
 	
 	end
+
+	fullalgtime = time() - fullalgstart
 
 	optimize!(rmp)
 	rmpobj = objective_value(rmp)
@@ -337,6 +351,6 @@ function columngeneration!(orderarcs, hasdriverarcs, cuts)
 
 	#-------------------------------#
 
-	return rmpobj, rmp, x, y, z, w, paths, delta, sum(rmptimes), sum(pptimes), sum(pptimes_par), totalpaths, cg_iter
+	return rmpobj, rmp, x, y, z, w, paths, delta, sum(rmptimes), sum(pptimes), sum(pptimes_par), totalpaths, cg_iter, fullalgtime
 
 end

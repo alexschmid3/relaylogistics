@@ -7,21 +7,21 @@ include("scripts/theory/generatedemand.jl")
 include("scripts/theory/realizedemand.jl")
 include("scripts/visualizations/theorynetwork.jl")
 
-experiment_id += 1 #1001 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+experiment_id = 1001 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 params = CSV.read("data/morelocs.csv", DataFrame)
 
 w = 2
 h = 1/2
-n = params[experiment_id, 2]
+n = 3 #params[experiment_id, 2]
 T = 5
 C = 5
 
 totalflow = 500 #params[experiment_id, 5] 
-stdev_base = 0.5 #params[experiment_id, 6] 
+stdev_base = 0.0 #params[experiment_id, 6] 
 aggbalance = 1 #params[experiment_id, 4] 
-disaggbalance = 0.2 #params[experiment_id, 3] 
+disaggbalance = 0.6 #params[experiment_id, 3] 
 coastbalance = 1 #params[experiment_id, 2] 
-randomseedval = params[experiment_id, 1] #params[experiment_id, 7] 
+randomseedval = 12091 #params[experiment_id, 1] #params[experiment_id, 7] 
 Random.seed!(randomseedval)
 
 W = [i for i in 1:n]
@@ -376,7 +376,7 @@ ptp_bound3 = sum(sum(sum(tripdistance[i,j]*demand[i,j,t] for t in 1:T) for j in 
 disagg = sum(sum(sum(abs(demand[i,j,t] - demand[j,i,t]) for i in W) for j in E) for t in 1:T)
 coastal = sum(abs(sum(sum(demand[i,j,t] for j in E) for i in W) - sum(sum(demand[i,j,t] for j in W) for i in E)) for t in 1:T)
 
-ptp_bound3 += (3*w - h) * coastal + (2*h)/(n-1) * disagg
+ptp_bound3 += (3*w - (h)/(n-1)) * coastal + (h)/(n-1) * disagg
 
 #Relay simple
 detourdistance = Dict()
@@ -415,4 +415,4 @@ end
 #df = DataFrame(ab=[actualAB], db=[actualDB], cd=[actualCB], flow=[totalflow], stdev=[stdev_base], relay=[relay_delay_obj], ptp=[ptp_obj], relay_bound=[relay_bound2], ptp_bound=[ptp_bound3])
 df = DataFrame(n=[n], seed=[randomseedval], ab=[actualAB], db=[actualDB], cd=[actualCB], flow=[totalflow], stdev=[stdev_base], relay=[relay_delay_obj], ptp=[ptp_obj], relay_bound=[relay_bound2], ptp_bound=[ptp_bound3])
 #CSV.write(string("outputs/heatmapdata/exp", experiment_id,".csv"), df)
-CSV.write(string("outputs/heatmapdata/morelocations.csv"), df, append=true)
+#CSV.write(string("outputs/heatmapdata/morelocations.csv"), df, append=true)

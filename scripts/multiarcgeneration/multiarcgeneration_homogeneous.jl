@@ -44,7 +44,7 @@ end
 
 function findarcvariablereducedcosts(M, smpconstraints)
 
-    alpha, beta, gamma, theta, nu, mu, xi, psi = getdualvalues(smpconstraints)
+	alpha, beta, gamma, theta, nu, mu, xi, psi = getdualvalues(smpconstraints)
     
     arcredcosts = zeros(numorders, extendednumarcs)
     for i in orders
@@ -264,7 +264,7 @@ function multiarcgeneration!(magarcs, hasdriverarcs)
 	while cg_iter <= 100000
 
 		#-----------SOLVE SMP-----------#
-
+		lasttime = time()
 		println("-------- ITERATION $cg_iter --------")
 
 		status = optimize!(smp)
@@ -273,6 +273,8 @@ function multiarcgeneration!(magarcs, hasdriverarcs)
 			return 100000000, smp, x, y, z, w, magarcs.A
 		end
 		smpobj, smptime = objective_value(smp), solve_time(smp)
+		println("Solve SMP time = ", time()-lasttime)
+		lasttime = time()
 
         #Update chosen variables
         #for i in orders, a in magarcs.A[i]
@@ -298,12 +300,14 @@ function multiarcgeneration!(magarcs, hasdriverarcs)
 		println("Solved SMP with objective = ", smpobj, " in iteration $cg_iter (", sum(length(magarcs.A[i]) for i in orders), " arcs)")
 
         #------------SUBPROBLEMS------------#
-
+		lasttime = time()
 		#Calculate reduced costs
         arcredcosts = findarcvariablereducedcosts(M, smpconstraints)
 		if strengthenedreducedcost_flag == 1
 			arcredcosts = strengthenreducedcosts(arcredcosts, z)
 		end
+		println("Calc r.c. time = ", time()-lasttime)
+		lasttime = time()
 
 		#Run shortest path for each order to find new arcs
 		dptimelist = []
@@ -324,6 +328,8 @@ function multiarcgeneration!(magarcs, hasdriverarcs)
 				end				
 			end
 		end
+		println("Solve SP time = ", time()-lasttime)
+		lasttime = time()
 		
 		#"Parallelize" subproblem times
 		shuffleddptimes = shuffle_partition(length(orders))
@@ -346,11 +352,16 @@ function multiarcgeneration!(magarcs, hasdriverarcs)
 			maximprove = minimum(minreducedcosts) * sum(sum(value(x[i,a]) for a in magarcs.A[i]) for i in orders)
 			write_cg_conv(convergencedatafilename, cg_iter, maximprove, totalorderarcs, totalorderpaths, smpobj)
 		end
+		println("Filler = ", time()-lasttime)
+		lasttime = time()
 	
 		#-------ADD NEW VARIABLES-------#
 
 		#Add new arcs to order arc sets
 		magarcs, newarcs = updatearcsets(magarcs, addarcs)
+
+		println("Update arcs time = ", time()-lasttime)
+		lasttime = time()
 
 		#Add new arcs to model as x-variables
 		for (i,a) in newarcs
@@ -360,7 +371,7 @@ function multiarcgeneration!(magarcs, hasdriverarcs)
 			set_name(x[i,a], string("x[",i,",",a,"]")) 
 
 			#Add to the objective
-			set_objective_function(smp, objective_function(smp) + c[a]*x[i,a])
+			set_objective_coefficient(smp, x[i,a], c[a])
 
 			#Find the entering and exiting nodes for arc a (ex. n_plus is the node for which a belongs to A_plus[n])
 			n_plus = arcLookup[a][1]
@@ -413,6 +424,8 @@ function multiarcgeneration!(magarcs, hasdriverarcs)
 			end
 
 		end
+		println("Add vars time = ", time()-lasttime)
+		lasttime = time()
 
 		#----------TERMINATION----------#
 

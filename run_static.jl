@@ -461,12 +461,12 @@ elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 elseif (solutionmethod == "cg") & (formulation == "homogeneous")
 
 	dummypath = 1
-	cg_obj, rmp, x_rmp, y_rmp, z_rmp, w_rmp, cgpaths, delta, rmptime, pptime, pptime_par, totalcgpaths, cg_iter = columngeneration!(orderarcs, hasdriverarcs, nocuts)
+	cg_obj, rmp, x_rmp, y_rmp, z_rmp, w_rmp, cgpaths, delta, rmptime, pptime, pptime_par, totalcgpaths, cg_iter, fullcg_time = columngeneration!(orderarcs, hasdriverarcs, nocuts)
 	cgip_obj, x_cgip, z_cgip, cgip_time, cgip_bound = solvejourneymodel_paths(0, opt_gap, cgpaths, delta, numeffshifts)
 
-	timeslist1 = (mp=rmptime, pp=pptime, pppar=pptime_par, ip=0, cut=0)
+	timeslist1 = (mp=rmptime, pp=pptime, pppar=pptime_par, ip=0, cut=0, full=fullcg_time-pptime+pptime_par)
 	writeresultsforrun(resultsfilename, 0, cg_iter, cg_obj, timeslist1, totalcgpaths, x_cgip, z_cgip)
-	timeslist2 = (mp=0, pp=0, pppar=0, ip=cgip_time, cut=0)
+	timeslist2 = (mp=0, pp=0, pppar=0, ip=cgip_time, cut=0, full=cgip_time)
 	writeresultsforrun(resultsfilename, 1, "IP", cgip_obj, timeslist2, totalcgpaths, x_cgip, z_cgip)
 
 elseif solutionmethod == "cg"

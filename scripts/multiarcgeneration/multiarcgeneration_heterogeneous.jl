@@ -884,11 +884,17 @@ function multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, startercuts, 
                 #Run MAG with the new fixed variables
                 println("------------------- SETTING VARIABLES - ", masterfixedvars.varsettingiter, " -------------------")
 				println("Passing $cg_iter to MAG!()")
-                obj_fix, smp_fix, x_fix, y_fix, z_fix, w_fix, magarcs_fix, smptm_fix, pptm_fix, pppar_fix, arcs_fix, cgiter_fix, cuts_fix, cuttime = multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, mastercuts, masterfixedvars, variableusecount, currvarfixingiter+1, cg_iter+1)
+                obj_fix, smp_fix, x_fix, y_fix, z_fix, w_fix, magarcs_fix, smptm_fix, pptm_fix, pppar_fix, arcs_fix, cgiter_fix, cuts_fix, cuttime_fx = multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, mastercuts, masterfixedvars, variableusecount, currvarfixingiter+1, cg_iter+1)
                 println("Final iteration was $cgiter_fix")
 				cg_iter += - cg_iter + cgiter_fix 
 				println("Updated cg_iter to $cg_iter")
 				println("That was node $currvarfixingiter btw")
+
+				#Add times to lists
+				smptimes = union(smptimes, smptm_fix)
+				pptimes = union(pptimes, pptm_fix)
+				pptimes_par = union(pptimes_par, pppar_fix)
+				cuttime += cuttime_fx
 
                 #Add the generated arcs to the master list
                 magarcs = combineorderarcsets(magarcs, magarcs_fix)
