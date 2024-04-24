@@ -209,11 +209,11 @@ function columngeneration!(orderarcs, hasdriverarcs, cuts)
 		println("Solved RMP with objective = ", rmpobj, " in iteration $cg_iter (", sum(length(paths[i]) for i in orders), " paths)")
 
 		#Count number of arcs and paths
-		#if saveconvergencedata_flag >= 0
-		#	totalorderarcs = sum(sum(min(1, sum(delta[i,a,p] for p in paths[i])) for a in orderarcs.A[i]) for i in orders)
-		#	totalorderpaths = sum(length(paths[i]) for i in orders)
-		#	totalusedpaths = sum(sum(value(x[i,p]) for p in paths[i]) for i in orders)
-		#end
+		if saveconvergencedata_flag >= 0
+			totalorderarcs = 0 #sum(sum(min(1, sum(delta[i,a,p] for p in paths[i])) for a in orderarcs.A[i]) for i in orders)
+			totalorderpaths = 0 #sum(length(paths[i]) for i in orders)
+			totalusedpaths = sum(sum(value(x[i,p]) for p in paths[i]) for i in orders)
+		end
 		println("Checkpoint 1 = ", time()-lasttime)
 		lasttime = time()
 
@@ -278,6 +278,7 @@ function columngeneration!(orderarcs, hasdriverarcs, cuts)
 		end
 		println("Checkpoint 5 = ", time()-lasttime)
 		lasttime = time()
+
 		#-------ADD NEW VARIABLES-------#
 
 		for row in newpaths
