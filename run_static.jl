@@ -42,11 +42,14 @@ weekstart = expparms[experiment_id, 4]
 horizon = expparms[experiment_id, 5] * 24
 tstep = expparms[experiment_id, 6]
 driverfactor = expparms[experiment_id, 7]
-k = expparms[experiment_id, 8]   #This is the rho value
+k = expparms[experiment_id, 8]  		   # This is the rho value
 opt_gap = expparms[experiment_id, 9]
 lambda = expparms[experiment_id, 10]
 maxweeklydriverhours = expparms[experiment_id, 11]
 lambda2 = expparms[experiment_id, 12]
+runtype = "static"
+operations = "relay" 					   # "ptp" or "relay"
+ptpvsrelay = 0
 println("Experiment = ", experiment_id)
 
 #Manual parameters for response/appendix experiments
@@ -113,7 +116,7 @@ saveconvergencedata_flag = 1
 
 #Travel time calculation parameters
 excludeoutliers_flag = 1							# 0 = include outliers in travel time calculation, 1 = exclude outliers
-googlemapstraveltimes_flag = 1						# 1 = travel time between two locations is max(Avg from Rivigo data, Google Maps travel time) (<5% of arcs use google maps time), 0 = travel time is avg of Rivigo data
+googlemapstraveltimes_flag = ptpvsrelay==1 ? 2 : 1	# 2 = travel time between two locations is Google maps, 1 = max(Avg from Rivigo data, Google Maps travel time) (<5% of arcs use google maps time), 0 = travel time is avg of Rivigo data
 includesymmetricarcs_flag = 1						# 1 = if arc A-->B present in Rivigo data but not B-->A, create synthetic arc B-->A; 0 = do not include synthetic arcs (may cause feasibility issues)
 traveltimefordelay_flag = 2 						# 0 = use rounded travel times for shortest path used in delay objective, 1 = use raw travel times (best for comparing across multiple tsteps), 2 = use rounded travel times, except on the final leg of the journey where raw is used 
 ensureconnectivity_flag = 1
@@ -172,8 +175,8 @@ maxviztimeperiods = timeperiods
 hubCoords, hubsLookup, hubsReverseLookup, hubsTravelTimeIndex, numlocs = readlocations(hubdataisbfilename, maxlocs)
 nodes, nodesLookup, N_0, N_end, numnodes = timespacentwk(numlocs, tstep, horizon)
 m_0, m_end = truckdistribution(numtrucks, numlocs, N_0, N_end)
-prearcs, arcLength, arcLength_raw = readarcs(traveltimesfilename, hubdistancesfilename, tstep, numlocs, hubsTravelTimeIndex, roundup_flag, excludeoutliers_flag, hubsReverseLookup, googlemapstraveltimes_flag)
-arcs, arcLookup, A_plus, A_minus, A_space, A_plus_time, A_minus_time, A_minus_space, A_plus_space, numarcs, truetraveltime = arccreation(prearcs, horizon, tstep, numnodes, nodes, numlocs)
+prearcs, arcLength, arcLength_raw = readandprocessarcs(operations, traveltimesfilename, hubdistancesfilename, tstep, numlocs, hubsTravelTimeIndex, roundup_flag, excludeoutliers_flag, hubsReverseLookup, googlemapstraveltimes_flag)
+arcs, arcLookup, A_plus, A_minus, A_space, A_plus_time, A_minus_time, A_minus_space, A_plus_space, numarcs, truetraveltime, arcduration, arcsbetween, arcsbetween_back = arccreation(prearcs, horizon, tstep, numnodes, nodes, numlocs)
 c, u = calcobjectivecosts(hubdistancesfilename)
 
 #Initialize orders
@@ -198,18 +201,49 @@ arcLookup, nodesLookup, arcfinishtime, dummyarc, allarcs = calcarcfinishtimes()
 
 #----------------------------------CREATE ARC SETS-----------------------------------# 
 
-primaryarcs, extendedtimearcs, orderarcs, driverarcs, hasdriverarcs = initializearcsets(A_space, A_plus, A_minus, orders, Origin, Destination, driverStartNodes, T_off)
+basetsn = (arcsbetween=arcsbetween, arcsbetween_back=arcsbetween_back, numlocs=numlocs, arcLookup=arcLookup, nodesLookup=nodesLookup, nodes=extendednodes, arcs=extendedarcs, numarcs=numarcs, numnodes=numnodes, horizon=horizon, tstep=tstep, extendednumarcs=extendednumarcs, extendednumnodes=extendednumnodes, A_minus=A_minus, A_plus=A_plus)
+ghosttsn = createghostTSN(maxnightsaway)
+
+primaryarcs, extendedtimearcs, orderarcs, driverarcs, hasdriverarcs, ghostdriverarcs = initializearcsets(A_space, A_plus, A_minus, orders, Origin, Destination, driverStartNodes, T_off)
 R_off = findreturnhomearcsets(driverarcs, T_off_constr)
 magarcs = initializeorderarcsets(k, orders, originloc, destloc, Origin, Destination, shortesttriptimes)
 driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = initializejourneymodel(maxnightsaway, T_off, T_on_0)
 nocuts=(vars=[], rhs=[], coeff=[])
+
+#=
+include("scripts/onlineimplementation/initializecurrentstatearcs.jl")
+lasttimehome = [0 for d in drivers]
+driversets, driversingroup, numdrivergroups, drivergroupnum, drivergroupdesc, numeffshifts, effshift, shiftsincluded = finddriversets_online(T_off, driverStartNodes, lasttimehome) 
+basetsn = (arcsbetween=arcsbetween, arcsbetween_back=arcsbetween_back, numlocs=numlocs, arcLookup=arcLookup, nodesLookup=nodesLookup, nodes=extendednodes, arcs=extendedarcs, numarcs=numarcs, numnodes=numnodes, horizon=horizon, tstep=tstep, extendednumarcs=extendednumarcs, extendednumnodes=extendednumnodes, A_minus=A_minus, A_plus=A_plus)
+ghosttsn = createghostTSN(maxnightsaway)
+
+currstate = (m_0=m_0, m_end=m_end, trucksintransit=trucksintransit, orders=orders, 
+    Origin=Origin, Destination=Destination, driversintransit=driversintransit, N_flow_d=N_flow_d, N_flow_i=N_flow_i,
+    alltimeswithinview=alltimeswithinview, T_off=T_off, T_off_0=T_off_0, T_off_constr=T_off_constr, T_on_0=T_on_0,
+    available=available, duedate=duedate, usedorderidlist=usedorderidlist, psseq=psseq, ordersinprogress=ordersinprogress, 
+    shortesttriptimes=shortesttriptimes, orderintransit_flag=orderintransit_flag,
+    driverStartNodes=driverStartNodes, driverEndNodes=driverEndNodes, assignedDrivers=assignedDrivers,
+    lasttimehome=lasttimehome)
+
+journeystart = time()
+numfragments, fragmentscontaining, fragmentarcs, F_plus_g, F_minus_g, N_flow_g = initializedriversetjourneys(currstate, driversets, drivergroupnum, driversingroup, drivergroupdesc, driverarcs, ghostdriverarcs)
+journeytime = time() - journeystart
+
+fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = getfragmentstats(currstate, driversets, numfragments, fragmentarcs)
+
+currarcs = (orderarcs=orderarcs, driverarcs=driverarcs, hasdriverarcs=hasdriverarcs, magarcs=magarcs); #, R_off=R_off)
+currfragments = (driversets=driversets, driversingroup=driversingroup, numdrivergroups=numdrivergroups, drivergroupnum=drivergroupnum, drivergroupdesc=drivergroupdesc, numeffshifts=numeffshifts, effshift=effshift, shiftsincluded=shiftsincluded,numfragments=numfragments, fragmentscontaining=fragmentscontaining, fragmentarcs=fragmentarcs, F_plus_g=F_plus_g, F_minus_g=F_minus_g, N_flow_g=N_flow_g, fragdrivinghours=fragdrivinghours, fragworkinghours=fragworkinghours, workingfragments=workingfragments, fragmentnightsaway=fragmentnightsaway);
+=#
+
+println("Nights away = ", maxnightsaway)
+println("Journeys = ", sum(sum(numfragments[l,s] for s in 1:numeffshifts) for l in 1:numlocs))
 
 #---------------------------------------SOLVE----------------------------------------# 
 
 if solutionmethod == "lp"
 
 	lp_obj, x_lp, z_lp, lp_time, lp_bound = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts, nocuts)
-	timeslist = (mp=lp_time, pp=0, pppar=0, ip=0, cut=0)
+	timeslist = (mp=lp_time, pp=0, pppar=0, ip=0, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 0, "LP", lp_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_lp, z_lp)
 
 	#=include("scripts/visualizations/timespacenetwork.jl")
@@ -230,11 +264,11 @@ if solutionmethod == "lp"
 elseif solutionmethod == "lpcuts"
 
 	lpc_obj, x_lpc, z_lpc, lpc_time, lpc_bound, knapsackcuts, basisarcs = solvelpwithcuts(opt_gap, orderarcs, knapsackcuttype)
-	timeslist = (mp=lpc_time, pp=0, pppar=0, ip=0, cut=0)
+	timeslist = (mp=lpc_time, pp=0, pppar=0, ip=0, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 0, "LP", lpc_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_lpc, z_lpc)
 
 	ipc_obj, x_ipc, z_ipc, ipc_time, ipc_bound = solvejourneymodel(0, opt_gap, orderarcs, numeffshifts, knapsackcuts)
-	timeslist = (mp=0, pp=0, pppar=0, ip=ipc_time, cut=0)
+	timeslist = (mp=0, pp=0, pppar=0, ip=ipc_time, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 1, "IP", ipc_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_ipc, z_ipc)
 
 	#=include("scripts/visualizations/timespacenetwork.jl")
@@ -288,11 +322,11 @@ elseif solutionmethod == "lpcuts"
 elseif (solutionmethod == "ip") #& (knapsackcuttype == 0)
 
 	lp_obj, x_lp, z_lp, lp_time, lp_bound = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts, nocuts)
-	timeslist = (mp=lp_time, pp=0, pppar=0, ip=0, cut=0)
+	timeslist = (mp=lp_time, pp=0, pppar=0, ip=0, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 0, "LP", lp_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_lp, z_lp)
 
 	ip_obj, x_ip, z_ip, ip_time, ip_bound = solvejourneymodel(0, opt_gap, orderarcs, numeffshifts, nocuts)
-	timeslist = (mp=0, pp=0, pppar=0, ip=ip_time, cut=0)
+	timeslist = (mp=0, pp=0, pppar=0, ip=ip_time, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 1, "IP", ip_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_ip, z_ip)
 	
 	#=
@@ -308,7 +342,7 @@ elseif (solutionmethod == "ip") & (knapsackcuttype != 0)
 
 	#Solve IP with generated cuts
 	ipc_obj, x_ipc, z_ipc, ipc_time, ipc_bound = solveipwithcuts(opt_gap, orderarcs, numeffshifts)
-	timeslist = (mp=0, pp=0, pppar=0, ip=ipc_time, cut=0)
+	timeslist = (mp=0, pp=0, pppar=0, ip=ipc_time, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 1, "IP", ipc_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_ipc, z_ipc)
 
 	#=
@@ -324,13 +358,13 @@ elseif solutionmethod == "ipred"
 
 	reducedarcs = initializeorderarcsets(k, orders, originloc, destloc, Origin, Destination, shortesttriptimes)
 	ipk_obj, x_ipk, z_ipk, ipk_time, ipk_bound = solvejourneymodel(0, opt_gap, reducedarcs, numeffshifts, nocuts)
-	timeslist = (mp=0, pp=0, pppar=0, ip=ipk_time, cut=0)
+	timeslist = (mp=0, pp=0, pppar=0, ip=ipk_time, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 0, "IPreduced", ipk_obj, timeslist, sum(length(reducedarcs.A[i]) for i in orders), x_ipk, z_ipk)
 		
 elseif solutionmethod == "arcip"
 
 	arcip_obj, x_arcip, z_arcip, arcip_time, arcip_bound = solvearcbasedmodel(orderarcs, 0)
-	timeslist = (mp=0, pp=0, pppar=0, ip=arcip_time, cut=0)
+	timeslist = (mp=0, pp=0, pppar=0, ip=arcip_time, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 0, "ArcIP", arcip_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_arcip, z_arcip)
 		
 elseif (solutionmethod == "basisip") & (formulation == "homogeneous")
@@ -338,9 +372,9 @@ elseif (solutionmethod == "basisip") & (formulation == "homogeneous")
 	lp_obj, x_lp, z_lp, lp_time, lp_bound, lpbasisarcs = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts, nocuts)
 	bip_obj, x_bip, z_bip, bip_time, bip_bound = solvejourneymodel(0, opt_gap, lpbasisarcs, numeffshifts, nocuts)
 
-	timeslist1 = (mp=lp_time, pp=0, pppar=0, ip=0, cut=0)
+	timeslist1 = (mp=lp_time, pp=0, pppar=0, ip=0, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 0, "LP", lp_obj, timeslist1, sum(length(lpbasisarcs.A[i]) for i in orders), x_lp, z_lp)
-	timeslist2 = (mp=0, pp=0, pppar=0, ip=bip_time, cut=0)
+	timeslist2 = (mp=0, pp=0, pppar=0, ip=bip_time, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 1, "IP", bip_obj, timeslist2, sum(length(lpbasisarcs.A[i]) for i in orders), x_bip, z_bip)
 	
 	println("IP-LP gap = ", round(100*(bip_obj-lp_obj)/lp_obj, digits=2), "%")
@@ -350,9 +384,9 @@ elseif solutionmethod == "basisip"
 	lp_obj, x_lp, z_lp, lp_time, lp_bound, knapsackcuts, lpbasisarcs = solvelpwithcuts(opt_gap, orderarcs, knapsackcuttype)
 	bip_obj, x_bip, z_bip, bip_time, bip_bound = solvejourneymodel(0, opt_gap, lpbasisarcs, numeffshifts, knapsackcuts)
 
-	timeslist1 = (mp=lp_time, pp=0, pppar=0, ip=0, cut=0)
+	timeslist1 = (mp=lp_time, pp=0, pppar=0, ip=0, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 0, "LP", lp_obj, timeslist1, sum(length(lpbasisarcs.A[i]) for i in orders), x_lp, z_lp)
-	timeslist2 = (mp=0, pp=0, pppar=0, ip=bip_time, cut=0)
+	timeslist2 = (mp=0, pp=0, pppar=0, ip=bip_time, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 1, "IP", bip_obj, timeslist2, sum(length(lpbasisarcs.A[i]) for i in orders), x_bip, z_bip)
 	
 	println("IP-LP gap = ", round(100*(bip_obj-lp_obj)/lp_obj, digits=2), "%")
@@ -371,23 +405,23 @@ elseif ((solutionmethod == "mag") || (solutionmethod == "sag")) & (formulation =
 	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter = multiarcgeneration!(magarcs, hasdriverarcs) 
 	magip_obj, x_magip, z_magip, magip_time, magip_bound = solvejourneymodel(0, opt_gap, magarcs, numeffshifts, nocuts)
 
-	timeslist1 = (mp=smptime, pp=pptime, pppar=pptime_par, ip=0, cut=0)
+	timeslist1 = (mp=smptime, pp=pptime, pppar=pptime_par, ip=0, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 0, mag_iter, mag_obj, timeslist1, totalmagarcs, x_smp, z_smp)
-	timeslist2 = (mp=0, pp=0, pppar=0, ip=magip_time, cut=0)
+	timeslist2 = (mp=0, pp=0, pppar=0, ip=magip_time, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs, x_magip, z_magip)
 	
 elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 
 	variableusecount, startercuts, starterfixedvars = initmagsets(magarcs)	
-	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts, cuttime, arcsbeforecolmgmt, arcsbeforevarsetting = multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, startercuts, starterfixedvars, variableusecount, 0, 1)
+	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts, cuttime, arcsbeforecolmgmt, arcsbeforevarsetting = multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, startercuts, starterfixedvars, variableusecount, 0, 1, 100000)
 	
 	#mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter, knapsackcuts, cuttime = multiarcgeneration!(magarcs, variablefixingthreshold, hasdriverarcs)
 
 	magip_obj, x_magip, z_magip, magip_time, magip_bound = solvejourneymodel(0, opt_gap, magarcs, numeffshifts, nocuts)
 
-	timeslist1 = (mp=smptime, pp=pptime, pppar=pptime_par, ip=0, cut=cuttime)
+	timeslist1 = (mp=smptime, pp=pptime, pppar=pptime_par, ip=0, cut=cuttime, full=0)
 	writeresultsforrun(resultsfilename, 0, mag_iter, mag_obj, timeslist1, totalmagarcs, x_smp, z_smp)
-	timeslist2 = (mp=0, pp=0, pppar=0, ip=magip_time, cut=0)
+	timeslist2 = (mp=0, pp=0, pppar=0, ip=magip_time, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs, x_magip, z_magip)
 	
 	writedriverstats(string("outputs/bigtable_new/driverstats_exp", experiment_id,".csv"), z_magip)
@@ -478,9 +512,9 @@ elseif solutionmethod == "cg"
 	cg_obj, rmp, x_rmp, y_rmp, z_rmp, w_rmp, cgpaths, delta, rmptime, pptime, pptime_par, totalcgpaths, cg_iter, knapsackcuts, cgcuttime = columngeneration!(orderarcs, hasdriverarcs, startercuts)
 	cgip_obj, x_cgip, z_cgip, cgip_time, cgip_bound = solvejourneymodel_paths(0, opt_gap, cgpaths, delta, numeffshifts, knapsackcuts)
 
-	timeslist1 = (mp=rmptime, pp=pptime, pppar=pptime_par, ip=0, cut=cgcuttime)
+	timeslist1 = (mp=rmptime, pp=pptime, pppar=pptime_par, ip=0, cut=cgcuttime, full=0)
 	writeresultsforrun(resultsfilename, 0, cg_iter, cg_obj, timeslist1, totalcgpaths, x_cgip, z_cgip)
-	timeslist2 = (mp=0, pp=0, pppar=0, ip=cgip_time, cut=0)
+	timeslist2 = (mp=0, pp=0, pppar=0, ip=cgip_time, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 1, "IP", cgip_obj, timeslist2, totalcgpaths, x_cgip, z_cgip)
 
 end
