@@ -81,7 +81,7 @@ function solvejourneymodel(lprelax_flag, opt_gap, arcspassed, currentdatetime)
 	end
 
 	#Linking constraints
-	@constraint(ip, driverAvailability[a in A_space_all], sum(sum(z[(i1,i2,i3,i4),f] for f in intersect(currfragments.fragmentscontaining[i1,i2,i3,i4,a], journeysfor[i1,i2,i3,i4]); init=0) for (i1,i2,i3,i4) in currfragments.driversets; init=0) == w[a]  )
+	@constraint(ip, driverAvailability[a in A_space_all], sum(sum(z[(i1,i2,i3,i4),f] for f in intersect(currfragments.fragmentscontaining[i1,i2,i3,i4,a], journeysfor[i1,i2,i3,i4])) for (i1,i2,i3,i4) in currfragments.driversets) == w[a]  )
 	for i in currstate.orders, a in [a for a in currarcs.orderarcs.A_space[i] if nodesLookup[arcLookup[a][1]][2] < horizon]
 		set_normalized_coefficient(driverAvailability[a], x[i,a], -1)
 	end
