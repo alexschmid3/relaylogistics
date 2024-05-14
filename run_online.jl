@@ -171,53 +171,35 @@ total_delivtime, max_delivtime, shortestpossible_delivtime, shortestpossible_ord
 
 for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 
-	currentdatetime = weekstart + Dates.Hour(currtime)
-
 	println("------------------------------------BEGIN ITERATION CURRTIME = $currtime------------------------------------")
+
+	currentdatetime = weekstart + Dates.Hour(currtime)
 
     #Solve current instance
     if (operations == "relay") & ((solutionmethod == "mag") || (solutionmethod == "sag"))
-        mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs = multiarcgeneration!(currstate, currfragments, currarcs)    
-        magip_obj, x_magip, z_magip, magip_time, magip_bound = solvejourneymodel(0, opt_gap, currstate, currarcs, currfragments, magarcs)
+        #mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs = multiarcgeneration!(currstate, currfragments, currarcs)    
+        ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel(0, opt_gap, -1, currentdatetime);
+		useddriverjourneys = -1
+	elseif (operations == "relay") & (solutionmethod == "ip") 
+		ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel(0, opt_gap, -1, currentdatetime);
+		useddriverjourneys = -1
 	elseif (operations == "ptp") & (solutionmethod == "basisip") 
 		lp_obj, x_lp, z_lp, w_lp, y_lp, solvetime_lp, bound_lp, useddriverjourneys = solvejourneymodel(1, opt_gap, -1, currentdatetime);
 		ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel(0, opt_gap, useddriverjourneys, currentdatetime);
+	elseif (operations == "ptp") & (solutionmethod == "ip") 
+		ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel(0, opt_gap, -1, currentdatetime);
+		useddriverjourneys = -1
 	end
 
 	#Visualize
-	#for i in currstate.orders
-	#	availarcs, usedarcs = [a for a in currarcs.orderarcs.A[i]], [a for a in currarcs.orderarcs.A[i] if x_ip[i,a]>1e-4]
-	#	timespacenetwork(string("outputs/viz/online/iter",currtime,"_order",i,".png"), [availarcs, usedarcs], [(150,150,150),(0,0,0)], [3,8], ["solid", "solid"], [0,0], 2400, 1800)
-	#end
+	for i in currstate.orders
+		availarcs, usedarcs = [a for a in currarcs.orderarcs.A[i]], [a for a in currarcs.orderarcs.A[i] if x_ip[i,a]>1e-4]
+		timespacenetwork(string("outputs/viz/online/iter",currtime,"_order",i,".png"), [availarcs, usedarcs], [(150,150,150),(0,0,0)], [3,8], ["solid", "solid"], [0,0], 2400, 1800)
+	end
 
-	#if (solutionmethod == "mvg") || (solutionmethod == "otdf") || (solutionmethod == "rrf")
+	#Find arcs taken by drivers
 	driverarcstaken = updatepastsegments(timedelta, x_ip, y_ip, z_ip, w_ip, useddriverjourneys, currentdatetime)
 	updatelasttimehome(driverarcstaken)
-	#end
-
-	#=if (solutionmethod == "mvg") || (solutionmethod == "otdf") || (solutionmethod == "rrf")
-		#Save most recently executed segments for visualization and reporting
-		driverarcstaken = updatepastsegments_fragment(timedelta, x_ip, y_ip, z_ip, w_ip, restrictedArcSet, driversets, driversingroup)
-		#Update whether each driver was at home or away from home during their last off hours
-		updateawaylastnight_fragment(z_ip, driverarcstaken)
-	elseif solutionmethod == "ptp"
-		driverarcstaken = updatepastsegments_ptp(timedelta, x_ip, y_ip, z_ip, w_ip, orderArcSet_full, driversets, driversingroup)
-	elseif solutionmethod != "bns"
-		#Save most recently executed segments for visualization and reporting
-		updatepastsegments(timedelta, x_ip, y_ip, z_ip, w_ip, restrictedArcSet)
-		#Update whether each driver was at home or away from home during their last off hours
-		updateawaylastnight(z_ip)
-	end
-	
-	if (solutionmethod == "mvg") || (solutionmethod == "otdf") || (solutionmethod == "rrf")
-		savefullsolution_online_fragment(fullxsolutionfilename, fullysolutionfilename, fullzsolutionfilename, currtime, x_ip, y_ip, z_ip, restrictedArcSet, driverarcstaken)
-	elseif solutionmethod == "ptp"
-		savefullsolution_online_fragment(fullxsolutionfilename, fullysolutionfilename, fullzsolutionfilename, currtime, x_ip, y_ip, z_ip, orderArcSet_full, driverarcstaken)
-		#savefullsolution_online(fullxsolutionfilename, fullysolutionfilename, fullzsolutionfilename, currtime, x_ip, y_ip, z_ip, orderArcSet_full)
-	elseif solutionmethod != "bns"
-		savefullsolution_online(fullxsolutionfilename, fullysolutionfilename, fullzsolutionfilename, currtime, x_ip, y_ip, z_ip, restrictedArcSet)
-	end
-	=#
 	
 	#Update local datetime 
 	currentdatetime = currentdatetime + Dates.Hour(timedelta)
@@ -225,7 +207,11 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 	#Iterate forward by timedelta 
 	updatedriverlocations(currentdatetime, driverarcstaken);
 	updatedriversshifts(currentdatetime, weekstart, T_off_Monday8am);
-	updatetrucks(timedelta, currentdatetime, weekstart, x_ip, y_ip);
+	if solutionmethod == "mag"
+		updatetrucks(timedelta, currentdatetime, weekstart, x_ip, y_ip, currarcs.magars);
+	else
+		updatetrucks(timedelta, currentdatetime, weekstart, x_ip, y_ip, currarcs.orderarcs);
+	end
 	updatedriverarcsets();
 
 	#=myarcs = [a for a in currarcs.driverarcs.A[driverHomeLocs[7],drivershift[7]]]
@@ -250,12 +236,12 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 	global currarcs = (orderarcs=neworderarcs, driverarcs=currarcs.driverarcs, hasdriverarcs=currarcs.hasdriverarcs, magarcs=newmagarcs, ghostdriverarcs=currarcs.ghostdriverarcs) 
 
 	#If it's not the last iteration, get next orders
-	#If it is the last iteration, print final reports
 	if currtime != timedelta*(numiterations_online-1)
 
 		getnextorders(timedelta, currentdatetime, lhdataisbfilename, vntdataisbfilename)
 		writeresults_onlineiteration(resultsfilename, currtime)
 
+	#If it is the last iteration, print final reports
 	elseif currtime == timedelta*(numiterations_online-1)
 
 		writeresults_onlineiteration(resultsfilename, currtime)
@@ -264,43 +250,6 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 		assessendofhorizonpenalties(currstate, currtime)
 
 		writeresults_onlinefinal(resultsfilename, currtime + tstep)
-
-		#Write final output files
-		#=
-		if (writeresultsfile == 1) & (solutionmethod == "abcg")
-			writeresults_final_online(resultsfilename, currtime)
-		elseif (writeresultsfile == 1) & (solutionmethod == "otd")
-			writeresults_final_online(resultsfilename, currtime)
-		elseif (writeresultsfile == 1) & (solutionmethod == "rr")
-			writeresults_final_online(resultsfilename, currtime)
-		elseif (writeresultsfile == 1) & (solutionmethod == "bns")
-			writeresults_bns(resultsfilename, currtime, "final")	
-		end
-
-		#Corridor file = number of trips between every pair of locations
-		if writecorridorfile == 1
-			writecorridorcounterfile(solutionmethod)
-		end
-
-		#Order outcome file = delivery time and distance for each order
-		writeorderoutcomesfile(orderoutcomesfilename, solutionmethod, currtime)
-
-		if makespatialvizfiles == 1
-			spatialviz_shortestpath(string(vizfoldername, "/SpatialNetworkMaps/", vizfilename, currtime, "_shortestpaths.png"), darkestcolor, lightestcolor)
-		end
-
-		#Write file for figures = heuristic comparison
-		writefiguresfile(heuristicfigurefilename)
-
-		#COmputational summary file for abcg only
-		if solutionmethod == "abcg"
-			writecomputationaltimesfile(computationaltimefigurefilename, currtime)
-		end
-
-		#Save full solution
-		if solutionmethod == "bns"
-			savefullsolution_bns(fullxsolutionfilename, fullysolutionfilename, fullzsolutionfilename, currtime)
-		end=#
 
 	end
 
@@ -311,4 +260,3 @@ println("Total past cost for exp. $experiment_id = ", sum(values(totalpastcost))
 #---------------------------------------------------------------------------#
 
 println("Done!")
-

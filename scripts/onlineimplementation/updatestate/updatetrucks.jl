@@ -1,5 +1,5 @@
 
-function updatetrucks(timedelta, currentdatetime, weekstart, x, y)
+function updatetrucks(timedelta, currentdatetime, weekstart, x, y, orderarcs)
 
 	#Update the time 
 	wklydelta = mod(Dates.value(Dates.Hour(currentdatetime - weekstart)), 168)
@@ -23,15 +23,15 @@ function updatetrucks(timedelta, currentdatetime, weekstart, x, y)
 		n = nodes[l, t]
 		totaltrucks = 0
 		for i in currstate.orders
-			if intersect(earlyarcs, currarcs.magarcs.A_minus[i,n]) != []
-				totaltrucks += sum(value(x[i,a]) for a in intersect(earlyarcs, currarcs.magarcs.A_minus[i,n]))
+			if intersect(earlyarcs, orderarcs.A_minus[i,n]) != []
+				totaltrucks += sum(value(x[i,a]) for a in intersect(earlyarcs, orderarcs.A_minus[i,n]))
 			end
 		end
 		if intersect(earlyarcs, currarcs.hasdriverarcs.A_minus[n]) != []
 			totaltrucks += sum(value(y[a]) for a in intersect(earlyarcs, currarcs.hasdriverarcs.A_minus[n])) 
 		end
 		totaltrucks = round(totaltrucks)
-		#totaltrucks = sum(sum(value(x[i,a]) for a in intersect(earlyarcs, currarcs.magarcs.A_minus[i,n])) for i in orders) + sum(value(y[a]) for a in intersect(earlyarcs, A_minus_hd[n])) 
+		#totaltrucks = sum(sum(value(x[i,a]) for a in intersect(earlyarcs, orderarcs.A_minus[i,n])) for i in orders) + sum(value(y[a]) for a in intersect(earlyarcs, A_minus_hd[n])) 
 		if totaltrucks > 0.001
 			intransittruckcount[l] += totaltrucks
 			push!(currstate.trucksintransit, (l, t - timedelta, totaltrucks))
@@ -43,8 +43,8 @@ function updatetrucks(timedelta, currentdatetime, weekstart, x, y)
 		n = nodes[l, timedelta]
 		enteringtrucks = 0 
 		for i in currstate.orders
-			if setdiff(currarcs.magarcs.A_minus[i,n], dummyarc) != []
-				enteringtrucks += sum(value(x[i,a]) for a in setdiff(currarcs.magarcs.A_minus[i,n], dummyarc)) 
+			if setdiff(orderarcs.A_minus[i,n], dummyarc) != []
+				enteringtrucks += sum(value(x[i,a]) for a in setdiff(orderarcs.A_minus[i,n], dummyarc)) 
 			end
 		end
 		if currarcs.hasdriverarcs.A_minus[n] != []

@@ -17,13 +17,21 @@ function updatepastsegments(timedelta, x, y, z, w, useddriverjourneys, currentda
         end
     end
     lockedjourneys = Dict()
-    for (hl,ss,sn,lth) in currfragments.driversets
-        lockedjourneys[hl,ss,sn,lth] = []
-        for l in 1:numlocs, t in 0:tstep:timedelta-tstep
-            lockedjourneys[hl,ss,sn,lth] = union(lockedjourneys[hl,ss,sn,lth], intersect(useddriverjourneys[hl,ss,sn,lth],currfragments.F_plus_g[hl,ss,sn,lth,nodes[l,t]]))
+    if useddriverjourneys == -1
+        for (hl,ss,sn,lth) in currfragments.driversets
+            lockedjourneys[hl,ss,sn,lth] = []
+            for l in 1:numlocs, t in 0:tstep:timedelta-tstep
+                lockedjourneys[hl,ss,sn,lth] = union(lockedjourneys[hl,ss,sn,lth], currfragments.F_plus_g[hl,ss,sn,lth,nodes[l,t]])
+            end
+        end
+    else
+        for (hl,ss,sn,lth) in currfragments.driversets
+            lockedjourneys[hl,ss,sn,lth] = []
+            for l in 1:numlocs, t in 0:tstep:timedelta-tstep
+                lockedjourneys[hl,ss,sn,lth] = union(lockedjourneys[hl,ss,sn,lth], intersect(useddriverjourneys[hl,ss,sn,lth],currfragments.F_plus_g[hl,ss,sn,lth,nodes[l,t]]))
+            end
         end
     end
-
     #====================================================#
 
     #Add order segments

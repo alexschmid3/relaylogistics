@@ -6,6 +6,14 @@ function updateorders(x, timedelta, currentdatetime)
 
 	#====================================================#
 
+	if solutionmethod == "mag"	
+		orderarcs = currarcs.magarcs
+	else	
+		orderarcs = currarcs.orderarcs
+	end
+	
+	#====================================================#
+
 	#Find current location of orders from last time (may be in transit) and update origin/destination windows
 	completedorders = []
     orderintransit_flag = Dict()
@@ -56,7 +64,7 @@ function updateorders(x, timedelta, currentdatetime)
             #println("$i, $availtime, $endwindowtime")
 
             #Find the arcs used by the order in the current solution
-            usedarcs = [a for a in currarcs.magarcs.A[i] if value(x[i,a]) > 1e-4]
+            usedarcs = [a for a in orderarcs.A[i] if value(x[i,a]) > 1e-4]
             usedarcs = sort(usedarcs, by=x->nodesLookup[arcLookup[x][1]][2])
 
             #Find the updated order location and time
