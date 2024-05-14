@@ -600,14 +600,16 @@ function createfragmentsets_online(currstate, hl, ss, sn, lth, drivergroupnum, d
 
 	#Stranded driver needs a ride home
 	stranded_journeys = []
-	if (startloc != hl) & (arcLength[startloc,hl] > shiftlength)
+	if (startloc != hl) # & (arcLength[startloc,hl] > shiftlength)
 		o1, d1 = hl, startloc
-		backhometrips = []
-		try 
-			backhometrips = union(backhometrips, matchabletrips[o1,d1])
-		catch 
-			backhometrips = union(backhometrips, [(startloc, hl)])
-		end
+		backhometrips = [(d1,o1)]
+		backhometrips = union(backhometrips, [(o2,d2) for (o2,d2) in odpairs if (distbetweenlocs[o1,d2] <= maxrepositioningdistance) & (distbetweenlocs[o2,d1] <= maxrepositioningdistance) & (arcLength[o1,d2] <= tstep) & (arcLength[o2,d1] <= tstep)])
+		#backhometrips = []
+		#try 
+		#	backhometrips = union(backhometrips, matchabletrips[o1,d1])
+		#catch 
+		#	backhometrips = union(backhometrips, [(startloc, hl)])
+		#and
 		for (o2, d2) in backhometrips
 
 			t4 = starttime
@@ -712,9 +714,15 @@ function createfragmentsets_online(currstate, hl, ss, sn, lth, drivergroupnum, d
 	journeys = union(journeys, order_journeys)
 	=#
 	
-	#for j in 1:15:length(journeys)
-	#	timespacenetwork(string("outputs/viz/aaa_all_",j,".png"), [intersect(journeys[j],1:numarcs)], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
-	#end
+	#=for j in 1:15:length(journeys)
+		timespacenetwork(string("outputs/viz/aaa_all_",j,".png"), [intersect(journeys[j],1:numarcs)], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
+	end
+	myarcs = []
+	for item in journeys
+		myarcs = union(myarcs, item)
+	end
+	timespacenetwork("outputs/viz/aaa_all.png", [myarcs], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
+	=#
 
 	time_extended = time() - starttime_extended 
 
@@ -752,7 +760,7 @@ end
 
 function initializedriversetjourneys(currstate, driversets, drivergroupnum, driversingroup, drivergroupdesc, driverarcs, ghostdriverarcs, enumeratestandardjourneys_flag)
 		
-	#(hl,ss,sn,lth) =  driversets[1]
+	#(hl,ss,sn,lth) = (18, 1, 5, -36) driversets[1]
 	numfragments = Dict()
 	fragmentscontaining = Dict()
 	fragmentarcs = Dict()
