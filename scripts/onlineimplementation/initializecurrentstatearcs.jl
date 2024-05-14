@@ -655,7 +655,7 @@ function createfragmentsets_online(currstate, hl, ss, sn, lth, drivergroupnum, d
 				push!(journeyarclist, extendedarcs[journeynodelist[n], journeynodelist[n+1]])
 			end
 
-			timespacenetwork(string("outputs/viz/aaa_order.png"), [intersect(journeyarclist,1:numarcs)], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
+			#timespacenetwork(string("outputs/viz/aaa_order.png"), [intersect(journeyarclist,1:numarcs)], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
 
 			push!(stranded_journeys, journeyarclist)
 		end
