@@ -295,7 +295,7 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function multiarcgeneration!(currstate, currfragments, currarcs)
+function multiarcgeneration!(currstate, currfragments, currarcs, currjourneys)
 
     smp = Model(Gurobi.Optimizer)
 	set_optimizer_attribute(smp, "TimeLimit", 60*60)

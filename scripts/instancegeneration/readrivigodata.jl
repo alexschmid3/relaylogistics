@@ -124,10 +124,18 @@ function readarcs(filename, hubdistfilename, tstep, numlocs, hubsTravelTimeIndex
 					else
 						rawtt = max(data[row,6], data[row,8])
 					end
+				elseif (googlemapstraveltimes_flag == 2) & (ensureconnectivity_flag == 0)
+					rawtt = data[row,8]
+				elseif (googlemapstraveltimes_flag == 2) & (ensureconnectivity_flag == 1)
+					if (data[row,8] < shiftlength) & (origin in [63,65,66]) & (destination in [63,65,66])
+						rawtt = min(shiftlength-1e-4, data[row,8]*1.3)
+					else
+						rawtt = data[row,8]*1.3
+					end
 				end
 
 				#Add travel time to list of pre-arcs and arcLength lists
-				push!(prearcs,(origin, destination, ceil(rawtt/tstep) * tstep, rawtt, distances[origin, destination] ))
+				push!(prearcs, (origin, destination, ceil((rawtt)/tstep) * tstep, rawtt, distances[origin, destination] ))
 				arcLength[origin, destination] = ceil(rawtt/tstep) * tstep
 				arcLength_raw[origin, destination] = rawtt
 			end
@@ -165,6 +173,45 @@ end
 
 #---------------------------------------------------------------------------------------#
 
+#Needed, at least temporarily, because travel time information is not available for all point-to-point arcs
+function formarcsforptp(prearcs, arcLength, arcLength_raw)
+
+	distbetweenlocs, shortestpatharclists = cacheShortestDistance(numlocs, prearcs)
+	#traveltime_rdd = cacheShortestTravelTimes(numlocs, prearcs, "rdd time")
+	traveltime_raw = cacheShortestTravelTimes(numlocs, prearcs, "raw time")
+	#traveltime_llr = cacheShortestTravelTimes(numlocs, prearcs, "llr time")
+	
+	prearcs_aug = []
+	arcLength_aug, arcLength_raw_aug = Dict(), Dict()
+	for i in 1:numlocs, j in 1:numlocs
+		arctime_raw = traveltime_raw[i,j] + (24-shiftlength)*max(0,floor(traveltime_raw[i,j] / shiftlength - 1e-4))
+		arctime_rdd = max(tstep,tstep * ceil((arctime_raw)/tstep))
+		arcmiles = distbetweenlocs[i,j]
+		push!(prearcs_aug, (i, j, arctime_rdd, arctime_raw, arcmiles))
+		arcLength_aug[i,j] = arctime_rdd
+		arcLength_raw_aug[i,j] = arctime_raw
+	end
+
+	return prearcs_aug, arcLength_aug, arcLength_raw_aug
+
+end
+
+#---------------------------------------------------------------------------------------#
+
+function readandprocessarcs(operations, traveltimesfilename, hubdistancesfilename, tstep, numlocs, hubsTravelTimeIndex, roundup_flag, excludeoutliers_flag, hubsReverseLookup, googlemapstraveltimes_flag)
+
+	prearcs, arcLength, arcLength_raw = readarcs(traveltimesfilename, hubdistancesfilename, tstep, numlocs, hubsTravelTimeIndex, roundup_flag, excludeoutliers_flag, hubsReverseLookup, googlemapstraveltimes_flag)
+	if operations == "ptp"
+		prearcs_aug, arcLength_aug, arcLength_raw_aug = formarcsforptp(prearcs, arcLength, arcLength_raw)
+		return prearcs_aug, arcLength_aug, arcLength_raw_aug
+	else
+		return prearcs, arcLength, arcLength_raw
+	end
+
+end
+
+#---------------------------------------------------------------------------------------#
+
 function arccreation(prearcs, horizon, tstep, numnodes, nodes, numlocs)
 
 	#Initialize output sets/dictionaries
@@ -192,22 +239,24 @@ function arccreation(prearcs, horizon, tstep, numnodes, nodes, numlocs)
 	#Create arcs
 	for arc in prearcs
 		traveltime = arc[3]
-		for t in 0:tstep:horizon - traveltime
-			startnode = nodes[arc[1],t]
-			endnode = nodes[arc[2],t+arc[3]]
-		
-			arcs[(startnode,endnode)] = index
-			arcLookup[index] = (startnode,endnode)
+		if arc[1] != arc[2]
+			for t in 0:tstep:horizon - traveltime
+				startnode = nodes[arc[1],t]
+				endnode = nodes[arc[2],t+arc[3]]
 			
-			push!(A_plus[startnode], index)
-			push!(A_minus[endnode], index)
-			push!(A_space, index)
-			push!(A_minus_space[endnode], index)
-			push!(A_plus_space[startnode], index)
-
-			truetraveltime[index] = arc[4]
+				arcs[(startnode,endnode)] = index
+				arcLookup[index] = (startnode,endnode)
 				
-			index += 1
+				push!(A_plus[startnode], index)
+				push!(A_minus[endnode], index)
+				push!(A_space, index)
+				push!(A_minus_space[endnode], index)
+				push!(A_plus_space[startnode], index)
+
+				truetraveltime[index] = arc[4]
+					
+				index += 1
+			end
 		end
 	end
 	
@@ -228,9 +277,21 @@ function arccreation(prearcs, horizon, tstep, numnodes, nodes, numlocs)
 		index += 1
 	end
 	
-	arccount = length(arcs)
+	numarcs = length(arcs)
 
-	return arcs, arcLookup, A_plus, A_minus, A_space, A_plus_time, A_minus_time, A_minus_space, A_plus_space, arccount, truetraveltime
+	arcduration = [nodesLookup[arcLookup[a][2]][2] - nodesLookup[arcLookup[a][1]][2] for a in 1:numarcs]
+	arcsbetween = Dict()
+	sortedarclist = sort([a for a in 1:numarcs], by=x->nodesLookup[arcLookup[x][1]][2])
+	for t1 in 0:tstep:horizon, t2 in t1:tstep:horizon
+		arcsbetween[t1,t2] = [a for a in sortedarclist if (nodesLookup[arcLookup[a][1]][2] >= t1) & (nodesLookup[arcLookup[a][2]][2] <= t2)]
+	end
+	arcsbetween_back = Dict()
+	sortedarclist_back = reverse(sort([a for a in 1:numarcs], by=x->nodesLookup[arcLookup[x][2]][2]))
+	for t1 in 0:tstep:horizon, t2 in t1:tstep:horizon
+		arcsbetween_back[t1,t2] = [a for a in sortedarclist_back if (nodesLookup[arcLookup[a][1]][2] >= t1) & (nodesLookup[arcLookup[a][2]][2] <= t2)]
+	end
+
+	return arcs, arcLookup, A_plus, A_minus, A_space, A_plus_time, A_minus_time, A_minus_space, A_plus_space, numarcs, truetraveltime, arcduration, arcsbetween, arcsbetween_back
 	
 end
 
@@ -1307,7 +1368,7 @@ function createdrivershifts(drivers, shiftlength, tstep, drivershifttstep, allti
 	for shift in T_off_Monday8am
 		newshift = []
 		for hr in shift
-			if hr <= horizon #- tstep
+			if hr <= horizon + 2*24*maxnightsaway #horizon #- tstep
 				push!(newshift, hr)
 			end
 		end
@@ -1322,10 +1383,10 @@ function createdrivershifts(drivers, shiftlength, tstep, drivershifttstep, allti
 	T_off_0, T_off_constr = Dict(), Dict()
 	for d in drivers
 		T_off_0[d], T_off_constr[d] = [], []
-		for t in 0:tstep:horizon
+		for t in 0:tstep: horizon + 2*24*maxnightsaway
 			if (t in T_off[drivershift[d]]) & !(t-tstep in T_off[drivershift[d]])
 				push!(T_off_0[d], t)
-				if (t + 24 <= horizon) & (intersect([t3 for t3 in t:tstep:t+24],T_off_0[d]) != [])
+				if (t + 24 <=  horizon + 2*24*maxnightsaway) & (intersect([t3 for t3 in t:tstep:t+24],T_off_0[d]) != [])
 					push!(T_off_constr[d], t)  
 				end
 			end
@@ -1337,7 +1398,7 @@ function createdrivershifts(drivers, shiftlength, tstep, drivershifttstep, allti
 	T_on_0 = Dict()
 	for d in drivers
 		T_on_0[d] = []
-		for t in 0:tstep:horizon+24*maxnightsaway
+		for t in 0:tstep:horizon+24*2*maxnightsaway
 			if (t in setdiff([t2 for t2 in 0:tstep:horizon+24*maxnightsaway], T_off_Monday8am[drivershift[d]])) & !(t-tstep in setdiff([t2 for t2 in 0:tstep:horizon+24*maxnightsaway], T_off_Monday8am[drivershift[d]]))
 				push!(T_on_0[d], t)
 			end

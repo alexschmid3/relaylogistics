@@ -1,4 +1,35 @@
 
+function initializeonlinereporting()
+
+	totalpastcost, totalordertrips, totalordermiles, ordermilesoutcomes, orderdelayoutcomes, totaldriverhours = Dict(), Dict(), Dict(), Dict(), Dict(), Dict()
+	totalemptytrips, totalemptymiles, totaltaxitrips, totaltaximiles, ordermilespenalty, orderdelaypenalty = Dict(), Dict(), Dict(), Dict(), Dict(), Dict()
+	total_delivtime, max_delivtime, shortestpossible_delivtime, shortestpossible_ordermiles = Dict(), Dict(), Dict(), Dict()
+	for wklydelta in 0:timedelta:onlinetimehorizon+timedelta
+		totalpastcost[wklydelta] = 0
+		totalordertrips[wklydelta] = 0
+		totalordermiles[wklydelta] = 0
+		totaldriverhours[wklydelta] = 0
+		totalemptytrips[wklydelta] = 0
+		totalemptymiles[wklydelta] = 0
+		totaltaxitrips[wklydelta] = 0
+		totaltaximiles[wklydelta] = 0
+		total_delivtime[wklydelta] = 0
+		max_delivtime[wklydelta] = 0
+		shortestpossible_delivtime[wklydelta] = 0
+		shortestpossible_ordermiles[wklydelta] = 0
+	end
+	for i in currstate.orders
+		ordermilesoutcomes[i] = 0
+		orderdelayoutcomes[i] = 0
+		ordermilespenalty[i] = 0
+		orderdelaypenalty[i] = 0
+	end
+	pastordersegments, pastdriversegments_space, pastdriversegments, pastemptysegments, pasttaxisegments = [], [], [], [], []
+
+	return total_delivtime, max_delivtime, shortestpossible_delivtime, shortestpossible_ordermiles, totalemptytrips, totalemptymiles, totaltaxitrips, totaltaximiles, ordermilespenalty, orderdelaypenalty, totalpastcost, totalordertrips, totalordermiles, ordermilesoutcomes, orderdelayoutcomes, totaldriverhours, pastordersegments, pastdriversegments_space, pastdriversegments, pastemptysegments, pasttaxisegments
+
+end
+
 #---------------------------------------------------------------------------------------#
 
 function getinitialstate(nodesLookup, arcLookup, A_minus, A_plus, c)
@@ -20,7 +51,7 @@ function getinitialstate(nodesLookup, arcLookup, A_minus, A_plus, c)
     
     #Initialize drivers
     driversintransit, drivers, driverStartNodes, driverEndNodes, driverHomeLocs, assignedDrivers, N_flow_t, N_flow_d, alltimeswithinview, T_off_Monday8am, T_off, drivershift, T_off_0, T_off_constr, numshifts, T_on_0 = getdriverandshiftinfo()
-    awaylastnight = [0 for d in 1:length(drivers)]
+    lasttimehome = zeros(length(drivers))
 
     #Distances
     distbetweenlocs, shortesttriptimes, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr = findtraveltimesanddistances(orders, Origin, Destination)
@@ -34,7 +65,7 @@ function getinitialstate(nodesLookup, arcLookup, A_minus, A_plus, c)
     available=available, duedate=duedate, usedorderidlist=usedorderidlist, psseq=psseq, ordersinprogress=ordersinprogress, 
     shortesttriptimes=shortesttriptimes, orderintransit_flag=orderintransit_flag,
     driverStartNodes=driverStartNodes, driverEndNodes=driverEndNodes, assignedDrivers=assignedDrivers,
-    awaylastnight=awaylastnight)
+    lasttimehome=lasttimehome)
 
     return currstate, includeorderidlist, drivers, driverHomeLocs, drivershift, N_flow_t, T_off_Monday8am, numshifts, originloc, destloc, orderOriginalStartLoc, orderOriginalStartTime, highestorderindex, distbetweenlocs, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr, nodesLookup, arcLookup, A_minus, A_plus, c, extendednodes, extendednumnodes, extendedarcs, extendednumarcs
 

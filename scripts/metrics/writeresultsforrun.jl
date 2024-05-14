@@ -58,7 +58,8 @@ function writeresultsforrun(resultsfilename, appendflag, iteration, obj, timesli
 			cuttime = [timeslist.cut],
 			driverutil = [util],
 			drivernightsaway = [nightsaway],
-			driversunused = [driversunused]
+			driversunused = [driversunused],
+			fulltime = [timeslist.full]
 		)
 
 	if appendflag == 1

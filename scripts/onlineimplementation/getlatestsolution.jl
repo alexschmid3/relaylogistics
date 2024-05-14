@@ -2,6 +2,7 @@
 function updatepastsegments(timedelta, x, y, z, w, restrictedArcSet, currfragments, driversingroup)
 
 	wklydelta = mod(Dates.value(Dates.Hour(currentdatetime - weekstart)), 168)
+	totaldelta = Dates.value(Dates.Hour(currentdatetime - weekstart))
 	
 	#====================================================#
 
@@ -27,7 +28,7 @@ function updatepastsegments(timedelta, x, y, z, w, restrictedArcSet, currfragmen
 		if getvalue(x[i,a]) > 0.001
 			#Add new current segment = (i, starttime, endtime, startloc, endloc)
 			arcstartloc, arcendloc = nodesLookup[arcLookup[a][1]][1], nodesLookup[arcLookup[a][2]][1]
-			push!(pastordersegments, (i, nodesLookup[arcLookup[a][1]][2] + wklydelta, nodesLookup[arcLookup[a][2]][2] + wklydelta, arcstartloc, arcendloc))
+			push!(pastordersegments, (i, nodesLookup[arcLookup[a][1]][2] + totaldelta, nodesLookup[arcLookup[a][2]][2] + totaldelta, arcstartloc, arcendloc))
 			#Update the total past cost with the completed segment
 			global totalpastcost += c[a]
 			global totalordertrips += 1
@@ -68,9 +69,9 @@ function updatepastsegments(timedelta, x, y, z, w, restrictedArcSet, currfragmen
 				for a in addarclist
 					arcstartloc, arcendloc = nodesLookup[arcLookup[a][1]][1], nodesLookup[arcLookup[a][2]][1]
 					push!(driverarcstaken[d], a)
-					push!(pastdriversegments, (d, nodesLookup[arcLookup[a][1]][2] + wklydelta, nodesLookup[arcLookup[a][2]][2] + wklydelta, arcstartloc, arcendloc))
+					push!(pastdriversegments, (d, nodesLookup[arcLookup[a][1]][2] + totaldelta, nodesLookup[arcLookup[a][2]][2] + totaldelta, arcstartloc, arcendloc))
 					if a in A_space
-						push!(pastdriversegments_space, (d, nodesLookup[arcLookup[a][1]][2] + wklydelta, nodesLookup[arcLookup[a][2]][2] + wklydelta, nodesLookup[arcLookup[a][1]][1], nodesLookup[arcLookup[a][2]][1] ))
+						push!(pastdriversegments_space, (d, nodesLookup[arcLookup[a][1]][2] + totaldelta, nodesLookup[arcLookup[a][2]][2] + totaldelta, nodesLookup[arcLookup[a][1]][1], nodesLookup[arcLookup[a][2]][1] ))
 					end
 					if arcstartloc != arcendloc
 						global totaldriverhours += arcLength_raw[arcstartloc, arcendloc]
@@ -88,7 +89,7 @@ function updatepastsegments(timedelta, x, y, z, w, restrictedArcSet, currfragmen
 	for a in intersect(lockedarcs, A_hasdriver_space)
 		if getvalue(y[a]) > 0.001
 			#Add new current segment = (numtrucks, starttime, endtime, startloc, endloc)
-			push!(pastemptysegments, (getvalue(y[a]), nodesLookup[arcLookup[a][1]][2] + wklydelta, nodesLookup[arcLookup[a][2]][2] + wklydelta, nodesLookup[arcLookup[a][1]][1], nodesLookup[arcLookup[a][2]][1] ))
+			push!(pastemptysegments, (getvalue(y[a]), nodesLookup[arcLookup[a][1]][2] + totaldelta, nodesLookup[arcLookup[a][2]][2] + totaldelta, nodesLookup[arcLookup[a][1]][1], nodesLookup[arcLookup[a][2]][1] ))
 			global totalpastcost += c[a] * getvalue(y[a])
 			global totalemptytrips += getvalue(y[a])
 			global totalemptymiles += c[a] * getvalue(y[a])
@@ -99,7 +100,7 @@ function updatepastsegments(timedelta, x, y, z, w, restrictedArcSet, currfragmen
 	for a in intersect(lockedarcs, A_space)
 		if getvalue(w[a]) > 0.001
 			#Add new current segment = (numtrucks, starttime, endtime, startloc, endloc)
-			push!(pasttaxisegments, (getvalue(w[a]), nodesLookup[arcLookup[a][1]][2] + wklydelta, nodesLookup[arcLookup[a][2]][2] + wklydelta, nodesLookup[arcLookup[a][1]][1], nodesLookup[arcLookup[a][2]][1] ))
+			push!(pasttaxisegments, (getvalue(w[a]), nodesLookup[arcLookup[a][1]][2] + totaldelta, nodesLookup[arcLookup[a][2]][2] + totaldelta, nodesLookup[arcLookup[a][1]][1], nodesLookup[arcLookup[a][2]][1] ))
 			global totalpastcost += u[a] * getvalue(w[a])
 			global totaltaxitrips += getvalue(w[a])
 			global totaltaximiles += u[a] * getvalue(w[a])

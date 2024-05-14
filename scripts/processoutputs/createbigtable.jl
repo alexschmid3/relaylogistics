@@ -95,4 +95,3 @@ df_final = sort!(df_summ, [:instance, :numdrivers, :horizon, order(:tstep, rev=t
 #printbigtable(df_final, fulltimes, fulllambdas, fullmethods)
 df_final[!,"method"] = [methodmap[i] for i in df_final[!,"method"]]
 CSV.write("outputs/table2_deadlines_v7.csv", df_final)
-

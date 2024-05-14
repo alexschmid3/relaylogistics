@@ -44,14 +44,26 @@ function extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c, dist
 		A_minus[extendednumnodes + 1], A_plus[extendednumnodes + 1] = [], []
 		extendednumnodes += 1
 	end
-	for l1 in 1:numlocs, l2 in 1:numlocs
-		n1, n2 = extendednodes[l1, horizon], extendednodes[l2, dummyendtime]
-		extendedarcs[n1,n2] = extendednumarcs + 1
-		arcLookup[extendednumarcs + 1] = (n1, n2)
-		push!(c, distbetweenlocs[l1,l2] * (1 + finallegdistancepenalty))
-		push!(A_minus[n2], extendednumarcs + 1)
-		push!(A_plus[n1], extendednumarcs + 1)
-		extendednumarcs += 1
+	if operations == "ptp"
+		for l1 in 1:numlocs, l2 in 1:numlocs, t in max(0,horizon-arcLength[l1,l2]+tstep):tstep:horizon
+			n1, n2 = extendednodes[l1, t], extendednodes[l2, dummyendtime]
+			extendedarcs[n1,n2] = extendednumarcs + 1
+			arcLookup[extendednumarcs + 1] = (n1, n2)
+			push!(c, distbetweenlocs[l1,l2] * (1 + finallegdistancepenalty))
+			push!(A_minus[n2], extendednumarcs + 1)
+			push!(A_plus[n1], extendednumarcs + 1)
+			extendednumarcs += 1
+		end
+	elseif operations == "relay"
+		for l1 in 1:numlocs, l2 in 1:numlocs
+			n1, n2 = extendednodes[l1, horizon], extendednodes[l2, dummyendtime]
+			extendedarcs[n1,n2] = extendednumarcs + 1
+			arcLookup[extendednumarcs + 1] = (n1, n2)
+			push!(c, distbetweenlocs[l1,l2] * (1 + finallegdistancepenalty))
+			push!(A_minus[n2], extendednumarcs + 1)
+			push!(A_plus[n1], extendednumarcs + 1)
+			extendednumarcs += 1
+		end
 	end
 
 	return nodesLookup, arcLookup, A_minus, A_plus, c, extendednodes, extendednumnodes, extendedarcs, extendednumarcs
@@ -80,7 +92,7 @@ function findreturnhomearcsets(driverarcs, T_off_constr)
 	for d in drivers
 		R_off[d] = []
 	end
-	for d in drivers, t in T_off_constr[d]
+	for d in drivers, t in [t2 for t2 in T_off_constr[d] if t2 <= horizon-24+tstep] 
 		h = driverHomeLocs[d]
 		if t + 24 == horizon 
 			a1 = arcs[nodes[h,t], nodes[h,t+tstep]]
@@ -144,7 +156,7 @@ function getdriverandshiftinfo()
 	N_flow_t, N_flow_d = flowbalancenodesets_td(drivers, numnodes, driverStartNodes, N_0, N_end)
 
 	#Driver shifts
-	alltimeswithinview = 2*horizon
+	alltimeswithinview = max(2*horizon, horizon + 2*24*maxnightsaway, onlinetimehorizon)
 	T_off_Monday8am, T_off, drivershift, T_off_0, T_off_constr, numshifts, T_on_0 = createdrivershifts(drivers, shiftlength, tstep, drivershifttstep, alltimeswithinview)
 
 	return driversintransit, drivers, driverStartNodes, driverEndNodes, driverHomeLocs, assignedDrivers, N_flow_t, N_flow_d, alltimeswithinview, T_off_Monday8am, T_off, drivershift, T_off_0, T_off_constr, numshifts, T_on_0

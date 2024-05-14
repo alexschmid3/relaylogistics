@@ -316,7 +316,7 @@ function multiarcgeneration!(magarcs, hasdriverarcs)
 			if solutionmethod == "mag"	
 				minreducedcost, shortestpathnodes, shortestpatharcs, sptime = magsubproblem(i, arcredcosts, subproblemsets)
 			elseif solutionmethod == "sag"
-				minreducedcost, shortestpathnodes, shortestpatharcs, sptime = sagsubproblem(i, arcredcosts, 5)
+				minreducedcost, shortestpathnodes, shortestpatharcs, sptime = sagsubproblem(i, arcredcosts, 1)
 			end
 
 			push!(dptimelist, sptime)
