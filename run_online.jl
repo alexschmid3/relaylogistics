@@ -192,10 +192,10 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 	end
 
 	#Visualize
-	for i in currstate.orders
+	#=for i in currstate.orders
 		availarcs, usedarcs = [a for a in currarcs.orderarcs.A[i]], [a for a in currarcs.orderarcs.A[i] if x_ip[i,a]>1e-4]
 		timespacenetwork(string("outputs/viz/online/iter",currtime,"_order",i,".png"), [availarcs, usedarcs], [(150,150,150),(0,0,0)], [3,8], ["solid", "solid"], [0,0], 2400, 1800)
-	end
+	end=#
 
 	#Find arcs taken by drivers
 	driverarcstaken = updatepastsegments(timedelta, x_ip, y_ip, z_ip, w_ip, useddriverjourneys, currentdatetime)
