@@ -617,8 +617,8 @@ function createfragmentsets_online(currstate, hl, ss, sn, lth, drivergroupnum, d
 				t4 = starttime
 
 				#Arc locations 
-				l1, l2, l3, l4, l5, l6, l7, l8, l9 = d2, o1, o1, d1, d1, o2, o2, d2, d2
-				journeylocations = [l4, l5, l6, l7, l8, l9]
+				l1, l2, l3, l4, l5, l6, l7, l8, l9, l10, l11 = d2, o1, o1, d1, d1, o2, o2, d2, d2, o1, o1
+				journeylocations = [l4, l5, l6, l7, l8, l9, l10, l11]
 
 				#Calculate arc times
 				#Note that this relies on the assumption that the repositioning trips take at most 1 tstep to complete!!!
@@ -628,15 +628,19 @@ function createfragmentsets_online(currstate, hl, ss, sn, lth, drivergroupnum, d
 				upcomingshifts = [t_prime for t_prime in currstate.T_on_0[d_ex] if t_prime >= t6]
 				t7 = minimum(union(upcomingshifts, dummyendtime)) <= horizon ? minimum(union(upcomingshifts, dummyendtime)) : dummyendtime
 				t8 = t7 + arcLength[o2,d2] <= horizon ?  t7 + arcLength[o2,d2] : dummyendtime #o2 --> d2
-				upcomingshifts = [t_prime for t_prime in currstate.T_on_0[d_ex] if t_prime >= t8]
-				t9 = minimum(union(upcomingshifts, dummyendtime)) <= horizon ? minimum(union(upcomingshifts, dummyendtime)) : dummyendtime
+				upcomingworkinghours = [t_prime for t_prime in setdiff(0:tstep:horizon, currstate.T_off[ss]) if t_prime >= t8]
+				t9 = minimum(union(upcomingworkinghours, dummyendtime)) #Find start time of d2 --> o1
+				t10 = d2 == o1 ? t9 : t9 + arcLength[d2,o1] <= horizon ? t9 + arcLength[d2,o1] : dummyendtime #d2 --> o1
+				upcomingshifts = [t_prime for t_prime in currstate.T_on_0[d_ex] if t_prime >= t10]
+				t11 = minimum(union(upcomingshifts, dummyendtime)) <= horizon ? minimum(union(upcomingshifts, dummyendtime)) : dummyendtime
 
 				#Create journey
-				journeytimes = [t4,t5,t6,t7,t8,t9]
+				journeytimes = [t4,t5,t6,t7,t8,t9,t10,t11]
 				finaltimeindex = argmax([t for t in journeytimes]) #Stop times at first dummyendtime
-				if (dummyendtime in journeytimes) & (finaltimeindex > 1) && (journeylocations[finaltimeindex] == journeylocations[finaltimeindex-1])
+				if (dummyendtime in journeytimes) & (finaltimeindex > 1) && (journeylocations[finaltimeindex] == journeylocations[finaltimeindex-1]) #& !(journeylocations[finaltimeindex] == hl)
 					#If the last arc before the time horizon ends would be an idle arc, then just drop it
-					finaltimeindex = finaltimeindex - 1
+					journeytimes[finaltimeindex] = horizon
+					#finaltimeindex = finaltimeindex - 1
 				end
 				#Nodes
 				journeypairlist = [(journeylocations[t], journeytimes[t]) for t in 1:finaltimeindex]
@@ -671,7 +675,7 @@ function createfragmentsets_online(currstate, hl, ss, sn, lth, drivergroupnum, d
 		timespacenetwork(string("outputs/viz/aaa_all_",j,".png"), [intersect(journeys[j],1:numarcs)], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
 	end
 	myarcs = []
-	for item in journeys
+	for item in stranded_journeys
 		myarcs = union(myarcs, item)
 	end
 	timespacenetwork("outputs/viz/aaa_all.png", [myarcs], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
@@ -718,7 +722,7 @@ end
 
 function initializedriversetjourneys(currstate, driversets, drivergroupnum, driversingroup, drivergroupdesc, driverarcs, ghostdriverarcs, enumeratestandardjourneys_flag)
 		
-	#(hl,ss,sn,lth) = (18, 1, 5, -36) driversets[1]
+	#(hl,ss,sn,lth) = (1, 1, 309, -12) driversets[1]
 	numfragments = Dict()
 	fragmentscontaining = Dict()
 	fragmentarcs = Dict()

@@ -1,6 +1,6 @@
 
 function solvejourneymodel(lprelax_flag, opt_gap, arcspassed, currentdatetime)
-			
+				
 	totaldelta = Dates.value(Dates.Hour(currentdatetime - weekstart))
 
 	if arcspassed == -1
@@ -129,13 +129,17 @@ function solvejourneymodel(lprelax_flag, opt_gap, arcspassed, currentdatetime)
 end
 
 #=
+
+4578
+
 myarcs, usedarcs = [], []
-for j in 1:currfragments.numfragments[14, 2, 23, -24]
-	myarcs = union(myarcs, currfragments.fragmentarcs[14, 2, 23, -24, j])
+for j in 1:currfragments.numfragments[(1, 1, 309, -12)]
+	myarcs = union(myarcs, currfragments.fragmentarcs[1, 1, 309, -12, j])
 end
-for j in 1:currfragments.numfragments[14, 2, 23, -24]
-	if value(z[(14, 2, 23, -24), j]) > 1e-4
-		usedarcs = union(usedarcs, currfragments.fragmentarcs[14, 2, 23, -24, j])
+for j in 1:currfragments.numfragments[1, 1, 309, -12]
+	if value(z[(1, 1, 309, -12), j]) > 1e-4
+		println(j)
+		usedarcs = union(usedarcs, currfragments.fragmentarcs[1, 1, 309, -12, j])
 	end
 end
 timespacenetwork("outputs/viz/aaa_all.png", [myarcs, usedarcs], [(150,150,150),(0,0,0)], [3,6,6], ["solid","solid","solid"], [0,0,0], 2400, 1800)
