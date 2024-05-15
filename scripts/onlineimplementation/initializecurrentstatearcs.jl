@@ -347,6 +347,8 @@ function createfragmentsets_online(currstate, hl, ss, sn, lth, drivergroupnum, d
 	d_ex = driversingroup[hl,ss,sn,lth][1] #Example driver for all the annoying sets that are indexed by driver instead of group
 	upcomingfragmentstarttime = [t for t in currstate.T_on_0[d_ex] if (t > starttime) & (t < horizon)]
 	
+	println("($hl, $ss, $sn, $lth)")
+
 	#----------------------------------------------------------------------#
 
 	starttime_standard = time()
@@ -357,10 +359,13 @@ function createfragmentsets_online(currstate, hl, ss, sn, lth, drivergroupnum, d
 		if (sn == nodes[hl,0]) & (0 in currstate.T_off[ss])
 			deadlinetime = minimum(currstate.T_on_0[d_ex])
 		else
-			deadlinetime = lth + (shiftlength + 24*maxnightsaway)
+			deadlinetime = max(starttime, lth + (shiftlength + 24*maxnightsaway))
 		end
 		offtimestarttimes = currstate.T_off_0[d_ex] #union(currstate.T_off_0[d_ex], last(currstate.T_off_0[d_ex])+24:24:deadlinetime)
 		deadlinetime = [t for t in offtimestarttimes if t <= deadlinetime] == [] ? 0 : maximum([t for t in offtimestarttimes if t <= deadlinetime]) + (24-shiftlength)
+		if deadlinetime < starttime
+			deadlinetime += 24
+		end
 		if deadlinetime > horizon
 			#Set the deadline at dummy extended horizon (basically, deal with it later)
 			deadlinenode = extendednodes[hl, dummyendtime]
@@ -376,7 +381,7 @@ function createfragmentsets_online(currstate, hl, ss, sn, lth, drivergroupnum, d
 		#timespacenetwork("outputs/viz/aaa_all.png", [availablearcs_base], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
 		journeyarcs = formatarcset(availablearcs_base, basetsn)
 
-		#Find all journeys beginning from startnode, sn
+				#Find all journeys beginning from startnode, sn
 		journeyendingnodelist = union(N_end, [nodes[hl, t] for t in [t2 for t2 in currstate.T_on_0[d_ex] if t2 <= horizon] if sn < nodes[hl, t] <= deadlinenode], numnodes+1:extendednumnodes)
 		if sn < nodes[hl,currstate.T_on_0[d_ex][1]] < journeyendingnodelist[1]
 			journeyendingnodelist = union(journeyendingnodelist, nodes[hl,currstate.T_on_0[d_ex][1]])
