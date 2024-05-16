@@ -673,7 +673,7 @@ function multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, startercuts, 
 		status = optimize!(smp)
 		if termination_status(smp) != MOI.OPTIMAL
 			println(termination_status(smp))
-			return 100000000, smp, x, y, z, w, magarcs, 0, 0, 0, 0, 0, (vars=Dict(), rhs=Dict(), coeff=Dict()), 0
+			return 100000000, smp, x, y, z, w, magarcs, 0, 0, 0, 0, cg_iter, (vars=Dict(), rhs=Dict(), coeff=Dict()), 0, 0, 0 
 		end
 		smpobj, smptime = objective_value(smp), solve_time(smp)
     
