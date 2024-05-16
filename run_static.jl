@@ -11,6 +11,7 @@ include("scripts/instancegeneration/initializearcsets.jl")
 include("scripts/multiarcgeneration/initializeorderarcsets.jl")
 include("scripts/journeybasedmodel/initializejourneymodel.jl")
 include("scripts/metrics/writeresultsforrun.jl")
+include("scripts/onlineimplementation/initializecurrentstatearcs.jl")
 
 #-------------------------------------FOUR INSTANCES------------------------------------#  
 
@@ -34,7 +35,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 
 #Read experiment parameters from file
 experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/table2.csv"
+paramsfilename = "data/table3.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
 ex = expparms[experiment_id, 2]		
@@ -56,12 +57,12 @@ println("Experiment = ", experiment_id)
 deadlineasmultipleofshortestpath = 2  #1 - deadline is shortest path time, 2 - deadline is twice shortest path time, etc.
 roundeddrivinghours_flag = 0
 if formulation == "heterogeneous"
-	csvfoldername = string("outputs/table2_het/")
+	csvfoldername = string("outputs/table3/")
 	deadlines_flag = 1
 	finallegdistancepenalty = 0.80				# Distance penalty assessed for orders that finish beyond the planning horizon
 	finallegtimepenalty = 0.70					# Time/delay penalty assessed for orders that finish beyond the planning horizon
 elseif formulation == "homogeneous"
-	csvfoldername = string("outputs/table2_hom/")
+	csvfoldername = string("outputs/table3/")
 	deadlines_flag = 0
 	finallegdistancepenalty = 0.40 			    # Distance penalty assessed for orders that finish beyond the planning horizon
 	finallegtimepenalty = 0.30					# Time/delay penalty assessed for orders that finish beyond the planning horizon
@@ -120,6 +121,7 @@ googlemapstraveltimes_flag = ptpvsrelay==1 ? 2 : 1	# 2 = travel time between two
 includesymmetricarcs_flag = 1						# 1 = if arc A-->B present in Rivigo data but not B-->A, create synthetic arc B-->A; 0 = do not include synthetic arcs (may cause feasibility issues)
 traveltimefordelay_flag = 2 						# 0 = use rounded travel times for shortest path used in delay objective, 1 = use raw travel times (best for comparing across multiple tsteps), 2 = use rounded travel times, except on the final leg of the journey where raw is used 
 ensureconnectivity_flag = 1
+onlinetimehorizon = horizon*2
 
 #Uniform k and ABCG + k control parameters
 ktype_flag = "pct"									# "hrs" = # of hours acceptable delay, "pct" = acceptable delay as percent of shortest path time, "min24" = max(24 hrs, percent of shortest path)

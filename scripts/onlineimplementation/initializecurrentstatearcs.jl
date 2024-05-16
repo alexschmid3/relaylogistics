@@ -347,7 +347,7 @@ function createfragmentsets_online(currstate, hl, ss, sn, lth, drivergroupnum, d
 	d_ex = driversingroup[hl,ss,sn,lth][1] #Example driver for all the annoying sets that are indexed by driver instead of group
 	upcomingfragmentstarttime = [t for t in currstate.T_on_0[d_ex] if (t > starttime) & (t < horizon)]
 	
-	println("($hl, $ss, $sn, $lth)")
+	#println("($hl, $ss, $sn, $lth)")
 
 	#----------------------------------------------------------------------#
 
