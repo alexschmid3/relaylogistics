@@ -1,11 +1,21 @@
 
 
-function updatepastsegments(timedelta, x, y, z, w, useddriverjourneys, currentdatetime)
+function updatepastsegments(timedelta, x, y, z, w, candidatejourneys, currentdatetime, basisarcs)
 
 	# x, y, z, w = x_ip, y_ip, z_ip, w_ip
 
     wklydelta = mod(Dates.value(Dates.Hour(currentdatetime - weekstart)), 168)
     totaldelta = Dates.value(Dates.Hour(currentdatetime - weekstart))
+
+    #====================================================#
+
+    if (operations == "relay") & (solutionmethod == "mag")
+		orderarcs = currarcs.magarcs
+	elseif (operations == "relay") & (solutionmethod == "basisip")
+		orderarcs = basisarcs
+	else	
+		orderarcs = currarcs.orderarcs
+	end
 
     #====================================================#
 
@@ -17,7 +27,7 @@ function updatepastsegments(timedelta, x, y, z, w, useddriverjourneys, currentda
         end
     end
     lockedjourneys = Dict()
-    if useddriverjourneys == -1
+    if candidatejourneys == -1
         for (hl,ss,sn,lth) in currfragments.driversets
             lockedjourneys[hl,ss,sn,lth] = []
             for l in 1:numlocs, t in 0:tstep:timedelta-tstep
@@ -28,14 +38,14 @@ function updatepastsegments(timedelta, x, y, z, w, useddriverjourneys, currentda
         for (hl,ss,sn,lth) in currfragments.driversets
             lockedjourneys[hl,ss,sn,lth] = []
             for l in 1:numlocs, t in 0:tstep:timedelta-tstep
-                lockedjourneys[hl,ss,sn,lth] = union(lockedjourneys[hl,ss,sn,lth], intersect(useddriverjourneys[hl,ss,sn,lth],currfragments.F_plus_g[hl,ss,sn,lth,nodes[l,t]]))
+                lockedjourneys[hl,ss,sn,lth] = union(lockedjourneys[hl,ss,sn,lth], intersect(candidatejourneys[hl,ss,sn,lth],currfragments.F_plus_g[hl,ss,sn,lth,nodes[l,t]]))
             end
         end
     end
     #====================================================#
 
     #Add order segments
-    for i in currstate.orders, a in intersect(lockedarcs, setdiff(currarcs.orderarcs.A[i], dummyarc))
+    for i in currstate.orders, a in intersect(lockedarcs, setdiff(orderarcs.A[i], dummyarc))
         if value(x[i,a]) > 0.001
             #Add new current segment = (i, starttime, endtime, startloc, endloc)
             arcstartloc, arcendloc = nodesLookup[arcLookup[a][1]][1], nodesLookup[arcLookup[a][2]][1]
@@ -109,7 +119,7 @@ function updatepastsegments(timedelta, x, y, z, w, useddriverjourneys, currentda
 
     A_space_all = primaryarcs.A_space
     for i in currstate.orders
-        goodones = [a for a in currarcs.orderarcs.A_space[i] if nodesLookup[arcLookup[a][1]][2] < horizon]
+        goodones = [a for a in orderarcs.A_space[i] if nodesLookup[arcLookup[a][1]][2] < horizon]
         A_space_all = union(A_space_all, goodones)
     end
 

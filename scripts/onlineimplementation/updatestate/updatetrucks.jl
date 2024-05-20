@@ -1,8 +1,18 @@
 
-function updatetrucks(timedelta, currentdatetime, weekstart, x, y, orderarcs)
+function updatetrucks(timedelta, currentdatetime, weekstart, x, y, basisarcs)
 
 	#Update the time 
 	wklydelta = mod(Dates.value(Dates.Hour(currentdatetime - weekstart)), 168)
+
+	#====================================================#
+
+	if (operations == "relay") & (solutionmethod == "mag")
+		orderarcs = currarcs.magarcs
+	elseif (operations == "relay") & (solutionmethod == "basisip")
+		orderarcs = basisarcs
+	else	
+		orderarcs = currarcs.orderarcs
+	end
 
 	#====================================================#
 

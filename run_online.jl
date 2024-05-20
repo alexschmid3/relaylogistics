@@ -23,6 +23,7 @@ include("scripts/onlineimplementation/updatestate/updatetrucks.jl")
 include("scripts/onlineimplementation/updatestate/getnextorders.jl")
 include("scripts/onlineimplementation/updatestate/updatearcsets.jl")
 include("scripts/onlineimplementation/updatestate/updateorders.jl")
+include("scripts/onlineimplementation/journeygeneration.jl")
 include("scripts/visualizations/timespacenetwork.jl")
 
 #-------------------------------------FOUR INSTANCES------------------------------------#  
@@ -160,8 +161,11 @@ ghosttsn = createghostTSN(4)
 
 #Create initial arc sets
 include("scripts/onlineimplementation/initializecurrentstatearcs.jl")
-currarcs, currfragments, primaryarcs, extendedtimearcs, numeffshifts, journeytime = initializecurrentstatearcs(currstate, 1);
-
+if (operations == "ptp") & (solutionmethod == "jg") 
+	currarcs, currfragments, primaryarcs, extendedtimearcs, numeffshifts, journeytime = initializecurrentstatearcs(currstate, 0);
+else
+	currarcs, currfragments, primaryarcs, extendedtimearcs, numeffshifts, journeytime = initializecurrentstatearcs(currstate, 1);
+end
 totalnumjourneys = sum(currfragments.numfragments[ds] for ds in currfragments.driversets)
 println("Total journeys = ", totalnumjourneys)
 
@@ -179,16 +183,26 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
     if (operations == "relay") & ((solutionmethod == "mag") || (solutionmethod == "sag"))
         #mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs = multiarcgeneration!(currstate, currfragments, currarcs)    
         ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel(0, opt_gap, -1, currentdatetime);
-		useddriverjourneys = -1
+		candidatejourneys, basisarcs = -1, []
 	elseif (operations == "relay") & (solutionmethod == "ip") 
 		ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel(0, opt_gap, -1, currentdatetime);
-		useddriverjourneys = -1
+		candidatejourneys, basisarcs = -1, []
+	elseif (operations == "relay") & (solutionmethod == "basisip") 
+		lp_obj, x_lp, z_lp, w_lp, y_lp, solvetime_lp, bound_lp, basisarcs = solvejourneymodel_relayred(1, opt_gap, -1, currentdatetime, currarcs.orderarcs);
+		ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel_relayred(0, opt_gap, -1, currentdatetime, basisarcs);
+		candidatejourneys = -1
 	elseif (operations == "ptp") & (solutionmethod == "basisip") 
-		lp_obj, x_lp, z_lp, w_lp, y_lp, solvetime_lp, bound_lp, useddriverjourneys = solvejourneymodel(1, opt_gap, -1, currentdatetime);
-		ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel(0, opt_gap, useddriverjourneys, currentdatetime);
+		lp_obj, x_lp, z_lp, w_lp, y_lp, solvetime_lp, bound_lp, candidatejourneys = solvejourneymodel(1, opt_gap, -1, currentdatetime);
+		ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel(0, opt_gap, candidatejourneys, currentdatetime);
+		basisarcs = []
 	elseif (operations == "ptp") & (solutionmethod == "ip") 
 		ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel(0, opt_gap, -1, currentdatetime);
-		useddriverjourneys = -1
+		candidatejourneys, basisarcs = -1, []
+	elseif (operations == "ptp") & (solutionmethod == "jg") 
+		include("scripts/onlineimplementation/journeygeneration.jl")
+		lp_obj, x_lp, z_lp, w_lp, y_lp = journeygeneration(opt_gap, currarcs.orderarcs, currarcs.ghostdriverarcs)
+		candidatejourneys, basisarcs = -1, []
+		ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel(0, opt_gap, candidatejourneys, currentdatetime);
 	end
 
 	#Visualize
@@ -198,7 +212,7 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 	end=#
 
 	#Find arcs taken by drivers
-	driverarcstaken = updatepastsegments(timedelta, x_ip, y_ip, z_ip, w_ip, useddriverjourneys, currentdatetime)
+	driverarcstaken = updatepastsegments(timedelta, x_ip, y_ip, z_ip, w_ip, candidatejourneys, currentdatetime, basisarcs)
 	updatelasttimehome(driverarcstaken)
 	
 	#Update local datetime 
@@ -207,11 +221,7 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 	#Iterate forward by timedelta 
 	updatedriverlocations(currentdatetime, driverarcstaken);
 	updatedriversshifts(currentdatetime, weekstart, T_off_Monday8am);
-	if solutionmethod == "mag"
-		updatetrucks(timedelta, currentdatetime, weekstart, x_ip, y_ip, currarcs.magars);
-	else
-		updatetrucks(timedelta, currentdatetime, weekstart, x_ip, y_ip, currarcs.orderarcs);
-	end
+	updatetrucks(timedelta, currentdatetime, weekstart, x_ip, y_ip, basisarcs);
 	updatedriverarcsets();
 
 	#=myarcs = [a for a in currarcs.driverarcs.A[driverHomeLocs[7],drivershift[7]]]
@@ -229,8 +239,8 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 	global currfragments = newfragments
 
 	#Update orders
-	updateorders(x_ip, timedelta, currentdatetime)
-
+	updateorders(x_ip, timedelta, currentdatetime, basisarcs)
+	
 	#Better way to do this without the global var update?
 	neworderarcs, newmagarcs = updateorderarcs()
 	global currarcs = (orderarcs=neworderarcs, driverarcs=currarcs.driverarcs, hasdriverarcs=currarcs.hasdriverarcs, magarcs=newmagarcs, ghostdriverarcs=currarcs.ghostdriverarcs) 
@@ -256,6 +266,22 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 end
 
 println("Total past cost for exp. $experiment_id = ", sum(values(totalpastcost)))
+
+#---------------------------------------------------------------------------#
+
+#= 
+for i in currstate.orders
+	myarcs = [a for a in currarcs.orderarcs.A[i]]
+	timespacenetwork(string("outputs/viz/aaa_order",i,".png"), [myarcs], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
+end
+for item in currfragments.driversets
+	myarcs = []
+	for f in currfragments.fragments[item]
+		myarcs = union(myarcs, currfragments.fragmentarcs[item[1], item[2], item[3], item[4], f])
+	end
+	timespacenetwork(string("outputs/viz/aaa_driver",item,".png"), [myarcs], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
+end
+=#
 
 #---------------------------------------------------------------------------#
 

@@ -1,13 +1,15 @@
 
-function updateorders(x, timedelta, currentdatetime)
+function updateorders(x, timedelta, currentdatetime, basisarcs)
 
 	#Update the time 
 	totaldelta = Dates.value(Dates.Hour(currentdatetime - weekstart))
 
 	#====================================================#
 
-	if solutionmethod == "mag"	
+	if (operations == "relay") & (solutionmethod == "mag")
 		orderarcs = currarcs.magarcs
+	elseif (operations == "relay") & (solutionmethod == "basisip")
+		orderarcs = basisarcs
 	else	
 		orderarcs = currarcs.orderarcs
 	end

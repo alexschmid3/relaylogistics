@@ -170,8 +170,9 @@ function journeyshortestpathproblem(arccost, spsets)
 end
 
 #----------------------------------------------------------------------------------------#
-#journeysubproblem(hl,ss,sn,lth, arcredcosts, beta, gamma, alljourneyarcs[hl,ss,sn,lth], currfragments, subproblemsets)
-	
+
+#hl,ss,sn,lth, arcredcosts, beta, gamma, journeyarcsfor, currfragments, subproblemsets = hl,ss,sn,lth, arcredcosts, beta, gamma, alljourneyarcs[hl,ss,sn,lth], currfragments, subproblemsets
+
 function journeysubproblem(hl,ss,sn,lth, arcredcosts, beta, gamma, journeyarcsfor, currfragments, subproblemsets)	
 
 	newjourneys, journeyreducedcosts = [], []
@@ -182,11 +183,11 @@ function journeysubproblem(hl,ss,sn,lth, arcredcosts, beta, gamma, journeyarcsfo
 
 	for t in journeystarttimes
 		#Get start node
-		if t == nodesLookup[sn][2]
-			startcost = beta[g]
-		else
-			startcost = 0
-		end
+		#if t == nodesLookup[sn][2]
+		#	startcost = beta[g]
+		#else
+		#	startcost = 0
+		#end
 
 		#Finalize arc costs
 		arccost = Dict()
@@ -206,7 +207,11 @@ function journeysubproblem(hl,ss,sn,lth, arcredcosts, beta, gamma, journeyarcsfo
 
 		#Find the min reduced cost journey 
 		journeyreducedcost, journeynodelist, journeyarclist = journeyshortestpathproblem(arccost, subproblemsets[hl,ss,sn,lth,t])
-		journeyreducedcost = journeyreducedcost + startcost + gamma[(hl,ss,sn,lth), subproblemsets[hl,ss,sn,lth,t].startnode]
+		if t == nodesLookup[sn][2]
+			journeyreducedcost = journeyreducedcost + beta[g] + 0
+		else
+			journeyreducedcost = journeyreducedcost + 0 + gamma[(hl,ss,sn,lth), subproblemsets[hl,ss,sn,lth,t].startnode]
+		end
 
 		#Add promising journeys
 		if journeyreducedcost < -1e-4
@@ -215,7 +220,7 @@ function journeysubproblem(hl,ss,sn,lth, arcredcosts, beta, gamma, journeyarcsfo
 		end
 
 		minrc = min(minrc, journeyreducedcost)
-		
+				
 	end
 
 	return newjourneys, journeyreducedcosts, minrc
@@ -224,7 +229,7 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function preprocesssubproblemsets(alljourneyarcs, currfragments)
+function preprocesssubproblemsets_journeygen(alljourneyarcs, currfragments)
 
 	subproblemsets = Dict()
 
@@ -268,25 +273,24 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-orderarcs = currarcs.orderarcs
-ghostdriverarcs = currarcs.ghostdriverarcs
+#opt_gap, orderarcs, ghostdriverarcs = opt_gap, currarcs.orderarcs, currarcs.ghostdriverarcs
 
-function journeygeneration(opt_gap, currstate, currarcs, currfragments, orderarcs)
-
+function journeygeneration(opt_gap, orderarcs, ghostdriverarcs)
+	
     #include("scripts/onlineimplementation/journeygeneration.jl")
 	#include("scripts/onlineimplementation/initializecurrentstatearcs.jl")
 	#currarcs, currfragments, primaryarcs, extendedtimearcs, numeffshifts, journeytime = initializecurrentstatearcs(currstate, 0 )
 
 	currjourneys = Dict()
     for (hl,ss,sn,lth) in currfragments.driversets
-        currjourneys[hl,ss,sn,lth] = 1:currfragments.numfragments[hl,ss,sn,lth]
+        currjourneys[hl,ss,sn,lth] = [j for j in 1:currfragments.numfragments[hl,ss,sn,lth]]
     end
 
     #-------------------------------------------------------------------------------#
 
 	rmp = Model(Gurobi.Optimizer)
 	set_optimizer_attribute(rmp, "TimeLimit", 60*60*40)
-	set_optimizer_attribute(rmp, "OutputFlag", 1)
+	set_optimizer_attribute(rmp, "OutputFlag", 0)
 	set_optimizer_attribute(rmp, "MIPGap", opt_gap)
 
 	A_space_all = primaryarcs.A_space
@@ -370,13 +374,13 @@ function journeygeneration(opt_gap, currstate, currarcs, currfragments, orderarc
 		alljourneyarcs[hl,ss,sn,lth] = journeyarcsfor
 	end
 
-	subproblemsets = preprocesssubproblemsets(alljourneyarcs, currfragments)
+	subproblemsets = preprocesssubproblemsets_journeygen(alljourneyarcs, currfragments)
 
 	#-------------------------------------------------------------------------------#
 
 	cg_iter = 1
 
-		while cg_iter <= 100000
+	while cg_iter <= 100000
 				
 		#-------------SOLVE RMP-------------#
 		println("-------- ITERATION $cg_iter --------")
@@ -397,7 +401,7 @@ function journeygeneration(opt_gap, currstate, currarcs, currfragments, orderarc
 
 		#Run shortest path for each order to find new arcs
 		shortestpathnodes, shortestpatharcs = Dict(), Dict()
-		dptimelist, minreducedcosts,  = [], []
+		dptimelist, minreducedcosts = [], []
 		for (hl,ss,sn,lth) in currfragments.driversets
 
 			newjourneys, journeyreducedcosts, minreducedcost = journeysubproblem(hl,ss,sn,lth, arcredcosts, beta, gamma, alljourneyarcs[hl,ss,sn,lth], currfragments, subproblemsets)
@@ -415,8 +419,8 @@ function journeygeneration(opt_gap, currstate, currarcs, currfragments, orderarc
 
 				#Add to sets
 				n_1,n_2 = arcLookup[journeryarclist[1]][1], arcLookup[last(journeryarclist)][2]
-				push!(currfragments.F_minus_g[i1,i2,i3,i4,n_2], j)
-				push!(currfragments.F_plus_g[i1,i2,i3,i4,n_1], j)
+				push!(currfragments.F_minus_g[hl,ss,sn,lth,n_2], j)
+				push!(currfragments.F_plus_g[hl,ss,sn,lth,n_1], j)
 				currfragments.fragmentarcs[hl,ss,sn,lth,j] = journeryarclist
 				for a in journeryarclist
 					push!(currfragments.fragmentscontaining[hl,ss,sn,lth,a], j)
@@ -426,7 +430,7 @@ function journeygeneration(opt_gap, currstate, currarcs, currfragments, orderarc
 
 				#Create a new variable for the path
 				global z[(hl,ss,sn,lth),j] = @variable(rmp, lower_bound = 0)
-				set_name(z[(hl,ss,sn,lth),j], string("x[(",hl,",",ss,",",sn,",",lth,"),",j,"]")) 
+				set_name(z[(hl,ss,sn,lth),j], string("z[(",hl,",",ss,",",sn,",",lth,"),",j,"]")) 
 			
 				#Linking constraints
 				for a in intersect(journeryarclist, A_space_all)
@@ -434,11 +438,16 @@ function journeygeneration(opt_gap, currstate, currarcs, currfragments, orderarc
 				end
 			
 				#Driver constraints
+				#println(rmpconstraints.con_driverStartingLocs)
 				if sn == n_1
-					set_normalized_coefficient(rmpconstraints.con_driverStartingLocs[hl,ss,sn,lth], z[(hl,ss,sn,lth),j], 1.0)
+					set_normalized_coefficient(rmpconstraints.con_driverStartingLocs[(hl,ss,sn,lth)], z[(hl,ss,sn,lth),j], 1.0)
 				end
-				set_normalized_coefficient(rmpconstraints.con_driverFlowBalance[(hl,ss,sn,lth),n_1], z[(hl,ss,sn,lth),j], -1.0)
-				set_normalized_coefficient(rmpconstraints.con_driverFlowBalance[(hl,ss,sn,lth),n_2], z[(hl,ss,sn,lth),j], 1.0)
+				if n_1 in currfragments.N_flow_g[hl,ss,sn,lth]
+					set_normalized_coefficient(rmpconstraints.con_driverFlowBalance[(hl,ss,sn,lth),n_1], z[(hl,ss,sn,lth),j], -1.0)
+				end
+				if n_2 in currfragments.N_flow_g[hl,ss,sn,lth]
+					set_normalized_coefficient(rmpconstraints.con_driverFlowBalance[(hl,ss,sn,lth),n_2], z[(hl,ss,sn,lth),j], 1.0)
+				end
 			
 			end	
 
@@ -456,8 +465,18 @@ function journeygeneration(opt_gap, currstate, currarcs, currfragments, orderarc
 		cg_iter += 1
 
     end
+
+	return objective_value(rmp), value.(x), value.(z), value.(w), value.(y)
 		
 end
 
 
 
+
+#=
+
+include("scripts/onlineimplementation/journeygeneration.jl")
+currarcs, currfragments, primaryarcs, extendedtimearcs, numeffshifts, journeytime = initializecurrentstatearcs(currstate, 0);
+lp_obj, x_lp, z_lp, w_lp, y_lp = journeygeneration(opt_gap, currarcs.orderarcs, currarcs.ghostdriverarcs)
+
+=#
