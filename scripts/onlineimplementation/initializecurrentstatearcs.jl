@@ -15,7 +15,7 @@ function finddriversets_online(T_off_online, driverStartNodes, lasttimehome)
 	#Create driver sets
 	driversingroup = Dict()
 	driversets = []
-	for homeloc in 1:numlocs, shiftsched in 1:numshifts, lth in -1*10*24:tstep:10*24, startnode in 1:numnodes
+	for homeloc in 1:numlocs, shiftsched in 1:numshifts, lth in -1*20*24:tstep:10*24, startnode in 1:numnodes
 		driversingroup[homeloc, shiftsched, startnode, lth] = []
 	end
 	for d in drivers

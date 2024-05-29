@@ -104,8 +104,11 @@ function calculatedriverstatistics()
             end
         end
         push!(journeynightsaway, currnightsaway)
-        driverjourneyssatisfyingcondition += sum(1 for j in journeynightsaway if j <= maxnightsaway) / sum(1 for j in journeynightsaway)
-        driverdayssatisfyingcondition += sum(j+1 for j in journeynightsaway if j <= maxnightsaway) / sum(j+1 for j in journeynightsaway)
+        standardjourneynightsaway = [j for j in journeynightsaway if j <= maxnightsaway]
+        if standardjourneynightsaway != []
+            driverjourneyssatisfyingcondition += length(standardjourneynightsaway) / length(journeynightsaway)
+            driverdayssatisfyingcondition += sum(j+1 for j in standardjourneynightsaway) / sum(j+1 for j in journeynightsaway)
+        end
     end
 
     driverjourneyssatisfyingcondition = driverjourneyssatisfyingcondition / length(drivers)
