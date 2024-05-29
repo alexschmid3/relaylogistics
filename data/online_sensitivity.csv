@@ -1,0 +1,17 @@
+experiment_id,instance,method,weekstart,horizon,tstep,driverfactor,rho-value,opt_gap,lambda,formulation,runtype,operations,ptpvsrelay,becomesavailablehours,onlineweeks,timedelta,maxnightsaway,maxrepositioningdistance
+1,4,mag,2019-06-30,5,6,8,0,0.01,10,homogeneous,online,relay,1,72,1,24,1,0
+2,4,mag,2019-06-30,5,3,8,0,0.01,10,homogeneous,online,relay,1,72,1,24,1,0
+3,4,mag,2019-06-30,5,6,8,0,0.01,10,homogeneous,online,relay,1,72,1,12,1,0
+4,4,mag,2019-06-30,5,3,8,0,0.01,10,homogeneous,online,relay,1,72,1,12,1,0
+5,4,mag,2019-06-30,5,6,8,0,0.01,10,homogeneous,online,relay,1,72,1,6,1,0
+6,4,mag,2019-06-30,5,3,8,0,0.01,10,homogeneous,online,relay,1,72,1,6,1,0
+7,4,mag,2019-06-30,5,6,8,0,0.01,10,homogeneous,online,relay,1,72,1,24,1,0
+8,4,mag,2019-06-30,5,3,8,0,0.01,10,homogeneous,online,relay,1,72,1,24,1,0
+9,4,mag,2019-07-21,5,6,8,0,0.01,10,homogeneous,online,relay,1,72,1,24,1,0
+10,4,mag,2019-07-21,5,3,8,0,0.01,10,homogeneous,online,relay,1,72,1,24,1,0
+11,4,mag,2019-07-21,5,6,8,0,0.01,10,homogeneous,online,relay,1,72,1,12,1,0
+12,4,mag,2019-07-21,5,3,8,0,0.01,10,homogeneous,online,relay,1,72,1,12,1,0
+13,4,mag,2019-07-21,5,6,8,0,0.01,10,homogeneous,online,relay,1,72,1,6,1,0
+14,4,mag,2019-07-21,5,3,8,0,0.01,10,homogeneous,online,relay,1,72,1,6,1,0
+15,4,mag,2019-07-21,5,6,8,0,0.01,10,homogeneous,online,relay,1,72,1,24,1,0
+16,4,mag,2019-07-21,5,3,8,0,0.01,10,homogeneous,online,relay,1,72,1,24,1,0

@@ -12,70 +12,63 @@ for item in tempHueList
 end
 
 #Parameters
-currstdev = 0.0
-stepsize = 0.1
+stdev_stepsize = 0.1
+n_list = [1,2,3,4,5,6,7,8,9,10]
 size_x, size_y = 2000,2000
 
 #File names
-if currstdev >= 1
-	outputfilename = string("figures/heatmap_", convert(Int,currstdev*10),".png")
-else
-	outputfilename = string("figures/heatmap_0", convert(Int,currstdev*10),".png")
-end
-if currstdev == 0.0
-	inputfilename = "outputs/heatmapdata/exp_all.csv"
-else
-	inputfilename = "outputs/heatmapdata/heatmapdata.csv"
-end
-
-generateheatmap(inputfilename, outputfilename, currstdev, stepsize, size_x, size_y)
+inputfilename = "outputs/heatmapdata/heatmap1_repos_outputs.csv"
+outputfilename = string("figures/heatmap_repos.png")
 
 #---------------------------------------------------------------------------------------#
 
-function generateheatmap(inputfilename, outputfilename, currstdev, stepsize, size_x, size_y)
+function generateheatmap(inputfilename, outputfilename, size_x, size_y)
 
     buffer_xy = 300
 
 	#Find coordinates for each workstation and pod storage location
-	boxwidth = (size_x - buffer_xy) / (length(0:stepsize:1)+1)
-	boxheight = (size_y - buffer_xy) / (length(0:stepsize:1)+1)
+	boxwidth = (size_x - buffer_xy) / (length(n_list)+1)
+	boxheight = (size_y - buffer_xy) / (length(0:stdev_stepsize:1)+1)
+	betweensquares_x = (size_x - buffer_xy) / (length(n_list)) - (size_x - buffer_xy) / (length(n_list)+1)
+	betweensquares_y = (size_y - buffer_xy) / (length(0:stdev_stepsize:1)) - (size_y - buffer_xy) / (length(0:stdev_stepsize:1)+1)
 
 	boxPoints = Dict()
-	for ab in 0:stepsize:1, db in 0:stepsize:1
-		newx = ab * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_x - buffer_xy) - 0.5 * (size_x - buffer_xy)
-		newy = (1-db) * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_y - buffer_xy) - 0.5 * (size_y - buffer_xy)
-		boxPoints[ab,db] = Point((newx, newy))
+	for stdv in 0:stdev_stepsize:1, nindex in 1:length(n_list)
+		n = n_list[nindex]
+		newx = (nindex-1)/(length(n_list)-1) * length(n_list)/(length(n_list)+1) * (size_x - buffer_xy) - 0.5 * (size_x - buffer_xy)
+		newy = (1-stdv) * length(0:stdev_stepsize:1)/(length(0:stdev_stepsize:1)+1) * (size_y - buffer_xy) - 0.5 * (size_y - buffer_xy)
+		boxPoints[n,stdv] = Point((newx, newy))
 	end
 
 	#-------------------------------------------------------------------------#
 
 	#Read the input file
 	mapdata = CSV.read(inputfilename, DataFrame)
-    filtereddata = filter(:stdev => n -> n == currstdev, mapdata)
+    filtereddata = filter(:n => n -> n in n_list, mapdata)
 	mileslookup, denomlookup, countlookup = Dict(), Dict(), Dict()
 
-	for ab in 0:stepsize:1, db in 0:stepsize:1
-		mileslookup[ab,db] = "X"
-        denomlookup[ab,db] = 0
-        countlookup[ab,db] = 0
+	for stdv in 0:stdev_stepsize:1, n in n_list
+		mileslookup[n,stdv] = "X"
+        denomlookup[n,stdv] = 0
+        countlookup[n,stdv] = 0
 	end
 
 	allmiles = []
 	for row in 1:size(filtereddata)[1]
-		ab, db = abs(round(stepsize * round(filtereddata[row,1] / stepsize), digits=2)), abs(round(stepsize * round(filtereddata[row,2] / stepsize),digits=2))
-		if mileslookup[ab,db] == "X"
-            mileslookup[ab,db] = 0
+		n, stdv = abs(convert(Int, round(filtereddata[row,6], digits=0))), abs(round(stdev_stepsize * round(filtereddata[row,7] / stdev_stepsize),digits=2))
+		if mileslookup[n,stdv] == "X"
+            mileslookup[n,stdv] = 0
         end
-        mileslookup[ab,db] += (filtereddata[row,7] - filtereddata[row,6])  
-        denomlookup[ab,db] += filtereddata[row,7] 
-        countlookup[ab,db] += 1
-		#pctlookup[ab,db] += 100 * (filtereddata[row,7] - filtereddata[row,6]) / filtereddata[row,7] 
-		push!(allmiles, filtereddata[row,7] - filtereddata[row,6])
+        mileslookup[n,stdv] += (filtereddata[row,9] - filtereddata[row,8]) / filtereddata[row,9]
+        denomlookup[n,stdv] += 1 #filtereddata[row,9] 
+        countlookup[n,stdv] += 1
+		#pctlookup[n,stdv] += 100 * (filtereddata[row,7] - filtereddata[row,6]) / filtereddata[row,7] 
+		push!(allmiles, (filtereddata[row,9] - filtereddata[row,8])/filtereddata[row,9])
 	end	
 
 	maxmiles, minmiles = maximum(allmiles), minimum(allmiles)
     maxmiles = max(maxmiles, -1*minmiles)
-    minmiles = min(-1*maxmiles, minmiles)
+    minmiles = min(-1*maxmiles/3, minmiles)
 
 	#-------------------------------------------------------------------------#
 	
@@ -89,33 +82,31 @@ function generateheatmap(inputfilename, outputfilename, currstdev, stepsize, siz
 	numberfont = 30
 
 	locationsquares, textsquares = [], []
-	for ab in 0:stepsize:1, db in 0:stepsize:1
-		corner = boxPoints[ab,db]
-		center = boxPoints[ab,db] + Point(boxwidth/2, boxheight/2) 
-		if mileslookup[ab,db] == "X"
+	for stdv in 0:stdev_stepsize:1, n in n_list
+		corner = boxPoints[n,stdv]
+		center = boxPoints[n,stdv] + Point(boxwidth/2, boxheight/2) 
+		if mileslookup[n,stdv] == "X"
 			boxcolor = (200,200,200)
 			textcolor = (150,150,150)
 			actualtext = "X"
 			push!(locationsquares, (corner, boxcolor, boxwidth, boxheight, thickness))
 			push!(textsquares, (center, textcolor, actualtext, xfont))
-		elseif mileslookup[ab,db] >= 0 
-			println("$ab, $db")
-			lamb = mileslookup[ab,db] / (countlookup[ab,db] * maxmiles)
+		elseif mileslookup[n,stdv]/denomlookup[n,stdv] >= -0.005
+			lamb = mileslookup[n,stdv] / (countlookup[n,stdv] * maxmiles)
 			boxcolor = (98 * lamb + 255 * (1-lamb), 151 * lamb + 255 * (1-lamb), 236 * lamb + 255 * (1-lamb))
 			textcolor = ((98 * lamb + 255 * (1-lamb)) / 2, (151 * lamb + 255 * (1-lamb)) / 2, (236 * lamb + 255 * (1-lamb)) / 2)
-			actualtext = string(convert(Int, -1*round((100 * mileslookup[ab,db])/denomlookup[ab,db],digits=0)), "%")
+			actualtext = string(convert(Int, -1*round((100 * mileslookup[n,stdv])/denomlookup[n,stdv],digits=0)), "%")
 			push!(locationsquares, (corner, boxcolor, boxwidth, boxheight, thickness))
 			push!(textsquares, (center, textcolor, actualtext, numberfont))
-			counter +=1
+			counter += 1 
 		else
-			println("$ab, $db")
-			lamb = mileslookup[ab,db] / (countlookup[ab,db] * minmiles)
+			lamb = mileslookup[n,stdv] / (countlookup[n,stdv] * minmiles)
 			boxcolor = (247 * lamb + 255 * (1-lamb), 91 * lamb + 255 * (1-lamb), 95 * lamb + 255 * (1-lamb))
 			textcolor = ((247 * lamb + 255 * (1-lamb)) / 2, (91 * lamb + 255 * (1-lamb)) / 2, (95 * lamb + 255 * (1-lamb)) / 2)
-			actualtext = string("+",convert(Int,-1*round((100 * mileslookup[ab,db])/denomlookup[ab,db],digits=0)), "%")
+			actualtext = string("+",convert(Int,-1*round((100 * mileslookup[n,stdv])/denomlookup[n,stdv],digits=0)), "%")
 			push!(locationsquares, (corner, boxcolor, boxwidth, boxheight, thickness))
 			push!(textsquares, (center, textcolor, actualtext, numberfont))
-			counter +=1
+			counter += 1
 		end		
 	end
 
@@ -134,6 +125,7 @@ function generateheatmap(inputfilename, outputfilename, currstdev, stepsize, siz
 	end
 
 	#Mile labels
+	fontsize(30)
 	for lbl in textsquares
 		fontsize(lbl[4])
 		r_val, g_val, b_val = lbl[2]
@@ -151,32 +143,39 @@ function generateheatmap(inputfilename, outputfilename, currstdev, stepsize, siz
 	Luxor.rect(Point(-(size_x - buffer_xy) / 2, - (size_y - buffer_xy) / 2), size_x - buffer_xy, size_y - buffer_xy, :stroke)	
 
 	#Ticks and labels
-	for ab in 0:stepsize:1
-		center = Point(ab * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_x - buffer_xy) - 0.5 * (size_x - buffer_xy),  0.5 * (size_y - buffer_xy))
+	for nindex in 1:length(n_list)
+		n = n_list[nindex]
+		xshift = nindex == 1 ? 0 : betweensquares_x / 2
+		center = Point((nindex-1)/(length(n_list)-1) * length(n_list)/(length(n_list)+1) * (size_x - buffer_xy) - 0.5 * (size_x - buffer_xy) - xshift, 0.5 * (size_y - buffer_xy))
 		Luxor.line(center, center + Point(0, 10), :stroke)
 	end
-	fontsize(36)
-	for ab in 0:stepsize*2:1
-		center = Point(ab * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_x - buffer_xy) - 0.5 * (size_x - buffer_xy),  0.5 * (size_y - buffer_xy))
-		label(string(round(1-ab,digits=1)), :S, center + Point(boxwidth/2, 10))
+	fontsize(46)
+	for nindex in 1:length(n_list)
+		n = n_list[nindex]
+		center = Point((nindex-1)/(length(n_list)-1) *  length(n_list)/(length(n_list)+1) * (size_x - buffer_xy) - 0.5 * (size_x - buffer_xy),  0.5 * (size_y - buffer_xy))
+		label(string(n), :S, center + Point(boxwidth/2, 10))
 	end
 
-	for db in 0:stepsize:1
-		center = Point(- 0.5 * (size_x - buffer_xy), db * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_y - buffer_xy) - 0.5 * (size_y - buffer_xy))
+	for stdev in 0:stdev_stepsize:1
+		yshift = stdev == 0 ? 0 : betweensquares_y / 2
+		center = Point(- 0.5 * (size_x - buffer_xy), stdev * length(0:stdev_stepsize:1)/(length(0:stdev_stepsize:1)+1) * (size_y - buffer_xy) - 0.5 * (size_y - buffer_xy) - yshift)
 		Luxor.line(center - Point(10, 0), center , :stroke)
 	end
-	fontsize(36)
-	for db in 0:stepsize*2:1
-		center = Point(- 0.5 * (size_x - buffer_xy), (1-db) * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_y - buffer_xy) - 0.5 * (size_y - buffer_xy))
-		label(string(round(1-db,digits=1)), :W, center + Point(-10, boxheight/2))
+	fontsize(46)
+	for stdev in 0:stdev_stepsize:1
+		center = Point(- 0.5 * (size_x - buffer_xy), (1-stdev) * length(0:stdev_stepsize:1)/(length(0:stdev_stepsize:1)+1) * (size_y - buffer_xy) - 0.5 * (size_y - buffer_xy))
+		label(string(round(stdev,digits=1)), :W, center + Point(-10, boxheight/2))
 	end
 
 	fontsize(60)
-	Luxor.text("Aggregate imbalance", Point(0.5 * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_x - buffer_xy) - 0.5 * (size_x - buffer_xy),  0.5 * (size_y - buffer_xy)) + buffer_xy/2 - 20, halign=:center, valign = :bottom)
-	Luxor.text("Disaggregate imbalance", Point(- 0.5 * (size_x - buffer_xy) - buffer_xy/2 + 35, 0.5 * length(0:stepsize:1)/(length(0:stepsize:1)+1) * (size_y - buffer_xy) - 0.5 * (size_y - buffer_xy)), halign=:center,   valign = :middle, angle = -pi/2)
+	Luxor.text("Number of locations", Point(0.5 * length(0:stdev_stepsize:1)/(length(0:stdev_stepsize:1)+1) * (size_x - buffer_xy) - 0.5 * (size_x - buffer_xy),  0.5 * (size_y - buffer_xy)) + buffer_xy/2 - 20, halign=:center, valign = :bottom)
+	Luxor.text("σ / d", Point(- 0.5 * (size_x - buffer_xy) - buffer_xy/2 + 35, 0.5 * length(0:stdev_stepsize:1)/(length(0:stdev_stepsize:1)+1) * (size_y - buffer_xy) - 0.5 * (size_y - buffer_xy)), halign=:center,   valign = :middle, angle = -pi/2)
 
 	finish()
 	preview()
 
 end
 
+#---------------------------------------------------------------------------------------#
+
+generateheatmap(inputfilename, outputfilename, size_x, size_y)

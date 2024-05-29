@@ -54,18 +54,25 @@ ptpvsrelay = 0
 println("Experiment = ", experiment_id)
 
 #Manual parameters for response/appendix experiments
-deadlineasmultipleofshortestpath = 2  #1 - deadline is shortest path time, 2 - deadline is twice shortest path time, etc.
 roundeddrivinghours_flag = 0
 if formulation == "heterogeneous"
 	csvfoldername = string("outputs/table3/")
 	deadlines_flag = 1
 	finallegdistancepenalty = 0.80				# Distance penalty assessed for orders that finish beyond the planning horizon
 	finallegtimepenalty = 0.70					# Time/delay penalty assessed for orders that finish beyond the planning horizon
+	deadlineasmultipleofshortestpath = 2
 elseif formulation == "homogeneous"
 	csvfoldername = string("outputs/table3/")
 	deadlines_flag = 0
 	finallegdistancepenalty = 0.40 			    # Distance penalty assessed for orders that finish beyond the planning horizon
 	finallegtimepenalty = 0.30					# Time/delay penalty assessed for orders that finish beyond the planning horizon
+	deadlineasmultipleofshortestpath = 2
+elseif formulation == "homogeneousdeadlines"
+	csvfoldername = string("outputs/ordersensitivity/")
+	deadlines_flag = 1
+	finallegdistancepenalty = 0.40 			    # Distance penalty assessed for orders that finish beyond the planning horizon
+	finallegtimepenalty = 0.30	
+	deadlineasmultipleofshortestpath = expparms[experiment_id, 24]
 else
 	throw(DomainError(formulation, "formulation not recognized: must be 'homogeneous' or 'heterogenous'"))
 end	

@@ -5,9 +5,13 @@ function realizedemands(d_bar, stdev)
 
     demand = zeros(numlocs, numlocs, T)
     for (i,j) in allpairs, t in 1:T
-        if d_bar[i,j] > 1e-4
-            demand[i,j,t] = max(0.0, round(randn() * stdev[i,j] + d_bar[i,j], digits=0))
+        #if d_bar[i,j] > 1e-4
+        if demanddist == "normal"
+            demand[i,j,t] = min(d_ub, max(d_lb, round(randn() * stdev_base * d_bar + d_bar, digits=0)))
+        elseif demanddist == "uniform"
+            demand[i,j,t] = (d_ub - d_lb) * rand() + d_lb
         end
+        #end
     end
 
     return demand

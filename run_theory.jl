@@ -7,21 +7,26 @@ include("scripts/theory/generatedemand.jl")
 include("scripts/theory/realizedemand.jl")
 include("scripts/visualizations/theorynetwork.jl")
 
-experiment_id = 1001 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-params = CSV.read("data/morelocs.csv", DataFrame)
+experiment_id += 1 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+params = CSV.read("data/heatmap1.csv", DataFrame)
 
 w = 2
 h = 1/2
-n = 3 #params[experiment_id, 2]
-T = 5
+n = params[experiment_id, 6]
+T = 1
 C = 5
+m = 1
+K = 1
 
-totalflow = 500 #params[experiment_id, 5] 
-stdev_base = 0.0 #params[experiment_id, 6] 
-aggbalance = 1 #params[experiment_id, 4] 
-disaggbalance = 0.6 #params[experiment_id, 3] 
-coastbalance = 1 #params[experiment_id, 2] 
-randomseedval = 12091 #params[experiment_id, 1] #params[experiment_id, 7] 
+#totalflow = 500 #params[experiment_id, 5] 
+stdev_base = params[experiment_id, 7] 
+aggbalance = params[experiment_id, 4] 
+disaggbalance = params[experiment_id, 3] 
+coastbalance = params[experiment_id, 2] 
+randomseedval = 123 #params[experiment_id, 8] 
+demanddist = params[experiment_id, 9] 
+d_lb = params[experiment_id, 10] 
+d_ub = params[experiment_id, 11] 
 Random.seed!(randomseedval)
 
 W = [i for i in 1:n]
@@ -46,8 +51,9 @@ end
 
 #--------------------------------------------------------------#
 
-d_bar, stdev, actualAB, actualDB, actualCB = generatedemand(totalflow, aggbalance, disaggbalance, coastbalance) 
-demand = realizedemands(d_bar, stdev)
+#d_bar, stdev, actualAB, actualDB, actualCB = generatedemand(totalflow, aggbalance, disaggbalance, coastbalance) 
+d_bar = (d_ub-d_lb)*0.5 + d_lb
+demand = realizedemands(d_bar, stdev_base)
 #demand = zeros(6,6,T)
 #for t in 1:T
 #    demand[1,4,t] = 1
@@ -76,7 +82,7 @@ for i in W, j in E, t in 1:T
 end
 jindex = 1
 journeyarclookup = Dict()
-for i in W, j in E, t in 1:T, i2 in W, j2 in E
+for i in W, j in E, t in 1:T, i2 in W, j2 in E #i2 in [i], j2 in [j]
     push!(journeyscovering[i,j,t], jindex)
     push!(journeyscovering[j2,i2,mod(t+C-1,T)+1], jindex)
     journeydist[jindex] = tripdistance[i,j] + tripdistance[i2,j2] + tripdistance[i,i2] + tripdistance[j,j2] 
@@ -180,7 +186,7 @@ for (j,i) in corridors, t in 1:T
 end
 
 #--------------------------------------------------------------#
-
+#=
 function periodsdelay(t1,t2)
     if t2 >= t1
         return t2 - t1
@@ -222,7 +228,7 @@ set_optimizer_attribute(model, "OutputFlag", 0)
 
 optimize!(model)
 relay_delay_obj = objective_value(model)
-
+=#
 #--------------------------------------------------------------#
 #=
 #Relay bound
@@ -369,7 +375,7 @@ assignments, cost = hungarian(weights)
 ptp_exact = M - cost
 =#
 #--------------------------------------------------------------#
-
+#=
 #PTP simple (T=C)
 ptp_bound3 = sum(sum(sum(tripdistance[i,j]*demand[i,j,t] for t in 1:T) for j in E) for i in W) + sum(sum(sum(tripdistance[i,j]*demand[i,j,t] for t in 1:T) for j in W) for i in E) 
 
@@ -389,7 +395,7 @@ relay_bound2 = sum(sum(sum(detourdistance[i,j]*demand[i,j,t] for t in 1:T) for j
 agg = sum(sum(abs(sum(demand[i,j,t] - demand[j,i,t] for j in E)) for i in W)  for t in 1:T) + sum(sum(abs(sum(demand[i,j,t] - demand[j,i,t] for j in W)) for i in E) for t in 1:T)
 
 relay_bound2 += w * coastal + sqrt(w^2 + h^2) * agg
-
+=#
 #--------------------------------------------------------------#
 
 if 1==1
@@ -398,14 +404,14 @@ if 1==1
     println("Point-to-point miles = ", ptp_obj)
     #println("Point-to-point bound (exact) = ", ptp_exact)
     #println("   Empty (ptp) = ", ptp_empties)
-    println("Point-to-point bound (simple) = ", ptp_bound3) 
+    #println("Point-to-point bound (simple) = ", ptp_bound3) 
     #println("Point-to-point bound (new) = ", ptp_bound2) 
     #println("Point-to-point bound = ", ptp_bound) 
     #println("Relay bound = ", relay_bound) 
-    println("Relay bound (simple) = ", relay_bound2) 
+    #println("Relay bound (simple) = ", relay_bound2) 
     println("Relay miles = ", relay_obj)
     #println("   Empty (relay) = ", relay_empties)
-    println("Relay miles w/ delay = ", relay_delay_obj)
+    #println("Relay miles w/ delay = ", relay_delay_obj)
     #println("   Strategic delay = ", sum(sum(sum(sum(periodsdelay(t,t2) * value(demandheld[i,j,t,t2]) for t2 in 1:T) for t in 1:T) for j in receivinglocs[i]) for i in demandlocs))
     println("Minimum possible miles = ", sum(sum(sum(tripdistance[i,j]*demand[i,j,t] for t in 1:T) for j in E) for i in W) + sum(sum(sum(tripdistance[i,j]*demand[i,j,t] for t in 1:T) for j in W) for i in E) )
 end
@@ -413,6 +419,6 @@ end
 #--------------------------------------------------------------#
 
 #df = DataFrame(ab=[actualAB], db=[actualDB], cd=[actualCB], flow=[totalflow], stdev=[stdev_base], relay=[relay_delay_obj], ptp=[ptp_obj], relay_bound=[relay_bound2], ptp_bound=[ptp_bound3])
-df = DataFrame(n=[n], seed=[randomseedval], ab=[actualAB], db=[actualDB], cd=[actualCB], flow=[totalflow], stdev=[stdev_base], relay=[relay_delay_obj], ptp=[ptp_obj], relay_bound=[relay_bound2], ptp_bound=[ptp_bound3])
+df = DataFrame(experiment_id=[experiment_id], seed=[randomseedval], ab=[aggbalance], db=[disaggbalance], cd=[coastbalance], n=[n], stdev=[stdev_base], relay=[relay_obj], ptp=[ptp_obj], improvement=[(relay_obj-ptp_obj)/ptp_obj])
 #CSV.write(string("outputs/heatmapdata/exp", experiment_id,".csv"), df)
-#CSV.write(string("outputs/heatmapdata/morelocations.csv"), df, append=true)
+CSV.write(string("outputs/heatmapdata/heatmap1_repos_outputs.csv"), df, append=true)

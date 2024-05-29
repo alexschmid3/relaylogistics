@@ -51,12 +51,12 @@ function pointotpointarcs(orders, Origin, Destination)
     end
 	
 	#Create A_plus and A_minus lists
-	for i in orders, n in 1:numnodes, a in A_plus[n]
+	for i in orders, n in 1:extendednumnodes, a in A_plus[n]
 		if (a in orderarcset[i]) & !(a in A_plus_i[i,n])
 			push!(A_plus_i[i,n], a)
 		end
 	end
-	for i in orders, n in 1:numnodes, a in A_minus[n]
+	for i in orders, n in 1:extendednumnodes, a in A_minus[n]
 		if (a in orderarcset[i]) & !(a in A_minus_i[i,n])
 			push!(A_minus_i[i,n], a)
 		end

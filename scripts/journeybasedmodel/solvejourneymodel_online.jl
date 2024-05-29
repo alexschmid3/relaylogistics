@@ -15,16 +15,16 @@ function solvejourneymodel(lprelax_flag, opt_gap, arcspassed, currentdatetime)
 		end
 	end
 
-	ip = Model(Gurobi.Optimizer)
-	set_optimizer_attribute(ip, "TimeLimit", 60*60*3)
-	set_optimizer_attribute(ip, "OutputFlag", 0)
-	set_optimizer_attribute(ip, "MIPGap", opt_gap)
-
 	A_space_all = primaryarcs.A_space
 	for i in currstate.orders
 		goodones = [a for a in currarcs.orderarcs.A_space[i] if nodesLookup[arcLookup[a][1]][2] < horizon]
 		A_space_all = union(A_space_all, goodones)
 	end
+
+	ip = Model(Gurobi.Optimizer)
+	set_optimizer_attribute(ip, "TimeLimit", 60*60*3)
+	set_optimizer_attribute(ip, "OutputFlag", 0)
+	set_optimizer_attribute(ip, "MIPGap", opt_gap)
 
 	#Variables
 	if lprelax_flag == 0
@@ -48,24 +48,19 @@ function solvejourneymodel(lprelax_flag, opt_gap, arcspassed, currentdatetime)
 	#+ sum(sum(c[a]*x[i,a] for a in currarcs.orderarcs.A[i]) for i in [2]) ) #+ sum(c[a]*(y[a]) for a in currarcs.hasdriverarcs.A) + sum(u[a]*(w[a] ) for a in primaryarcs.A_space) )
 
 	#Order constraints
-	@constraint(ip, orderFlowBalance[i = currstate.orders, n in setdiff([n2 for n2 in 1:numnodes], union(currstate.Origin[i], currstate.Destination[i]))], sum(x[i,a] for a in currarcs.orderarcs.A_minus[i,n]) - sum(x[i,a] for a in currarcs.orderarcs.A_plus[i,n]) == 0)
-	@constraint(ip, arriveDestin[i = currstate.orders], sum(sum(x[i,a] for a in currarcs.orderarcs.A_minus[i,n] if ((a == dummyarc) || (nodesLookup[arcLookup[a][1]][1] != nodesLookup[arcLookup[a][2]][1]))) for n in currstate.Destination[i]) == 1)
-	@constraint(ip, departOrigin[i = currstate.orders], sum(sum(x[i,a] for a in intersect(union(A_space, dummyarc), currarcs.orderarcs.A_plus[i,n])) for n in currstate.Origin[i]) == 1)
-	for i in setdiff(currstate.orders, currstate.ordersinprogress)
-		extendedorderarc = extendedarcs[last(currstate.Origin[i]), last(currstate.Destination[i])]
-		if extendedorderarc in currarcs.orderarcs.A[i]
-			set_normalized_coefficient(departOrigin[i], x[i,extendedorderarc], 1)
-		end
-	end
+	#@constraint(ip, orderFlowBalance[i = currstate.orders, n in setdiff([n2 for n2 in 1:numnodes], union(currstate.Origin[i], currstate.Destination[i]))], sum(x[i,a] for a in currarcs.orderarcs.A_minus[i,n]) - sum(x[i,a] for a in currarcs.orderarcs.A_plus[i,n]) == 0)
+	#@constraint(ip, arriveDestin[i = currstate.orders], sum(sum(x[i,a] for a in currarcs.orderarcs.A_minus[i,n] if ((a == dummyarc) || (nodesLookup[arcLookup[a][1]][1] != nodesLookup[arcLookup[a][2]][1]))) for n in currstate.Destination[i]) == 1)
+	#@constraint(ip, departOrigin[i = currstate.orders], sum(sum(x[i,a] for a in intersect(union(A_space, dummyarc), currarcs.orderarcs.A_plus[i,n])) for n in currstate.Origin[i]) == 1)
+	#@constraint(ip, departOrigin[i = currstate.orders], sum(sum(x[i,a] for a in union(dummyarc, currarcs.orderarcs.A_plus[i,n])) for n in currstate.Origin[i]) == 1)
+	#for i in setdiff(currstate.orders, currstate.ordersinprogress)
+	#	extendedorderarc = extendedarcs[last(currstate.Origin[i]), last(currstate.Destination[i])]
+	#	if extendedorderarc in currarcs.orderarcs.A[i]
+	#		set_normalized_coefficient(departOrigin[i], x[i,extendedorderarc], 1)
+	#	end
+	#end
+	@constraint(ip, deliverorder[i in currstate.orders], sum(x[i,a] for a in union(dummyarc, [a2 for a2 in currarcs.orderarcs.A[i] if (nodesLookup[arcLookup[a2][1]][1] == originloc[i]) & (nodesLookup[arcLookup[a2][2]][1] == destloc[i])])) == 1)
 
-	#Add in "stay where you are" arc for each in transit order - MAINLY NEEDED FOR ONLINE IMPLEMENTATION
-	for i in intersect(currstate.orders, currstate.ordersinprogress), n in currstate.Origin[i], a in setdiff(A_plus[n], union(A_space, dummyarc))
-		if a in currarcs.orderarcs.A[i]
-			set_normalized_coefficient(departOrigin[i], x[i,a], 1)
-		end
-	end
-
-	#Order delivery constraints
+		#Order delivery constraints
 	@constraint(ip, deliveryTime[i in currstate.orders], ordtime[i] - sum(sum((totaldelta + arcfinishtime[a]) * x[i,a] for a in currarcs.orderarcs.A_minus[i,n]) for n in currstate.Destination[i]) == - orderOriginalStartTime[i])
 
 	#Truck constraints
@@ -83,7 +78,11 @@ function solvejourneymodel(lprelax_flag, opt_gap, arcspassed, currentdatetime)
 	end
 
 	#Linking constraints
-	@constraint(ip, driverAvailability[a in A_space_all], sum(sum(z[(i1,i2,i3,i4),f] for f in intersect(currfragments.fragmentscontaining[i1,i2,i3,i4,a], journeysfor[i1,i2,i3,i4])) for (i1,i2,i3,i4) in currfragments.driversets) == w[a]  )
+	if arcspassed == -1
+		@constraint(ip, driverAvailability[a in A_space_all], sum(sum(z[(i1,i2,i3,i4),f] for f in currfragments.fragmentscontaining[i1,i2,i3,i4,a]) for (i1,i2,i3,i4) in currfragments.driversets) == w[a]  )
+	else
+		@constraint(ip, driverAvailability[a in A_space_all], sum(sum(z[(i1,i2,i3,i4),f] for f in intersect(currfragments.fragmentscontaining[i1,i2,i3,i4,a], journeysfor[i1,i2,i3,i4])) for (i1,i2,i3,i4) in currfragments.driversets) == w[a]  )
+	end
 	for i in currstate.orders, a in [a for a in currarcs.orderarcs.A_space[i] if nodesLookup[arcLookup[a][1]][2] < horizon]
 		set_normalized_coefficient(driverAvailability[a], x[i,a], -1)
 	end
@@ -322,5 +321,13 @@ for j in 1:currfragments.numfragments[1, 1, 309, -12]
 	end
 end
 timespacenetwork("outputs/viz/aaa_all.png", [myarcs, usedarcs], [(150,150,150),(0,0,0)], [3,6,6], ["solid","solid","solid"], [0,0,0], 2400, 1800)
+
+for (i1,i2,i3,i4) in currfragments.driversets
+myarcs = []
+for j in 1:currfragments.numfragments[(i1,i2,i3,i4)]
+	myarcs = union(myarcs, currfragments.fragmentarcs[i1,i2,i3,i4, j])
+end
+timespacenetwork(string("outputs/viz/aaa_", (i1,i2,i3,i4),".png"), [myarcs], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
+end
 
 =#

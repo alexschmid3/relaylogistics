@@ -752,7 +752,7 @@ function initializedriversetjourneys(currstate, driversets, drivergroupnum, driv
         end
     
         N_flow_g[hl,ss,sn,lth] = []
-        for n in setdiff(1:extendednumnodes, union(sn, N_end))
+        for n in setdiff(1:numnodes, union(sn, N_end))
             push!(N_flow_g[hl,ss,sn,lth], n)
         end
 
