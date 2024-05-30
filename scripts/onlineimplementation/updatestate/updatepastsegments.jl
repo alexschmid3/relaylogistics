@@ -100,8 +100,12 @@ function updatepastsegments(timedelta, x, y, z, w, candidatejourneys, currentdat
                 end
 
                 #Next node
-                lastarc = last(addarclist)
-                currnode = arcLookup[lastarc][2]
+                if addarclist == []
+                    break
+                else
+                    lastarc = last(addarclist)
+                    currnode = arcLookup[lastarc][2]
+                end
             end
         end
     end
