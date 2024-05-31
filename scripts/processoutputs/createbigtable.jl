@@ -4,7 +4,7 @@ using CSV, DataFrames, Statistics
 #include("createbigtable_helper.jl")
 include("scripts/processoutputs/createbigtable_helper.jl")
 
-datafile = "outputs/table2/deadlines/ex_combined_delete.csv"
+datafile = "outputs/table2_het_v2/ex_combined2.csv"
 
 fullsizes, fulltimes, fulllambdas, fullmethods = [2,3,4], [(3, 6), (4, 6), (5, 6)], [500,1000], ["Direct implementation", "Direct on LO basis", "Path-based column generation", "Single-arc generation", "Multi-arc generation", "Multi-arc generation [ENHANCED]"]
 
@@ -28,7 +28,7 @@ methodmap = Dict("a_ip" => "Direct implementation",
 #Primary key for each experiment_id
 #methodkey = [:experiment_id, :instance, :lambda_delay, :lambda_drvrhrs, :horizon, :tstep, :week, :numlocs, :numorders, :numdrivers, :method]
 #What do you want the final table grouped by?
-#tablekey = [:lambda_delay, :horizon, :tstep, :method]
+#tablekey = [:instance, :numdrivers, :lambda_delay, :horizon, :tstep, :method]
 
 #Primary key for each instance --> "how can I identify which IP optimal solution this row corresponds to?"
 instancekey = [:instance, :lambda_delay, :lambda_drvrhrs, :horizon, :tstep, :week, :numlocs, :numorders, :numdrivers]
@@ -94,4 +94,4 @@ df_final = sort!(df_summ, [:instance, :numdrivers, :horizon, order(:tstep, rev=t
 #Format as LaTeX table
 #printbigtable(df_final, fulltimes, fulllambdas, fullmethods)
 df_final[!,"method"] = [methodmap[i] for i in df_final[!,"method"]]
-CSV.write("outputs/table2_deadlines_v7.csv", df_final)
+CSV.write("outputs/table2_deadlines_v8.csv", df_final)
