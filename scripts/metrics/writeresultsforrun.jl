@@ -70,6 +70,66 @@ function writeresultsforrun(resultsfilename, appendflag, iteration, obj, timesli
 
 end
 
+
+#----------------------------------------------------------------------------------------#
+
+function writeresultsforrun_deadlines(resultsfilename, appendflag, iteration, obj, timeslist, totalarcs, x, z, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles)
+
+	if (formulation == "heterogeneous") & !(solutionmethod == "arcip")
+		util, nightsaway, driversunused = calcdrivermetrics(z)
+	else
+		util, nightsaway, driversunused = 0, 0, 0
+	end
+	
+	df = DataFrame(experiment_id = [experiment_id],
+			instance = [ex],
+			lambda_delay = [lambda],
+			lambda_drvrhrs = [lambda2],
+			horizon = [horizon],
+			tstep = [tstep],
+			week = [weekstart],
+			numlocs = [numlocs],
+			numorders = [length(orders)],
+			numdrivers = [length(drivers)],
+			maxweeklydriverhours = [maxweeklydriverhours],
+			method = [solutionmethod],
+			variablefixingthreshold = [variablefixingthreshold],
+			varsettingiterations = [varsettingiterations],
+			strongreducedcosts = [strengthenedreducedcost_flag],
+			columnmemory = [columnmemorylength],
+			deletioniterationpercent = [postmagcolumndeletioniterationpercent],
+			deletionthreshold = [postmagcolumndeletionthreshold],
+			cuttype = [knapsackcuttype],
+			iteration = [iteration],
+			objective = [obj],
+			smptime = [timeslist.mp],
+			pptime = [timeslist.pp],
+			pptime_par = [timeslist.pppar],
+			iptime = [timeslist.ip],
+            totalarcs = [totalarcs],
+			cuttime = [timeslist.cut],
+			driverutil = [util],
+			drivernightsaway = [nightsaway],
+			driversunused = [driversunused],
+			fulltime = [timeslist.full],
+			totalmiles = [totalmiles], 
+			totaldelay = [totaldelay], 
+			totalordertime = [totalordertime], 
+			totalemptymiles = [totalemptymiles], 
+			totalrepomiles = [totalrepomiles],
+			deadline_sp = [deadlineasmultipleofshortestpath]
+		)
+
+	if appendflag == 1
+		CSV.write(resultsfilename, df, append=true)
+	else
+		CSV.write(resultsfilename, df)
+	end
+
+end
+
+#----------------------------------------------------------------------------------------#
+
 function writedriverstats(filename, z)
 
 	mylocs, myshifts, mydrivers, myunused, myhours, myutil, mynights = [], [], [], [], [], [], []

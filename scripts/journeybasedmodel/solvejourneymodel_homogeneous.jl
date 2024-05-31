@@ -149,14 +149,25 @@ function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts, cuts)
 	end
 	println("Time = ", solve_time(ip))
 
-	totalmiles = sum(sum(c[a]*value(x[i,a]) for a in orderarcs.A[i]) for i in orders) + sum(c[a]*(value(y[a])) for a in hasdriverarcs.A) + sum(u[a]*(value(w[a]) ) for a in primaryarcs.A_space) 
-	totaldelay = sum((value(ordtime[i]) - shortesttriptimes[i])/shortesttriptimes[i] for i in orders)
-
+    if deadlines_flag == 1
+    	totalmiles = sum(sum(c[a]*value(x[i,a]) for a in orderarcs.A[i]) for i in orders) + sum(c[a]*(value(y[a])) for a in hasdriverarcs.A) + sum(u[a]*(value(w[a]) ) for a in primaryarcs.A_space) 
+        totalemptymiles = sum(c[a]*(value(y[a])) for a in hasdriverarcs.A) 
+        totalrepomiles = sum(u[a]*(value(w[a]) ) for a in primaryarcs.A_space) 
+	    totaldelay = sum(value(orderdelay[i]) for i in orders)
+        totalordertime = sum(value(ordtime[i]) for i in orders)
+    else
+        totalmiles = sum(sum(c[a]*value(x[i,a]) for a in orderarcs.A[i]) for i in orders) + sum(c[a]*(value(y[a])) for a in hasdriverarcs.A) + sum(u[a]*(value(w[a]) ) for a in primaryarcs.A_space) 
+	    totalemptymiles = sum(c[a]*(value(y[a])) for a in hasdriverarcs.A) 
+        totalrepomiles = sum(u[a]*(value(w[a]) ) for a in primaryarcs.A_space) 
+        totaldelay = sum((value(ordtime[i]) - shortesttriptimes[i])/shortesttriptimes[i] for i in orders)
+        totalordertime = sum(value(ordtime[i]) for i in orders)
+    end
+    
 	#Find the basis arcs
 	orderArcSet_basis, orderArcSet_space_basis, A_plus_i_basis, A_minus_i_basis = getnonzeroarcs(value.(x), orderarcs)
 	basisarcs = (A=orderArcSet_basis, A_space=orderArcSet_space_basis, A_minus=A_minus_i_basis, A_plus=A_plus_i_basis, available=[], closelocs=[]);
     
-	return ip_obj, value.(x), value.(z), solve_time(ip), objective_bound(ip), basisarcs #, totalmiles, totaldelay
+	return ip_obj, value.(x), value.(z), solve_time(ip), objective_bound(ip), basisarcs, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles
 	
 end
 

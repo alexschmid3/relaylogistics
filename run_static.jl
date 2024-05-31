@@ -35,7 +35,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 
 #Read experiment parameters from file
 experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/table3.csv"
+paramsfilename = "data/static_sensitivity.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
 ex = expparms[experiment_id, 2]		
@@ -150,7 +150,7 @@ if formulation == "heterogeneous"
 	include("scripts/multiarcgeneration/multiarcgeneration_heterogeneous.jl")
 	include("scripts/columngeneration/columngeneration.jl")
 	include("scripts/arcbasedmodel/solvearcbasedmodel_heterogeneous.jl")
-elseif formulation == "homogeneous"
+elseif (formulation == "homogeneous") || (formulation == "homogeneousdeadlines")
 	include("scripts/journeybasedmodel/solvejourneymodel_homogeneous.jl")
 	include("scripts/multiarcgeneration/multiarcgeneration_homogeneous.jl")
 	include("scripts/columngeneration/columngeneration_homogeneous.jl")
@@ -409,15 +409,15 @@ elseif solutionmethod == "basisip"
 	end
 	=#
 
-elseif ((solutionmethod == "mag") || (solutionmethod == "sag")) & (formulation == "homogeneous")
+elseif ((solutionmethod == "mag") || (solutionmethod == "sag")) & ((formulation == "homogeneous") || (formulation == "homogeneousdeadlines"))
 
 	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter = multiarcgeneration!(magarcs, hasdriverarcs) 
-	magip_obj, x_magip, z_magip, magip_time, magip_bound = solvejourneymodel(0, opt_gap, magarcs, numeffshifts, nocuts)
+	magip_obj, x_magip, z_magip, magip_time, magip_bound, ipbasisarcs, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles = solvejourneymodel(0, opt_gap, magarcs, numeffshifts, nocuts)
 
 	timeslist1 = (mp=smptime, pp=pptime, pppar=pptime_par, ip=0, cut=0, full=0)
-	writeresultsforrun(resultsfilename, 0, mag_iter, mag_obj, timeslist1, totalmagarcs, x_smp, z_smp)
+	writeresultsforrun_deadlines(resultsfilename, 0, mag_iter, mag_obj, timeslist1, totalmagarcs, x_smp, z_smp, 0, 0, 0, 0, 0)
 	timeslist2 = (mp=0, pp=0, pppar=0, ip=magip_time, cut=0, full=0)
-	writeresultsforrun(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs, x_magip, z_magip)
+	writeresultsforrun_deadlines(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs, x_magip, z_magip, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles)
 	
 elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 

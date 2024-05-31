@@ -7,6 +7,7 @@ include("scripts/theory/generatedemand.jl")
 include("scripts/theory/realizedemand.jl")
 include("scripts/visualizations/theorynetwork.jl")
 
+#Read experiment parameters from file
 experiment_id += 1 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 params = CSV.read("data/heatmap1.csv", DataFrame)
 
@@ -23,7 +24,7 @@ stdev_base = params[experiment_id, 7]
 aggbalance = params[experiment_id, 4] 
 disaggbalance = params[experiment_id, 3] 
 coastbalance = params[experiment_id, 2] 
-randomseedval = 123 #params[experiment_id, 8] 
+randomseedval = params[experiment_id, 8] 
 demanddist = params[experiment_id, 9] 
 d_lb = params[experiment_id, 10] 
 d_ub = params[experiment_id, 11] 
