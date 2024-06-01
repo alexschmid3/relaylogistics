@@ -74,7 +74,7 @@ function updatepastsegments(timedelta, x, y, z, w, candidatejourneys, currentdat
                 push!(usedjourneys, f)
             end
         end
-
+        
         while driverstoassign != []
             d = pop!(driverstoassign)	
             currnode = sn
@@ -121,11 +121,19 @@ function updatepastsegments(timedelta, x, y, z, w, candidatejourneys, currentdat
         end
     end
 
-    A_space_all = primaryarcs.A_space
-    for i in currstate.orders
-        goodones = [a for a in orderarcs.A_space[i] if nodesLookup[arcLookup[a][1]][2] < horizon]
-        A_space_all = union(A_space_all, goodones)
-    end
+    #A_space_all = primaryarcs.A_space
+    #for i in currstate.orders
+    #    goodones = [a for a in orderarcs.A_space[i] if nodesLookup[arcLookup[a][1]][2] < horizon]
+    #    A_space_all = union(A_space_all, goodones)
+    #end
+    A_space_all = []
+	for a in 1:extendednumarcs
+		l1,t1 = nodesLookup[arcLookup[a][1]]
+		l2,t2 = nodesLookup[arcLookup[a][2]]
+		if (l1 != l2) & (t1 < horizon)
+			push!(A_space_all, a)
+		end
+	end
 
     #Add taxi segments
     for a in intersect(lockedarcs, A_space_all)

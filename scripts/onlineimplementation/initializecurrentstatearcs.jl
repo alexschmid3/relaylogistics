@@ -19,7 +19,11 @@ function finddriversets_online(T_off_online, driverStartNodes, lasttimehome)
 		driversingroup[homeloc, shiftsched, startnode, lth] = []
 	end
 	for d in drivers
-		push!(driversingroup[driverHomeLocs[d], drivershift[d], driverStartNodes[d], lasttimehome[d]], d)
+		#If the driver has a start node, add them to the proper group
+		if typeof(currstate.driverStartNodes[d])==Int
+			push!(driversingroup[driverHomeLocs[d], drivershift[d], driverStartNodes[d], lasttimehome[d]], d)
+		end
+		#If the driver's start node is a placeholder for after the end of the horizon, then ignore the driver this iteration
 	end
 	for item in driversingroup
 		if item[2] != []

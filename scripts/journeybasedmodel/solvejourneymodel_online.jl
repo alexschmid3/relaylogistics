@@ -15,11 +15,18 @@ function solvejourneymodel(lprelax_flag, opt_gap, arcspassed, currentdatetime)
 		end
 	end
 
-	A_space_all = primaryarcs.A_space
-	for i in currstate.orders
-		goodones = [a for a in currarcs.orderarcs.A_space[i] if nodesLookup[arcLookup[a][1]][2] < horizon]
-		A_space_all = union(A_space_all, goodones)
+	A_space_all = []
+	for a in 1:extendednumarcs
+		l1,t1 = nodesLookup[arcLookup[a][1]]
+		l2,t2 = nodesLookup[arcLookup[a][2]]
+		if (l1 != l2) & (t1 < horizon)
+			push!(A_space_all, a)
+		end
 	end
+	#for i in currstate.orders
+	#	goodones = [a for a in currarcs.orderarcs.A[i] if nodesLookup[arcLookup[a][1]][2] < horizon]
+	#	A_space_all = union(A_space_all, goodones)
+	#end
 
 	ip = Model(Gurobi.Optimizer)
 	set_optimizer_attribute(ip, "TimeLimit", 60*60*3)
@@ -203,11 +210,18 @@ function solvejourneymodel_relayred(lprelax_flag, opt_gap, arcspassed, currentda
 	set_optimizer_attribute(ip, "OutputFlag", 0)
 	set_optimizer_attribute(ip, "MIPGap", opt_gap)
 
-	A_space_all = primaryarcs.A_space
-	for i in currstate.orders
-		goodones = [a for a in orderarcs.A_space[i] if nodesLookup[arcLookup[a][1]][2] < horizon]
-		A_space_all = union(A_space_all, goodones)
+	A_space_all = []
+	for a in 1:extendednumarcs
+		l1,t1 = nodesLookup[arcLookup[a][1]]
+		l2,t2 = nodesLookup[arcLookup[a][2]]
+		if (l1 != l2) & (t1 < horizon)
+			push!(A_space_all, a)
+		end
 	end
+	#for i in currstate.orders
+	#	goodones = [a for a in currarcs.orderarcs.A[i] if nodesLookup[arcLookup[a][1]][2] < horizon]
+	#	A_space_all = union(A_space_all, goodones)
+	#end
 
 	#Variables
 	if lprelax_flag == 0

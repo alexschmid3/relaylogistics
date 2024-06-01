@@ -31,17 +31,41 @@ function updatedriverlocations(currentdatetime, driverarcstaken)
         remove!(currstate.driversintransit, item)
     end
 	for d in drivers
-		if driverarcstaken[d] != []
+		if !(typeof(currstate.driverStartNodes[d])==Int)
+			newstartloc = currstate.driverStartNodes[d][1]
+			newstarttime = currstate.driverStartNodes[d][2] - timedelta
+			if newstarttime <= horizon
+				currstate.driverStartNodes[d] = nodes[newstartloc, newstarttime]
+			else 
+				currstate.driverStartNodes[d] = (newstartloc, newstarttime)
+			end
+		elseif driverarcstaken[d] != []
             #println("$d --> ", driverarcstaken[d])
 			driverarcstaken[d] = sort!(driverarcstaken[d], by=x->nodesLookup[arcLookup[x][2]][2])
 			newstartloc, newstarttime = nodesLookup[arcLookup[last(driverarcstaken[d])][2]][1], nodesLookup[arcLookup[last(driverarcstaken[d])][2]][2] - timedelta
-			currstate.driverStartNodes[d] = nodes[newstartloc, newstarttime]
+			if newstarttime > horizon
+				lasta = last(driverarcstaken[d])
+				ori,des = nodesLookup[arcLookup[lasta][1]][1], nodesLookup[arcLookup[lasta][2]][1]
+				newstarttime2 = nodesLookup[arcLookup[lasta][1]][2] + arcLength[ori,des] - timedelta
+				if newstarttime2 <= horizon
+					#println("Driver $d - nodes[$newstartloc, $newstarttime] = ")
+					currstate.driverStartNodes[d] = nodes[newstartloc, newstarttime2]
+				else 
+					#println("Driver $d - nodes[$newstartloc, $newstarttime] = ")
+					currstate.driverStartNodes[d] = (newstartloc, newstarttime2)
+				end
+			else 
+				#println("Driver $d - nodes[$newstartloc, $newstarttime] = ")
+				currstate.driverStartNodes[d] = nodes[newstartloc, newstarttime]
+			end
 			if newstarttime > 0
 				push!(currstate.driversintransit, (d, newstartloc, newstarttime))
 			end	
 		else
 			newstartloc, newstarttime = nodesLookup[currstate.driverStartNodes[d]][1], nodesLookup[currstate.driverStartNodes[d]][2] - timedelta
 			currstate.driverStartNodes[d] = nodes[newstartloc, newstarttime]
+			#println("Driver $d - nodes[$newstartloc, $newstarttime] = ")
+			#println(nodes[newstartloc, newstarttime])
 			if (newstarttime > 0) & (newstarttime < horizon)
 				push!(currstate.driversintransit, (d, newstartloc, newstarttime))
 			end	
