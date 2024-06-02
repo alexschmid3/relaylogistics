@@ -18,6 +18,12 @@ function updatelasttimehome(driverarcstaken)
 
 end
 
+#for item in currfragments.driversets
+#	if 414 in currfragments.driversingroup[item]
+#		println(item)
+#	end
+#end
+
 #-------------------------------------------------------------------------------------#
 
 function updatedriverlocations(currentdatetime, driverarcstaken)
@@ -32,15 +38,18 @@ function updatedriverlocations(currentdatetime, driverarcstaken)
     end
 	for d in drivers
 		if !(typeof(currstate.driverStartNodes[d])==Int)
+			#println("1. $d --> ", currstate.driverStartNodes[d])
 			newstartloc = currstate.driverStartNodes[d][1]
 			newstarttime = currstate.driverStartNodes[d][2] - timedelta
 			if newstarttime <= horizon
+				#println("Driver $d - nodes[$newstartloc, $newstarttime] = ")
 				currstate.driverStartNodes[d] = nodes[newstartloc, newstarttime]
 			else 
+				#println("Driver $d - nodes[$newstartloc, $newstarttime] = ")
 				currstate.driverStartNodes[d] = (newstartloc, newstarttime)
 			end
 		elseif driverarcstaken[d] != []
-            #println("$d --> ", driverarcstaken[d])
+            #println("2. $d --> ", driverarcstaken[d])
 			driverarcstaken[d] = sort!(driverarcstaken[d], by=x->nodesLookup[arcLookup[x][2]][2])
 			newstartloc, newstarttime = nodesLookup[arcLookup[last(driverarcstaken[d])][2]][1], nodesLookup[arcLookup[last(driverarcstaken[d])][2]][2] - timedelta
 			if newstarttime > horizon
@@ -62,6 +71,7 @@ function updatedriverlocations(currentdatetime, driverarcstaken)
 				push!(currstate.driversintransit, (d, newstartloc, newstarttime))
 			end	
 		else
+			#println("3. $d --> no move")
 			newstartloc, newstarttime = nodesLookup[currstate.driverStartNodes[d]][1], nodesLookup[currstate.driverStartNodes[d]][2] - timedelta
 			currstate.driverStartNodes[d] = nodes[newstartloc, newstarttime]
 			#println("Driver $d - nodes[$newstartloc, $newstarttime] = ")

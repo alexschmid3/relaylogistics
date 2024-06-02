@@ -32,7 +32,7 @@ end
 
 #---------------------------------------------------------------------------------------#
 
-function getinitialstate(nodesLookup, arcLookup, A_minus, A_plus, c)
+function getinitialstate(nodesLookup, arcLookup, A_minus, A_plus, c, u)
 
     #Initialize orders
     orderwindowstart, orderwindowend = weekstart, weekstart + Dates.Hour(becomesavailablehours) - Dates.Second(1)
@@ -55,7 +55,7 @@ function getinitialstate(nodesLookup, arcLookup, A_minus, A_plus, c)
 
     #Distances
     distbetweenlocs, shortesttriptimes, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr = findtraveltimesanddistances(orders, Origin, Destination)
-    nodesLookup, arcLookup, A_minus, A_plus, c, extendednodes, extendednumnodes, extendedarcs, extendednumarcs = extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c, distbetweenlocs)
+    nodesLookup, arcLookup, A_minus, A_plus, c, extendednodes, extendednumnodes, extendedarcs, extendednumarcs, u = extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c, u, distbetweenlocs)
     Destination = extendDestination(orders, Destination, extendednodes)
 
     #Define full state
@@ -67,7 +67,7 @@ function getinitialstate(nodesLookup, arcLookup, A_minus, A_plus, c)
     driverStartNodes=driverStartNodes, driverEndNodes=driverEndNodes, assignedDrivers=assignedDrivers,
     lasttimehome=lasttimehome)
 
-    return currstate, includeorderidlist, drivers, driverHomeLocs, drivershift, N_flow_t, T_off_Monday8am, numshifts, originloc, destloc, orderOriginalStartLoc, orderOriginalStartTime, highestorderindex, distbetweenlocs, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr, nodesLookup, arcLookup, A_minus, A_plus, c, extendednodes, extendednumnodes, extendedarcs, extendednumarcs
+    return currstate, includeorderidlist, drivers, driverHomeLocs, drivershift, N_flow_t, T_off_Monday8am, numshifts, originloc, destloc, orderOriginalStartLoc, orderOriginalStartTime, highestorderindex, distbetweenlocs, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr, nodesLookup, arcLookup, A_minus, A_plus, c, u, extendednodes, extendednumnodes, extendedarcs, extendednumarcs
 
 end
 

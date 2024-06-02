@@ -152,7 +152,7 @@ arcs, arcLookup, A_plus, A_minus, A_space, A_plus_time, A_minus_time, A_minus_sp
 c, u = calcobjectivecosts(hubdistancesfilename)
 
 #Get initial state of system
-currstate, includeorderidlist, drivers, driverHomeLocs, drivershift, N_flow_t, T_off_Monday8am, numshifts, originloc, destloc, orderOriginalStartLoc, orderOriginalStartTime, highestorderindex, distbetweenlocs, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr, nodesLookup, arcLookup, A_minus, A_plus, c, extendednodes, extendednumnodes, extendedarcs, extendednumarcs = getinitialstate(nodesLookup, arcLookup, A_minus, A_plus, c)
+currstate, includeorderidlist, drivers, driverHomeLocs, drivershift, N_flow_t, T_off_Monday8am, numshifts, originloc, destloc, orderOriginalStartLoc, orderOriginalStartTime, highestorderindex, distbetweenlocs, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr, nodesLookup, arcLookup, A_minus, A_plus, c, u, extendednodes, extendednumnodes, extendedarcs, extendednumarcs = getinitialstate(nodesLookup, arcLookup, A_minus, A_plus, c, u)
 
 #Finish extending the time-space network
 arcLookup, nodesLookup, arcfinishtime, dummyarc, allarcs = calcarcfinishtimes()
@@ -214,6 +214,16 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 	#Find arcs taken by drivers
 	driverarcstaken = updatepastsegments(timedelta, x_ip, y_ip, z_ip, w_ip, candidatejourneys, currentdatetime, basisarcs)
 	updatelasttimehome(driverarcstaken)
+
+	#=for (i1,i2,i3,i4) in currfragments.driversets
+		myarcs = []
+		for j in 1:currfragments.numfragments[(i1,i2,i3,i4)]
+			myarcs = union(myarcs, currfragments.fragmentarcs[i1,i2,i3,i4, j])
+		end
+		for d in currfragments.driversingroup[i1,i2,i3,i4]
+			timespacenetwork(string("outputs/viz/online/driver",d,"_iter",currtime,".png"), [myarcs, driverarcstaken[d]], [(150,150,150),(0,0,0)], [3,6], ["solid", "solid"], [0, 0], 2400, 1800)
+		end	
+	end=#
 	
 	#Update local datetime 
 	currentdatetime = currentdatetime + Dates.Hour(timedelta)

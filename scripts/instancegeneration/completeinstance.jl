@@ -34,7 +34,7 @@ end
 
 #---------------------------------------------------------------------------------------#
 
-function extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c, distbetweenlocs)
+function extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c, u, distbetweenlocs)
 
 	#Add final legs for orders that are unfinished at the end of the horizon
 	extendednodes, extendednumnodes, extendedarcs, extendednumarcs = copy(nodes), copy(numnodes), copy(arcs), copy(numarcs)
@@ -50,6 +50,7 @@ function extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c, dist
 			extendedarcs[n1,n2] = extendednumarcs + 1
 			arcLookup[extendednumarcs + 1] = (n1, n2)
 			push!(c, distbetweenlocs[l1,l2] * (1 + finallegdistancepenalty))
+			push!(u, taxicostpct * distbetweenlocs[l1,l2] * (1 + finallegdistancepenalty))
 			push!(A_minus[n2], extendednumarcs + 1)
 			push!(A_plus[n1], extendednumarcs + 1)
 			extendednumarcs += 1
@@ -60,13 +61,14 @@ function extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c, dist
 			extendedarcs[n1,n2] = extendednumarcs + 1
 			arcLookup[extendednumarcs + 1] = (n1, n2)
 			push!(c, distbetweenlocs[l1,l2] * (1 + finallegdistancepenalty))
+			push!(u, taxicostpct * distbetweenlocs[l1,l2] * (1 + finallegdistancepenalty))
 			push!(A_minus[n2], extendednumarcs + 1)
 			push!(A_plus[n1], extendednumarcs + 1)
 			extendednumarcs += 1
 		end
 	end
 
-	return nodesLookup, arcLookup, A_minus, A_plus, c, extendednodes, extendednumnodes, extendedarcs, extendednumarcs
+	return nodesLookup, arcLookup, A_minus, A_plus, c, extendednodes, extendednumnodes, extendedarcs, extendednumarcs, u
 
 end
 

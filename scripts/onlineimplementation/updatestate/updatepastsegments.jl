@@ -21,7 +21,7 @@ function updatepastsegments(timedelta, x, y, z, w, candidatejourneys, currentdat
 
     #Find the set of arcs that are locked in after the next iteration
     lockedarcs = []
-    for a in 1:numarcs
+    for a in 1:extendednumarcs
         if nodesLookup[arcLookup[a][1]][2] < timedelta
             push!(lockedarcs, a)
         end
@@ -42,6 +42,7 @@ function updatepastsegments(timedelta, x, y, z, w, candidatejourneys, currentdat
             end
         end
     end
+    
     #====================================================#
 
     #Add order segments
