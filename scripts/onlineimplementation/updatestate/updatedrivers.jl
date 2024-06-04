@@ -6,7 +6,9 @@ function updatelasttimehome(driverarcstaken)
 	for d in drivers
         #Update time based on arcs
         for a in sort(driverarcstaken[d], by=x->nodesLookup[arcLookup[x][1]][2])
-            arcendloc, arcendtime = nodesLookup[arcLookup[a][2]][1], nodesLookup[arcLookup[a][2]][2]
+            arcstartloc, arcstarttime = nodesLookup[arcLookup[a][1]][1], nodesLookup[arcLookup[a][1]][2]
+			arcendloc, arcendtime = nodesLookup[arcLookup[a][2]][1], nodesLookup[arcLookup[a][2]][2]
+			arcendtime = arcendtime >= dummyendtime ? arcstarttime + arcLength[arcstartloc, arcendloc] : arcendtime
 			if arcendloc == driverHomeLocs[d]
                 currstate.lasttimehome[d] = arcendtime
             end
@@ -17,12 +19,6 @@ function updatelasttimehome(driverarcstaken)
 	end
 
 end
-
-#for item in currfragments.driversets
-#	if 414 in currfragments.driversingroup[item]
-#		println(item)
-#	end
-#end
 
 #-------------------------------------------------------------------------------------#
 
