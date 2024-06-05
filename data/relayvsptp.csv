@@ -67,3 +67,4 @@ experiment_id,instance,method,weekstart,horizon,tstep,driverfactor,rho-value,opt
 66,2,basisip,2019-06-30,5,6,4.1,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0
 67,4,basisip,2019-06-30,5,6,8,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0
 68,1,basisip,2019-06-30,3,6,2.5,0,0.01,10,homogeneous,online,ptp,1,72,3,24,1,100
+69,4,basisip,2019-06-30,3,6,8,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0
