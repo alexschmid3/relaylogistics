@@ -847,3 +847,4 @@ experiment_id,instance,method,weekstart,horizon,tstep,driverfactor,rho-value,opt
 846,4,mag,2019-07-28,4,6,7,0,0.01,500,24,0.01,0,1,heterogeneous,1000,1,1,1,0.8,6,0,0,0
 847,4,mag,2019-08-04,4,6,7,0,0.01,500,24,0.01,0,1,heterogeneous,1000,1,1,1,0.8,6,0,0,0
 848,4,mag,2019-08-11,4,6,7,0,0.01,500,24,0.01,0,1,heterogeneous,1000,1,1,1,0.8,6,0,0,0
+849,4,mag,2019-08-11,1,6,1.5,0,0.01,500,24,0.01,0,1,heterogeneous,1000,1,1,1,0.8,6,0,0,0
