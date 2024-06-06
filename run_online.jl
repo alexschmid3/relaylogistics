@@ -126,11 +126,16 @@ ensureconnectivity_flag = 1
 ktype_flag = "pct"									# "hrs" = # of hours acceptable delay, "pct" = acceptable delay as percent of shortest path time, "min24" = max(24 hrs, percent of shortest path)
 
 #Create id for this run
-runid = string("ex", ex, "_exp", experiment_id, "_", operations, "_rundate", today())
+if paramsfilename == "data/driverstaffing.csv"
+	runid = string("ex", ex, "_exp", experiment_id, "_staffing_rundate", today())
+	csvfoldername = string("outputs/online/staffing/")
+else
+	runid = string("ex", ex, "_exp", experiment_id, "_", operations, "_rundate", today())
+	csvfoldername = string("outputs/online/")
+end
 
 #File names					
 vizfoldername = string("visualizations/static/run ", runid)
-csvfoldername = string("outputs/online/")
 resultsfilename = string(csvfoldername, runid, "_output.csv")
 convergencedatafilename = string(csvfoldername, "convergence_exp", runid, ".csv")
 
@@ -163,7 +168,7 @@ c, u = calcobjectivecosts(hubdistancesfilename)
 
 #Get initial state of system
 currstate, includeorderidlist, drivers, driverHomeLocs, drivershift, N_flow_t, T_off_Monday8am, numshifts, originloc, destloc, orderOriginalStartLoc, orderOriginalStartTime, highestorderindex, distbetweenlocs, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr, nodesLookup, arcLookup, A_minus, A_plus, c, u, extendednodes, extendednumnodes, extendedarcs, extendednumarcs = getinitialstate(nodesLookup, arcLookup, A_minus, A_plus, c, u)
-#=
+
 #Finish extending the time-space network
 arcLookup, nodesLookup, arcfinishtime, dummyarc, allarcs = calcarcfinishtimes()
 basetsn = (arcsbetween=arcsbetween, arcsbetween_back=arcsbetween_back, numlocs=numlocs, arcLookup=arcLookup, nodesLookup=nodesLookup, nodes=extendednodes, arcs=extendedarcs, numarcs=numarcs, numnodes=numnodes, horizon=horizon, tstep=tstep, extendednumarcs=extendednumarcs, extendednumnodes=extendednumnodes, A_minus=A_minus, A_plus=A_plus)
@@ -302,7 +307,7 @@ for item in currfragments.driversets
 	timespacenetwork(string("outputs/viz/aaa_driver",item,".png"), [myarcs], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
 end
 =#
-=#
+
 #---------------------------------------------------------------------------#
 
 println("Done!")
