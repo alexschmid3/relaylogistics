@@ -47,7 +47,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 
 #Read experiment parameters from file
 experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/relayvsptp.csv"
+paramsfilename = "data/driverstaffing.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 11]  # Drivers = homogeneous, heterogeneous
 ex = expparms[experiment_id, 2]		
@@ -82,11 +82,21 @@ solutionmethod = expparms[experiment_id, 3]
 #Transform date
 weekstart = DateTime(weekstart) + Dates.Hour(8)
 
+#Parameters for driver staffing analysis
+if paramsfilename == "data/driverstaffing.csv"
+	basedriverfactor = expparms[experiment_id, 21]
+	hiredriversto = expparms[experiment_id, 20]
+else 
+	basedriverfactor = driverfactor
+	hiredriversto = "all"
+end
+
 #Definition of the instance 
 iterationordercap = ordercapslist[ex]					 
 maxlocs = loclist[ex]
-maxdrivers = round(driverlist[ex] / driverfactor, digits = 0)							 
-numtrucks = round(trucklist[ex] / driverfactor, digits = 0)
+maxdrivers1 = round(driverlist[ex] / basedriverfactor, digits = 0)	
+maxdrivers2 = round(driverlist[ex] / driverfactor, digits = 0)							 
+numtrucks = round(trucklist[ex] / basedriverfactor, digits = 0)
 randomseedval = seedlist[ex]
 Random.seed!(randomseedval)
 
@@ -153,7 +163,7 @@ c, u = calcobjectivecosts(hubdistancesfilename)
 
 #Get initial state of system
 currstate, includeorderidlist, drivers, driverHomeLocs, drivershift, N_flow_t, T_off_Monday8am, numshifts, originloc, destloc, orderOriginalStartLoc, orderOriginalStartTime, highestorderindex, distbetweenlocs, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr, nodesLookup, arcLookup, A_minus, A_plus, c, u, extendednodes, extendednumnodes, extendedarcs, extendednumarcs = getinitialstate(nodesLookup, arcLookup, A_minus, A_plus, c, u)
-
+#=
 #Finish extending the time-space network
 arcLookup, nodesLookup, arcfinishtime, dummyarc, allarcs = calcarcfinishtimes()
 basetsn = (arcsbetween=arcsbetween, arcsbetween_back=arcsbetween_back, numlocs=numlocs, arcLookup=arcLookup, nodesLookup=nodesLookup, nodes=extendednodes, arcs=extendedarcs, numarcs=numarcs, numnodes=numnodes, horizon=horizon, tstep=tstep, extendednumarcs=extendednumarcs, extendednumnodes=extendednumnodes, A_minus=A_minus, A_plus=A_plus)
@@ -181,7 +191,7 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 
     #Solve current instance
     if (operations == "relay") & ((solutionmethod == "mag") || (solutionmethod == "sag"))
-        #mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs = multiarcgeneration!(currstate, currfragments, currarcs)    
+        mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs = multiarcgeneration!(currstate, currfragments, currarcs)    
         ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel(0, opt_gap, -1, currentdatetime);
 		candidatejourneys, basisarcs = -1, []
 	elseif (operations == "relay") & (solutionmethod == "ip") 
@@ -292,7 +302,7 @@ for item in currfragments.driversets
 	timespacenetwork(string("outputs/viz/aaa_driver",item,".png"), [myarcs], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
 end
 =#
-
+=#
 #---------------------------------------------------------------------------#
 
 println("Done!")

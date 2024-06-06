@@ -154,7 +154,7 @@ function getdriverandshiftinfo()
 
 	#Driver information
 	driversintransit = []
-	drivers, driverStartNodes, driverEndNodes, driverHomeLocs, assignedDrivers = readdrivers("data/pilots.csv", maxdrivers, numlocs, nodes, horizon)
+	drivers, driverStartNodes, driverEndNodes, driverHomeLocs, assignedDrivers = readdrivers("data/pilots.csv", maxdrivers1, maxdrivers2, numlocs, nodes, horizon)
 	N_flow_t, N_flow_d = flowbalancenodesets_td(drivers, numnodes, driverStartNodes, N_0, N_end)
 
 	#Driver shifts

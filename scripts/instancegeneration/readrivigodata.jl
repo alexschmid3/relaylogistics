@@ -738,7 +738,7 @@ end
 
 #---------------------------------------------------------------------------------------#
 
-function readdrivers(filename, maxdrivers, numlocs, nodes, horizon)
+function readdrivers(filename, maxdrivers1, maxdrivers2, numlocs, nodes, horizon)
 
 	data = CSV.read(filename, DataFrame)
 	
@@ -759,13 +759,13 @@ function readdrivers(filename, maxdrivers, numlocs, nodes, horizon)
 	end
 
 	adjtotal = 0
-	if totaldrivers >= maxdrivers
+	if totaldrivers >= maxdrivers1
 		for loc in 1:numlocs
-			adjusteddrivers[loc] = max(1, floor(maxdrivers * realdrivers[loc] / totaldrivers))
-			adjtotal += max(1, floor(maxdrivers * realdrivers[loc] / totaldrivers))
+			adjusteddrivers[loc] = max(1, floor(maxdrivers1 * realdrivers[loc] / totaldrivers))
+			adjtotal += max(1, floor(maxdrivers1 * realdrivers[loc] / totaldrivers))
 		end
 
-		remaining = maxdrivers - adjtotal
+		remaining = maxdrivers1 - adjtotal
 		if remaining < 0 
 			println("You allocated too many drivers :(")
 		end
@@ -776,6 +776,55 @@ function readdrivers(filename, maxdrivers, numlocs, nodes, horizon)
 	else
 		adjusteddrivers = realdrivers
 	end
+
+	flowdata = CSV.read("data/driversensitivity/flowlocations.csv", DataFrame)
+	sortedflowlocations = flowdata[:,1]
+
+	println("------------------------------------------")
+	println("------------------BEFORE------------------")
+	println("------------------------------------------")
+	println("Total drivers = ", sum(adjusteddrivers[l] for l in 1:numlocs))
+	println("Total perimeter = ", sum(adjusteddrivers[l] for l in sortedflowlocations[35:66]))
+	println("Total hybrid = ", sum(adjusteddrivers[l] for l in sortedflowlocations[14:34]))
+	println("Total corridor = ", sum(adjusteddrivers[l] for l in sortedflowlocations[1:13]))
+	println("------------------------------------------")
+
+	#Staffing experiments - adjust number of drivers accordingly
+	driverstohire = maxdrivers2 - maxdrivers1
+	if hiredriversto == "all"
+		locationstoadjust = sortedflowlocations
+	elseif hiredriversto == "corridors"
+		locationstoadjust = sortedflowlocations[1:13]
+	elseif hiredriversto == "perimeter"
+		locationstoadjust = sortedflowlocations[35:66]
+	elseif hiredriversto == "hybrid"
+		locationstoadjust = sortedflowlocations[14:34]
+	else
+		throw(DomainError(hiredriversto, "hiredriversto not recognized: must be 'all', 'corridors', 'hybrid', 'perimeter'"))
+	end
+	currentdrivers = sum(adjusteddrivers[l] for l in locationstoadjust)
+	newdrivers = currentdrivers + driverstohire
+	if currentdrivers != newdrivers
+		for l in locationstoadjust
+			adjusteddrivers[l] =  max(1, sign(newdrivers * adjusteddrivers[l] / currentdrivers) * floor(abs(newdrivers * adjusteddrivers[l] / currentdrivers)))
+		end
+
+		remaining = newdrivers - sum(adjusteddrivers[l] for l in locationstoadjust)
+		for loc in locationstoadjust[randperm(length(locationstoadjust))][1:convert(Int64,remaining)]
+			adjusteddrivers[loc] += sign(remaining)
+		end
+	else
+		adjusteddrivers = adjusteddrivers
+	end
+
+	println("------------------------------------------")
+	println("-------------------AFTER------------------")
+	println("------------------------------------------")
+	println("Total drivers = ", sum(adjusteddrivers[l] for l in 1:numlocs))
+	println("Total perimeter = ", sum(adjusteddrivers[l] for l in sortedflowlocations[35:66]))
+	println("Total hybrid = ", sum(adjusteddrivers[l] for l in sortedflowlocations[14:34]))
+	println("Total corridor = ", sum(adjusteddrivers[l] for l in sortedflowlocations[1:13]))
+	println("------------------------------------------")
 
 	driver = 1
 	for loc in 1:numlocs

@@ -1,7 +1,7 @@
 
-using CSV, Luxor, Colors, Random, DataFrames, Dates
+using CSV, Luxor, Colors, Random, DataFrames, Dates, StatsBase
 
-include("scripts/instancegeneration/readrivigodata.jl")
+#include("scripts/instancegeneration/readrivigodata.jl")
 
 #--------------------------------------------------------------------------------------------------#
 
@@ -16,13 +16,18 @@ function getrivigotriphistory(lhdataisbfilename)
 
 	data_agg = CSV.read(lhdataisbfilename, DataFrame)
 
-	tripson = Dict()
+	tripson, origincount, destinationcount = Dict(), Dict(), Dict()
     for i in 1:numlocs, j in 1:numlocs
         tripson[i,j] = 0
     end
+	for i in 1:numlocs
+        origincount[i] = 0
+		destinationcount[i] = 0
+    end
+
     hubsList = collect(values(hubsLookup))
 	for i in 1:size(data_agg)[1]
-		if data_agg[i,1] in [7882,8502,8388,7221,2723,5581,2606,8,737,1219]
+		#if data_agg[i,1] in [7882,8502,8388,7221,2723,5581,2606,8,737,1219]
 			orig, dest = data_agg[!,26][i], data_agg[!,27][i]
 			psseq_raw = data_agg[i,8]
 			psseq = split(psseq_raw, "-")
@@ -49,11 +54,13 @@ function getrivigotriphistory(lhdataisbfilename)
 				for i in 1:length(stopsequence)-1
 					tripson[stopsequence[i], stopsequence[i+1]] += 1
 				end
+				origincount[orig] += 1
+				destinationcount[dest] += 1
 			end
-		end
+		#end
 	end
 
-	return tripson
+	return tripson, origincount, destinationcount
 
 end
 
@@ -61,7 +68,7 @@ end
 
 function spatialnetwork(drawingname, lhdataisbfilename, xdim, ydim)
 
-    tripson = getrivigotriphistory(lhdataisbfilename)
+    tripson, origincount, destinationcount = getrivigotriphistory(lhdataisbfilename)
 
     #--------------------------------------------------------#
 
@@ -150,9 +157,13 @@ function spatialnetwork(drawingname, lhdataisbfilename, xdim, ydim)
     circle.(locationPoints, 16, :stroke)
 
 	#Add pit stop labels
-	#for item in listofpoints_labels
- 	#	label(item[2], :E , Point(item[1]))
-	#end
+	fontsize(22)
+	setcolor("white")
+	for item in listofpoints_labels
+ 		#label(item[2], :0, Point(item[1]))
+		Luxor.text(item[2],  Point(item[1]), halign=:center,   valign = :middle)
+	end
+	setcolor("black")
 
     #Legend box
     setline(4)
@@ -202,6 +213,24 @@ function spatialnetwork(drawingname, lhdataisbfilename, xdim, ydim)
 
 end
 
-spatialnetwork("figures/orderhistorymap.png", lhdataisbfilename, 2000, 1900)
 
-spatialnetwork("figures/truck18path.png", lhdataisbfilename, 2000, 1900)
+spatialnetwork("figures/orderhistorymap_numbers.png", lhdataisbfilename, 2000, 1900)
+
+#spatialnetwork("figures/truck18path.png", lhdataisbfilename, 2000, 1900)
+
+#--------------------------------------------------------#
+#=
+allcorridors = [c for c in collect(keys(tripson)) if tripson[c] > 1e-4]
+sortedcorridors = reverse(sort(allcorridors, by=x->tripson[x]))
+
+allpitstoptraffic = zeros(numlocs)
+for (l1,l2) in allcorridors
+	allpitstoptraffic[l1] += tripson[l1,l2]
+	allpitstoptraffic[l2] += tripson[l1,l2]
+end
+sortedpitstops = reverse(sort(1:numlocs, by=x->allpitstoptraffic[x]))
+
+allpitstopdemand = zeros(numlocs)
+
+=#
+

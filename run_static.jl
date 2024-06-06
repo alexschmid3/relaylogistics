@@ -103,7 +103,9 @@ weekstart = DateTime(weekstart) + Dates.Hour(8)
 #Definition of the instance 
 iterationordercap = ordercapslist[ex]					 
 maxlocs = loclist[ex]
-maxdrivers = round(driverlist[ex] / driverfactor, digits = 0)							 
+maxdrivers1 = round(driverlist[ex] / driverfactor, digits = 0)	
+maxdrivers2 = round(driverlist[ex] / driverfactor, digits = 0)	
+hiredriversto = "all"						 
 numtrucks = round(trucklist[ex] / driverfactor, digits = 0)
 randomseedval = seedlist[ex]
 Random.seed!(randomseedval)

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -a 1475-1496
+#SBATCH -a 585-848
 #SBATCH --partition=xeon-p8
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G

@@ -1,0 +1,14 @@
+experiment_id,instance,method,weekstart,horizon,tstep,driverfactor,rho-value,opt_gap,lambda,formulation,runtype,operations,ptpvsrelay,becomesavailablehours,onlineweeks,timedelta,maxnightsaway,maxrepositioningdistance,hireto,basedriverfactor
+1,4,basisip,2019-06-30,3,6,8,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,all,8
+2,4,basisip,2019-06-30,3,6,8.848,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,all,8
+3,4,basisip,2019-06-30,3,6,8.848,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,corridors,8
+4,4,basisip,2019-06-30,3,6,8.848,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,hybrid,8
+5,4,basisip,2019-06-30,3,6,8.848,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,perimeter,8
+6,4,basisip,2019-06-30,3,6,7.373,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,all,8
+7,4,basisip,2019-06-30,3,6,7.373,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,corridors,8
+8,4,basisip,2019-06-30,3,6,7.373,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,hybrid,8
+9,4,basisip,2019-06-30,3,6,7.373,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,perimeter,8
+10,4,basisip,2019-06-30,3,6,6.636,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,all,8
+11,4,basisip,2019-06-30,3,6,6.636,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,corridors,8
+12,4,basisip,2019-06-30,3,6,6.636,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,hybrid,8
+13,4,basisip,2019-06-30,3,6,6.636,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,perimeter,8

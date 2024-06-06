@@ -104,6 +104,7 @@ function solvejourneymodel(lprelax_flag, opt_gap, arcspassed, currentdatetime)
 	#--------------------------------------------#
 
 	optimize!(ip)
+	objective_value(ip)
 
 	println("Solve time = ", solve_time(ip), " seconds")
 
@@ -325,13 +326,13 @@ end
 #=
 
 myarcs, usedarcs = [], []
-for j in 1:currfragments.numfragments[(1, 1, 309, -12)]
-	myarcs = union(myarcs, currfragments.fragmentarcs[1, 1, 309, -12, j])
+for j in 1:currfragments.numfragments[(46, 2, 46, -168)]
+	myarcs = union(myarcs, currfragments.fragmentarcs[46, 2, 46, -168, j])
 end
-for j in 1:currfragments.numfragments[1, 1, 309, -12]
-	if value(z[(1, 1, 309, -12), j]) > 1e-4
+for j in 1:currfragments.numfragments[46, 2, 46, -168]
+	if value(z[(46, 2, 46, -168), j]) > 1e-4
 		println(j)
-		usedarcs = union(usedarcs, currfragments.fragmentarcs[1, 1, 309, -12, j])
+		usedarcs = union(usedarcs, currfragments.fragmentarcs[46, 2, 46, -168, j])
 	end
 end
 timespacenetwork("outputs/viz/aaa_all.png", [myarcs, usedarcs], [(150,150,150),(0,0,0)], [3,6,6], ["solid","solid","solid"], [0,0,0], 2400, 1800)
@@ -341,7 +342,7 @@ myarcs = []
 for j in 1:currfragments.numfragments[(i1,i2,i3,i4)]
 	myarcs = union(myarcs, currfragments.fragmentarcs[i1,i2,i3,i4, j])
 end
-timespacenetwork(string("outputs/viz/aaa_", (i1,i2,i3,i4),".png"), [myarcs], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
+timespacenetwork(string("outputs/viz/aaa_1.png"), [myarcs], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
 end
 
 =#
