@@ -343,8 +343,16 @@ function multiarcgeneration!(currstate, currfragments, currarcs, currjourneys)
 	@constraint(smp, truckFlowBalance[n in N_flow_t], sum(sum(x[i,a] for a in setdiff(currarcs.magarcs.A_minus[i,n], dummyarc)) for i in currstate.orders) + sum(y[a] for a in currarcs.hasdriverarcs.A_minus[n])- sum(sum(x[i,a] for a in setdiff(currarcs.magarcs.A_plus[i,n],dummyarc)) for i in currstate.orders) - sum(y[a] for a in currarcs.hasdriverarcs.A_plus[n]) == 0)
 
 	#Linking constraints
-	@constraint(smp, driverAvailability[a in primaryarcs.A_space], sum(sum(z[d,f] for f in currfragments.fragmentscontaining[driverHomeLocs[d], drivershift[d],a]) for d in drivers) == w[a]  )
+	@constraint(smp, driverAvailability[a in primaryarcs.A_space], sum(sum(z[d,f] for f in currfragments.fragmentscontaining[driverHomeLocs[d], drivershift[d],a]) for d in drivers) == w[a] )
 	for i in currstate.orders, a in currarcs.magarcs.A_space[i]
+		set_normalized_coefficient(driverAvailability[a], x[i,a], -1)
+	end
+	for a in currarcs.hasdriverarcs.A_space
+		set_normalized_coefficient(driverAvailability[a], y[a], -1)
+	end
+	
+	@constraint(ip, driverAvailability[a in A_space_all], sum(sum(z[(i1,i2,i3,i4),f] for f in intersect(currfragments.fragmentscontaining[i1,i2,i3,i4,a], journeysfor[i1,i2,i3,i4])) for (i1,i2,i3,i4) in currfragments.driversets) == w[a]  )
+	for i in currstate.orders, a in [a for a in orderarcs.A_space[i] if nodesLookup[arcLookup[a][1]][2] < horizon]
 		set_normalized_coefficient(driverAvailability[a], x[i,a], -1)
 	end
 	for a in currarcs.hasdriverarcs.A_space
@@ -352,8 +360,8 @@ function multiarcgeneration!(currstate, currfragments, currarcs, currjourneys)
 	end
 
 	#Driver constraints
-    @constraint(smp, driverStartingLocs[d in drivers, l = driverHomeLocs[d], s = drivershift[d]], sum(sum(z[d,f] for f in currfragments.F_plus_ls[l,s,n]) for n in currfragments.driverSetStartNodes[l,s]) == 1)
-	@constraint(smp, driverFlowBalance[d in drivers, l = driverHomeLocs[d], s = drivershift[d], n in currfragments.N_flow_ls[l,s]], sum(z[d,f] for f in currfragments.F_minus_ls[l,s,n]) - sum(z[d,f] for f in currfragments.F_plus_ls[l,s,n]) == 0)
+	@constraint(smp, driverStartingLocs[(i1,i2,i3,i4) in currfragments.driversets], sum(sum(z[(i1,i2,i3,i4),f] for f in currfragments.F_plus_g[i1,i2,i3,i4,n]) for n in [i3]) == length(currfragments.driversingroup[i1,i2,i3,i4]))
+	@constraint(smp, driverFlowBalance[(i1,i2,i3,i4) in currfragments.driversets, n in currfragments.N_flow_g[i1,i2,i3,i4]], sum(z[(i1,i2,i3,i4),f] for f in currfragments.F_minus_g[i1,i2,i3,i4,n]) - sum(z[(i1,i2,i3,i4),f] for f in currfragments.F_plus_g[i1,i2,i3,i4,n]) == 0)
 
 	#Return named tuple of constraints needed for column generation
 	smpconstraints = (con_orderFlowBalance = orderFlowBalance,

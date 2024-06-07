@@ -494,6 +494,8 @@ function createfragmentsets_online(currstate, hl, ss, sn, lth, drivergroupnum, d
 		order_journeys, repos_journeys = [], []
 		odpairs_homeorig = [(o,d) for (o,d) in odpairs if o==hl]
 		odpairs_homedest = [(o,d) for (o,d) in odpairs if d==hl]
+		odpairs_homenearorig = [(o,d) for (o,d) in odpairs if distbetweenlocs[o,hl] <= maxrepositioningdistance]
+		odpairs_homeneardest = [(o,d) for (o,d) in odpairs if distbetweenlocs[d,hl] <= maxrepositioningdistance]
 
 		#Driver home location = order origin
 		for (o1, d1) in odpairs_homeorig, (o2,d2) in matchabletrips[o1,d1], t1 in [t for t in currstate.T_on_0[d_ex] if t < horizon]
@@ -607,6 +609,110 @@ function createfragmentsets_online(currstate, hl, ss, sn, lth, drivergroupnum, d
 				push!(repos_journeys, journeyarclist)
 			end
 		end
+		#=
+		for (o1, d1) in odpairs_homenearorig, (o2,d2) in [(d1,hl)], t1 in [t for t in currstate.T_on_0[d_ex] if t < horizon]
+			if (arcLength[o1,d1] > shiftlength) || (arcLength[o2,d2] > shiftlength)
+
+				#Arc locations 
+				l1, l2, l3, l4, l5, l6, l7 = hl, o1, o1, d1, d1, hl, hl
+				journeylocations = [l1, l2, l3, l4, l5, l6, l7]
+
+				#Calculate arc times
+				#Note that this relies on the assumption that the repositioning trips take at most 1 tstep to complete!!!
+				t2 = t1 + arcLength[hl, o1] <= horizon ? t1 + arcLength[hl,o1] : dummyendtime #hl --> o1
+				upcomingshifts = [t_prime for t_prime in currstate.T_on_0[d_ex] if t_prime >= t2]
+				t3 = minimum(union(upcomingshifts, dummyendtime)) <= horizon ? minimum(union(upcomingshifts, dummyendtime)) : dummyendtime #Find start time of o1 --> d1
+				t4 = t3 + arcLength[o1,d1] <= horizon ? t3 + arcLength[o1,d1] : dummyendtime #o1 --> d1
+				upcomingshifts = [t_prime for t_prime in currstate.T_on_0[d_ex] if t_prime >= t4]
+				t5 = minimum(union(upcomingshifts, dummyendtime)) <= horizon ? minimum(union(upcomingshifts, dummyendtime)) : dummyendtime #Find start time of d1 --> hl
+				t6 = t5 + arcLength[d1,hl] <= horizon ? t5 + arcLength[d1,hl] : dummyendtime #d1 --> hl
+				upcomingshifts = [t_prime for t_prime in currstate.T_on_0[d_ex] if t_prime >= t6]
+				t7 = minimum(union(upcomingshifts, dummyendtime)) <= horizon ? minimum(union(upcomingshifts, dummyendtime)) : dummyendtime
+
+				#Create journey
+				journeytimes = [t1,t2,t3,t4,t5,t6,t7]
+				finaltimeindex = argmax([t for t in journeytimes]) #Stop times at first dummyendtime
+				if (dummyendtime in journeytimes) & (finaltimeindex > 1) && (journeylocations[finaltimeindex] == journeylocations[finaltimeindex-1]) 
+					#If the last arc before the time horizon ends would be an idle arc, then just drop it
+					finaltimeindex = finaltimeindex - 1
+				end
+				#Nodes
+				journeypairlist = [(journeylocations[t], journeytimes[t]) for t in 1:finaltimeindex]
+				journeynodelist = [extendednodes[journeypairlist[1][1],journeypairlist[1][2]]]
+				for nindex in 2:finaltimeindex
+					loc, tm = journeypairlist[nindex]
+					lastloc, lasttm = journeypairlist[nindex-1]
+					if lastloc == loc
+						for t in lasttm:tstep:tm
+							push!(journeynodelist, extendednodes[loc,t])
+						end
+					else
+						push!(journeynodelist, extendednodes[loc,tm])
+					end
+				end
+				journeynodelist = unique(journeynodelist)
+				#Arcs
+				journeyarclist = []
+				for n in 1:length(journeynodelist)-1
+					push!(journeyarclist, extendedarcs[journeynodelist[n], journeynodelist[n+1]])
+				end
+
+				#timespacenetwork(string("outputs/viz/aaa_order.png"), [intersect(journeyarclist,1:numarcs)], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
+				push!(repos_journeys, journeyarclist)
+			end
+		end
+		
+		for (o2, d2) in odpairs_homeneardest, (o1,d1) in [(hl,o2)], t1 in [t for t in currstate.T_on_0[d_ex] if t < horizon]
+			if (arcLength[o1,d1] > shiftlength) || (arcLength[o2,d2] > shiftlength)
+
+				#Arc locations 
+				l1, l2, l3, l4, l5, l6, l7 = hl, o2, o2, d2, d2, hl, hl
+				journeylocations = [l1, l2, l3, l4, l5, l6, l7]
+
+				#Calculate arc times
+				#Note that this relies on the assumption that the repositioning trips take at most 1 tstep to complete!!!
+				t2 = t1 + arcLength[hl, o2] <= horizon ? t1 + arcLength[hl,o2] : dummyendtime #hl --> o2
+				upcomingshifts = [t_prime for t_prime in currstate.T_on_0[d_ex] if t_prime >= t2]
+				t3 = minimum(union(upcomingshifts, dummyendtime)) <= horizon ? minimum(union(upcomingshifts, dummyendtime)) : dummyendtime #Find start time of o2 --> d2
+				t4 = t3 + arcLength[o2,d2] <= horizon ? t3 + arcLength[o2,d2] : dummyendtime #o2 --> d2
+				upcomingworkinghours = [t_prime for t_prime in setdiff(0:tstep:horizon, currstate.T_off[ss]) if t_prime >= t4]
+				t5 = minimum(union(upcomingworkinghours, dummyendtime)) #Find start time of d1 --> o2
+				t6 = t5 + arcLength[d2,hl] <= horizon ? t5 + arcLength[d2,hl] : dummyendtime #d2 --> hl
+				upcomingshifts = [t_prime for t_prime in currstate.T_on_0[d_ex] if t_prime >= t6]
+				t7 = minimum(union(upcomingshifts, dummyendtime)) <= horizon ? minimum(union(upcomingshifts, dummyendtime)) : dummyendtime
+
+				#Create journey
+				journeytimes = [t1,t2,t3,t4,t5,t6,t7]
+				finaltimeindex = argmax([t for t in journeytimes]) #Stop times at first dummyendtime
+				if (dummyendtime in journeytimes) & (finaltimeindex > 1) && (journeylocations[finaltimeindex] == journeylocations[finaltimeindex-1]) 
+					#If the last arc before the time horizon ends would be an idle arc, then just drop it
+					finaltimeindex = finaltimeindex - 1
+				end
+				#Nodes
+				journeypairlist = [(journeylocations[t], journeytimes[t]) for t in 1:finaltimeindex]
+				journeynodelist = [extendednodes[journeypairlist[1][1],journeypairlist[1][2]]]
+				for nindex in 2:finaltimeindex
+					loc, tm = journeypairlist[nindex]
+					lastloc, lasttm = journeypairlist[nindex-1]
+					if lastloc == loc
+						for t in lasttm:tstep:tm
+							push!(journeynodelist, extendednodes[loc,t])
+						end
+					else
+						push!(journeynodelist, extendednodes[loc,tm])
+					end
+				end
+				journeynodelist = unique(journeynodelist)
+				#Arcs
+				journeyarclist = []
+				for n in 1:length(journeynodelist)-1
+					push!(journeyarclist, extendedarcs[journeynodelist[n], journeynodelist[n+1]])
+				end
+
+				#timespacenetwork(string("outputs/viz/aaa_order.png"), [intersect(journeyarclist,1:numarcs)], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
+				push!(repos_journeys, journeyarclist)
+			end
+		end=#
 		journeys = union(journeys, repos_journeys)
 
 		#Stranded driver needs a ride home

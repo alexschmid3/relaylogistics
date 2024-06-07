@@ -219,7 +219,10 @@ spatialnetwork("figures/orderhistorymap_numbers.png", lhdataisbfilename, 2000, 1
 #spatialnetwork("figures/truck18path.png", lhdataisbfilename, 2000, 1900)
 
 #--------------------------------------------------------#
-#=
+
+
+tripson, origincount, destinationcount = getrivigotriphistory(lhdataisbfilename)
+
 allcorridors = [c for c in collect(keys(tripson)) if tripson[c] > 1e-4]
 sortedcorridors = reverse(sort(allcorridors, by=x->tripson[x]))
 
@@ -232,5 +235,9 @@ sortedpitstops = reverse(sort(1:numlocs, by=x->allpitstoptraffic[x]))
 
 allpitstopdemand = zeros(numlocs)
 
-=#
+for i in 1:numlocs
+	println("$i,",origincount[i],",",destinationcount[i],",",allpitstoptraffic[i])
+end
+
+
 
