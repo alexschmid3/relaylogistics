@@ -12,3 +12,11 @@ experiment_id,instance,method,weekstart,horizon,tstep,driverfactor,rho-value,opt
 11,4,basisip,2019-06-30,3,6,6.636,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,corridors,8
 12,4,basisip,2019-06-30,3,6,6.636,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,hybrid,8
 13,4,basisip,2019-06-30,3,6,6.636,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,perimeter,8
+14,4,basisip,2019-06-30,3,6,9.48,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,all,8
+15,4,basisip,2019-06-30,3,6,9.48,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,corridors,8
+16,4,basisip,2019-06-30,3,6,9.48,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,hybrid,8
+17,4,basisip,2019-06-30,3,6,9.48,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,perimeter,8
+18,4,basisip,2019-06-30,3,6,10.209,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,all,8
+19,4,basisip,2019-06-30,3,6,10.209,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,corridors,8
+20,4,basisip,2019-06-30,3,6,10.209,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,hybrid,8
+21,4,basisip,2019-06-30,3,6,10.209,0,0.01,10,homogeneous,online,relay,1,72,3,24,1,0,perimeter,8
