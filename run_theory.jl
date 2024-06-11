@@ -8,7 +8,7 @@ include("scripts/theory/realizedemand.jl")
 include("scripts/visualizations/theorynetwork.jl")
 
 #Read experiment parameters from file
-experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+experiment_id += 1 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 params = CSV.read("data/heatmap2.csv", DataFrame)
 
 w = 2
