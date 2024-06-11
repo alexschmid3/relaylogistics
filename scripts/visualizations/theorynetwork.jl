@@ -15,30 +15,17 @@ function theorynetwork(drawingname, y, x_size, y_size)
 
 	#Find coordinates for each time-space node
 	nodelist, nodelookup = [], Dict()
-	x_size_trimmed, y_size_trimmed = x_size*0.98, y_size*0.98
-	k_t = y_size_trimmed/(T+0.5) 
-    k_i = k_t / (2*length(E))
-	k_c = x_size_trimmed/3
-    for t in 1:T
-        nindex = 1
-        for i in W
-            ycoord = (t)*k_t + nindex * k_i - y_size_trimmed/2 - k_t/2
-            xcoord = k_c*0 - k_c/2
-            push!(nodelist, (xcoord, ycoord))
-            nodelookup[i,t] = Point((xcoord, ycoord))
-            nindex += 1 
-        end
-    end
-    for t in 1:T
-        nindex = 1
-        for j in E
-            ycoord = (t)*k_t + nindex * k_i - y_size_trimmed/2 - k_t/2
-            xcoord = k_c*1 - k_c/2
-            push!(nodelist, (xcoord, ycoord))
-            nodelookup[j,t] = Point((xcoord, ycoord))
-            nindex += 1 
-        end
-    end
+	x_size_trimmed, y_size_trimmed = x_size*0.95, y_size*0.95
+	x_size_orig, y_size_orig = m*w, 2*h
+    k_x, shift_x = x_size_trimmed / x_size_orig, -1/2 * x_size_trimmed
+	k_y, shift_y = y_size_trimmed / y_size_orig, -1/2 * y_size_trimmed
+
+	for i in pitstops
+		ycoord = -1 * (coordinates[i,2] * k_y + shift_y)
+		xcoord = coordinates[i,1] * k_x + shift_x
+		push!(nodelist, (xcoord, ycoord))
+		nodelookup[i] = Point((xcoord, ycoord))
+	end
 
 	#Create actual points as a Luxor object
 	nodePoints = Point.(nodelist)
@@ -47,7 +34,19 @@ function theorynetwork(drawingname, y, x_size, y_size)
 
     arccounter = Dict()
     allarcs = []
-    for i in W, j in E, t in 1:T
+	for (i,j) in corridors, t in 1:T
+        arccounter[i,j,t,Tmod(t+C)] = 0
+        arccounter[j,i,t,Tmod(t+C)] = 0
+        push!(allarcs, (i,j,t,Tmod(t+C)))
+        push!(allarcs, (j,i,t,Tmod(t+C)))
+    end
+	for (j,i) in corridors, t in 1:T
+        arccounter[i,j,t,Tmod(t+C)] = 0
+        arccounter[j,i,t,Tmod(t+C)] = 0
+        push!(allarcs, (i,j,t,Tmod(t+C)))
+        push!(allarcs, (j,i,t,Tmod(t+C)))
+    end
+    #=for i in W, j in E, t in 1:T
         arccounter[i,j,t,Tmod(t+C)] = 0
         arccounter[j,i,t,Tmod(t+C)] = 0
         push!(allarcs, (i,j,t,Tmod(t+C)))
@@ -60,27 +59,27 @@ function theorynetwork(drawingname, y, x_size, y_size)
     for i in E, j in setdiff(E,i), t in 1:T
         arccounter[i,j,t,t] = 0
         push!(allarcs, (i,j,t,t))
-    end
+    end=#
 
     for jindex in journeys
-        if value(y[jindex]) > 1e-4
+        #if value(y[jindex]) > 1e-4
             for (i,j,t1,t2) in journeyarclookup[jindex]
                 arccounter[i,j,t1,t2] += value(y[jindex])
+				#println("$i, $j --> ", value(y[jindex]))
             end
-        end
+        #end
     end
 
     arcinfo = []
-    maxthickness, maxflow = 8, maximum(values(arccounter))
+    maxthickness, maxflow = 20, maximum(values(arccounter))
     for (i,j,t1,t2) in allarcs
         if arccounter[i,j,t1,t2] > 1e-4
-            startPoint = nodelookup[i,t1]
-            endPoint = nodelookup[j,t2]
-            arcColor =  ((1 - demand[i,j,t1] / arccounter[i,j,t1,t2]) * 255, 0, 0)
+            startPoint = nodelookup[i]
+            endPoint = nodelookup[j]
+            arcColor =  (0,0,0) #((1 - demand[i,j,t1] / arccounter[i,j,t1,t2]) * 255, 0, 0)
             arcDash = "solid"
-            arcThickness = round(maxthickness * arccounter[i,j,t1,t2]/maxflow, digits=0)
+            arcThickness = ceil(maxthickness * arccounter[i,j,t1,t2]/maxflow)
             arcLabel = ""
-
             push!(arcinfo, (startPoint, endPoint, arcColor, arcDash, arcThickness, arcLabel))
         end
     end
@@ -122,16 +121,16 @@ function theorynetwork(drawingname, y, x_size, y_size)
 	#Draw node points
 	setcolor("black")
 	circle.(nodePoints, 9, :fill)
-    #=
+    
 	#Set font size for labels
 	fontsize(30)
 
 	#Add location labels
-	for l in 1:numlocs
-		coord = nodePoints[nodes[(l,0.0)]]
-		label("Loc $l       ", :W , coord)
+	for l in pitstops
+		coord = nodePoints[l]
+		Luxor.text("$l", coord + Point(0,-30), halign=:center, valign = :middle)
 	end
-
+	#=
 	#Add time labels
 	for t in 0:tstep*2:horizon
 		coord = nodePoints[nodes[(1,t)]] + Point(0,-30)
