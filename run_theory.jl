@@ -9,17 +9,16 @@ include("scripts/visualizations/theorynetwork.jl")
 
 #Read experiment parameters from file
 experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-params = CSV.read("data/heatmap2.csv", DataFrame)
+params = CSV.read("data/heatmap1_revised.csv", DataFrame)
 
-w = 2
-h = 1/2
 T = 1
 C = 5
+w = params[experiment_id, 15]
+h = params[experiment_id, 16]
 m = params[experiment_id, 12]
 K = params[experiment_id, 14]
 q = params[experiment_id, 13]
 n = K*q
-
 totalflow = params[experiment_id, 5] 
 stdev_base = params[experiment_id, 7] 
 aggbalance = params[experiment_id, 4] 
@@ -29,6 +28,7 @@ randomseedval = params[experiment_id, 8]
 demanddist = params[experiment_id, 9] 
 d_lb = params[experiment_id, 10] 
 d_ub = params[experiment_id, 11] 
+heatmaptype = params[experiment_id, 17] 
 #consolidation_flag = params[experiment_id, 15]
 Random.seed!(randomseedval)
 
@@ -54,194 +54,203 @@ for i in alllocs, j in alllocs
 end
 
 #--------------------------------------------------------------#
-#=
-#Point-to-point
-journeyscovering, journeydist = Dict(), Dict()
-for i in W, j in E, t in 1:T
-    journeyscovering[i,j,t] = []
-    journeyscovering[j,i,t] = []
-end
-jindex = 1
-journeyarclookup = Dict()
-for i in W, j in E, t in 1:T, i2 in W, j2 in E #i2 in [i], j2 in [j]
-    push!(journeyscovering[i,j,t], jindex)
-    push!(journeyscovering[j2,i2,mod(t+C-1,T)+1], jindex)
-    journeydist[jindex] = tripdistance[i,j] + tripdistance[i2,j2] + tripdistance[i,i2] + tripdistance[j,j2] 
-    
-    journeyarcs = []
-    for (orig,dest,t_orig,t_dest) in [(i,j,t,Tmod(t+C)), (j,j2,Tmod(t+C),Tmod(t+C)), (j2,i2,Tmod(t+C),Tmod(t+2C)), (i2,i,Tmod(t+2*C),Tmod(t+2*C))]
-        if orig != dest
-            push!(journeyarcs, (orig,dest,t_orig,t_dest))
-        end
+
+if heatmaptype == "relayvsptp"
+    #Point-to-point
+    journeyscovering, journeydist = Dict(), Dict()
+    for i in W, j in E, t in 1:T
+        journeyscovering[i,j,t] = []
+        journeyscovering[j,i,t] = []
     end
-    journeyarclookup[jindex] = journeyarcs
-    
-    global jindex += 1
-end 
-journeys = 1:jindex-1
-    
-model = Model(Gurobi.Optimizer)
-set_optimizer_attribute(model, "OutputFlag", 0)
-@variable(model, y[j in journeys] >= 0, Int)
-@objective(model, Min, sum(journeydist[j] * y[j] for j in journeys))
-@constraint(model, [i in W, j in E, t in 1:T], sum(y[jrny] for jrny in journeyscovering[i,j,t]) >= demand[i,j,t])
-@constraint(model, [i in E, j in W, t in 1:T], sum(y[jrny] for jrny in journeyscovering[i,j,t]) >= demand[i,j,t])
+    jindex = 1
+    journeyarclookup = Dict()
+    for i in W, j in E, t in 1:T, i2 in W, j2 in E #i2 in [i], j2 in [j]
+        push!(journeyscovering[i,j,t], jindex)
+        push!(journeyscovering[j2,i2,mod(t+C-1,T)+1], jindex)
+        journeydist[jindex] = tripdistance[i,j] + tripdistance[i2,j2] + tripdistance[i,i2] + tripdistance[j,j2] 
+        
+        journeyarcs = []
+        for (orig,dest,t_orig,t_dest) in [(i,j,t,Tmod(t+C)), (j,j2,Tmod(t+C),Tmod(t+C)), (j2,i2,Tmod(t+C),Tmod(t+2C)), (i2,i,Tmod(t+2*C),Tmod(t+2*C))]
+            if orig != dest
+                push!(journeyarcs, (orig,dest,t_orig,t_dest))
+            end
+        end
+        journeyarclookup[jindex] = journeyarcs
+        
+        global jindex += 1
+    end 
+    journeys = 1:jindex-1
+        
+    model = Model(Gurobi.Optimizer)
+    set_optimizer_attribute(model, "OutputFlag", 0)
+    @variable(model, y[j in journeys] >= 0, Int)
+    @objective(model, Min, sum(journeydist[j] * y[j] for j in journeys))
+    @constraint(model, [i in W, j in E, t in 1:T], sum(y[jrny] for jrny in journeyscovering[i,j,t]) >= demand[i,j,t])
+    @constraint(model, [i in E, j in W, t in 1:T], sum(y[jrny] for jrny in journeyscovering[i,j,t]) >= demand[i,j,t])
 
-optimize!(model)
+    optimize!(model)
 
-ptp_obj = objective_value(model)
+    ptp_obj = objective_value(model)
 
-ptp_empties = 0 
-for i in W, j in E, t in 1:T
-    global ptp_empties += (sum(value(y[jrny]) for jrny in journeyscovering[i,j,t]) - demand[i,j,t]) * sqrt((coordinates[i,1] - coordinates[j,1])^2 + (coordinates[i,2] - coordinates[j,2])^2)
+    ptp_empties = 0 
+    for i in W, j in E, t in 1:T
+        global ptp_empties += (sum(value(y[jrny]) for jrny in journeyscovering[i,j,t]) - demand[i,j,t]) * sqrt((coordinates[i,1] - coordinates[j,1])^2 + (coordinates[i,2] - coordinates[j,2])^2)
+    end
+    for i in E, j in W, t in 1:T
+        global ptp_empties += (sum(value(y[jrny]) for jrny in journeyscovering[i,j,t]) - demand[i,j,t]) * sqrt((coordinates[i,1] - coordinates[j,1])^2 + (coordinates[i,2] - coordinates[j,2])^2)
+    end
+
+    println("P2P miles = ", ptp_obj)
+
+    #theorynetwork("pointtopoint.png", y, 2000, 2000)
+
 end
-for i in E, j in W, t in 1:T
-    global ptp_empties += (sum(value(y[jrny]) for jrny in journeyscovering[i,j,t]) - demand[i,j,t]) * sqrt((coordinates[i,1] - coordinates[j,1])^2 + (coordinates[i,2] - coordinates[j,2])^2)
-end
 
-theorynetwork("pointtopoint.png", y, 2000, 2000)
-=#
 #--------------------------------------------------------------#
 
-consolidation_flag = 1
+if heatmaptype == "consolidation"   
+        
+    consolidation_flag = 1
 
-#Relay
-pitstops = 1:length(union(W,E,P))
-corridors, consolidationpaths = [], []
-corridoredwith = Dict()
-for i in pitstops
-    corridoredwith[i] = []
-end
-for k in 1:K, i in W_k[k]
-    p1,p2 = i, corridor[k][1]
-    push!(corridors, (p1, p2))
-    push!(corridoredwith[p1], p2)
-    push!(corridoredwith[p2], p1)
-end
-for k in 1:K, i in 1:length(corridor[k])-1
-    p1,p2 = corridor[k][i], corridor[k][i+1]
-    push!(corridors, (p1,p2))
-    push!(corridoredwith[p1], p2)
-    push!(corridoredwith[p2], p1)
-end
-for k in 1:K, i in E_k[k]
-    p1,p2 = i,last(corridor[k])
-    push!(corridors, (p1, p2))
-    push!(corridoredwith[p1], p2)
-    push!(corridoredwith[p2], p1)
-end
-#Intra country corridors
-if consolidation_flag == 1
-    for k1 in 1:K, k2 in setdiff(1:K, k1), i in W_k[k1]
-        p1,p2 = i,corridor[k2][1]
+    #Relay
+    pitstops = 1:length(union(W,E,P))
+    corridors, consolidationpaths = [], []
+    corridoredwith = Dict()
+    for i in pitstops
+        corridoredwith[i] = []
+    end
+    for k in 1:K, i in W_k[k]
+        p1,p2 = i, corridor[k][1]
         push!(corridors, (p1, p2))
-        push!(consolidationpaths, (p1, p2))
         push!(corridoredwith[p1], p2)
         push!(corridoredwith[p2], p1)
     end
-    for k1 in 1:K, k2 in setdiff(1:K, k1), i in E_k[k1]
-        p1,p2 = i,last(corridor[k2])
-        push!(corridors, (p1, p2))
-        push!(consolidationpaths, (p1, p2))
+    for k in 1:K, i in 1:length(corridor[k])-1
+        p1,p2 = corridor[k][i], corridor[k][i+1]
+        push!(corridors, (p1,p2))
         push!(corridoredwith[p1], p2)
         push!(corridoredwith[p2], p1)
     end
-end
-
-#=
-flow = zeros(length(union(W,E,P)), length(union(W,E,P)), T)
-for i in W, j in E, t in 1:T
-    flow[i,p1,t] += demand[i,j,t]
-    flow[p1,p2,Tmod(t+1)] += demand[i,j,t]
-    flow[p2,j,Tmod(t+2)] += demand[i,j,t] 
-end
-for i in E, j in W, t in 1:T
-    flow[i,p2,t] += demand[i,j,t]
-    flow[p2,p1,Tmod(t+1)] += demand[i,j,t]
-    flow[p1,j,Tmod(t+2)] += demand[i,j,t] 
-end
-=#
-
-journeyscovering, journeydist, journeyarclookup = Dict(), Dict(), Dict()
-for (i,j) in corridors, t in 1:T
-    journeyscovering[i,j,t] = []
-    journeyscovering[j,i,t] = []
-end
-jindex = 1
-for (i,j) in corridors, t in 1:T
-    push!(journeyscovering[i,j,t], jindex)
-    push!(journeyscovering[j,i,Tmod(t+1)], jindex)
-    journeydist[jindex] = tripdistance[i,j] + tripdistance[j,i]
-
-    journeyarcs = []
-    for (orig,dest,t_orig,t_dest) in [(i,j,t,Tmod(t+1)), (j,i,Tmod(t+1),Tmod(t+2))]
-        if orig != dest
-            push!(journeyarcs, (orig,dest,t_orig,t_dest))
+    for k in 1:K, i in E_k[k]
+        p1,p2 = i,last(corridor[k])
+        push!(corridors, (p1, p2))
+        push!(corridoredwith[p1], p2)
+        push!(corridoredwith[p2], p1)
+    end
+    #Intra country corridors
+    if consolidation_flag == 1
+        for k1 in 1:K, k2 in setdiff(1:K, k1), i in W_k[k1]
+            p1,p2 = i,corridor[k2][1]
+            push!(corridors, (p1, p2))
+            push!(consolidationpaths, (p1, p2))
+            push!(corridoredwith[p1], p2)
+            push!(corridoredwith[p2], p1)
+        end
+        for k1 in 1:K, k2 in setdiff(1:K, k1), i in E_k[k1]
+            p1,p2 = i,last(corridor[k2])
+            push!(corridors, (p1, p2))
+            push!(consolidationpaths, (p1, p2))
+            push!(corridoredwith[p1], p2)
+            push!(corridoredwith[p2], p1)
         end
     end
-    journeyarclookup[jindex] = journeyarcs
 
-    global jindex += 1
-end 
-for (j,i) in corridors, t in 1:T
-    push!(journeyscovering[i,j,t], jindex)
-    push!(journeyscovering[j,i,Tmod(t+1)], jindex)
-    journeydist[jindex] = tripdistance[i,j] + tripdistance[j,i]
-
-    journeyarcs = []
-    for (orig,dest,t_orig,t_dest) in [(i,j,t,Tmod(t+1)), (j,i,Tmod(t+1),Tmod(t+2))]
-        if orig != dest
-            push!(journeyarcs, (orig,dest,t_orig,t_dest))
-        end
+    #=
+    flow = zeros(length(union(W,E,P)), length(union(W,E,P)), T)
+    for i in W, j in E, t in 1:T
+        flow[i,p1,t] += demand[i,j,t]
+        flow[p1,p2,Tmod(t+1)] += demand[i,j,t]
+        flow[p2,j,Tmod(t+2)] += demand[i,j,t] 
     end
-    journeyarclookup[jindex] = journeyarcs
+    for i in E, j in W, t in 1:T
+        flow[i,p2,t] += demand[i,j,t]
+        flow[p2,p1,Tmod(t+1)] += demand[i,j,t]
+        flow[p1,j,Tmod(t+2)] += demand[i,j,t] 
+    end
+    =#
 
-    global jindex += 1
-end 
-journeys = 1:jindex-1
-    
-model = Model(Gurobi.Optimizer)
-set_optimizer_attribute(model, "OutputFlag", 0)
-@variable(model, y[j in journeys] >= 0, Int)
-@variable(model, flow[(i,j) in allpairs, t in 1:T, (l1,l2) in union([(a,b) for (a,b) in corridors],[(b,a) for (a,b) in corridors])] >= 0, Int)
-@objective(model, Min, sum(journeydist[j] * y[j] for j in journeys))
-@constraint(model, [(l1,l2) in corridors, t in 1:T], sum(y[jrny] for jrny in journeyscovering[l1,l2,t]) >= sum(flow[(i,j),t,(l1,l2)] for (i,j) in allpairs))
-@constraint(model, [(l2,l1) in corridors, t in 1:T], sum(y[jrny] for jrny in journeyscovering[l1,l2,t]) >= sum(flow[(i,j),t,(l1,l2)] for (i,j) in allpairs))
-@constraint(model, departorig[(i,j) in allpairs, t in 1:T], sum(flow[(i,j),t,(i,l)] for l in corridoredwith[i]) == demand[i,j,t])
-@constraint(model, flowbalance[(i,j) in allpairs, l1 in setdiff(pitstops, [i,j]), t in 1:T], sum(flow[(i,j),t,(l1,l2)] for l2 in corridoredwith[l1]) == sum(flow[(i,j),t,(l2,l1)] for l2 in corridoredwith[l1])) 
-@constraint(model, arrivedest[(i,j) in allpairs, t in 1:T], sum(flow[(i,j),t,(l,j)] for l in corridoredwith[j]) == demand[i,j,t])
-@constraint(model, noarriveorig[(i,j) in allpairs, t in 1:T], sum(flow[(i,j),t,(l,i)] for l in corridoredwith[i]) == 0)
-@constraint(model, nodepartdest[(i,j) in allpairs, t in 1:T], sum(flow[(i,j),t,(j,l)] for l in corridoredwith[j]) == 0)
+    journeyscovering, journeydist, journeyarclookup = Dict(), Dict(), Dict()
+    for (i,j) in corridors, t in 1:T
+        journeyscovering[i,j,t] = []
+        journeyscovering[j,i,t] = []
+    end
+    jindex = 1
+    for (i,j) in corridors, t in 1:T
+        push!(journeyscovering[i,j,t], jindex)
+        push!(journeyscovering[j,i,Tmod(t+1)], jindex)
+        journeydist[jindex] = tripdistance[i,j] + tripdistance[j,i]
 
-#@constraint(model, flow[(1,13), 1, (1,29)] >= 1)
+        journeyarcs = []
+        for (orig,dest,t_orig,t_dest) in [(i,j,t,Tmod(t+1)), (j,i,Tmod(t+1),Tmod(t+2))]
+            if orig != dest
+                push!(journeyarcs, (orig,dest,t_orig,t_dest))
+            end
+        end
+        journeyarclookup[jindex] = journeyarcs
 
-optimize!(model)
-#println("Relay bound = ", relay_bound)
-relay_obj = objective_value(model)
+        global jindex += 1
+    end 
+    for (j,i) in corridors, t in 1:T
+        push!(journeyscovering[i,j,t], jindex)
+        push!(journeyscovering[j,i,Tmod(t+1)], jindex)
+        journeydist[jindex] = tripdistance[i,j] + tripdistance[j,i]
 
-#=
-relay_empties = 0
-for (i,j) in corridors, t in 1:T
-    global relay_empties += (sum(value(y[jrny]) for jrny in journeyscovering[i,j,t]) - flow[i,j,t]) * tripdistance[i,j]
+        journeyarcs = []
+        for (orig,dest,t_orig,t_dest) in [(i,j,t,Tmod(t+1)), (j,i,Tmod(t+1),Tmod(t+2))]
+            if orig != dest
+                push!(journeyarcs, (orig,dest,t_orig,t_dest))
+            end
+        end
+        journeyarclookup[jindex] = journeyarcs
+
+        global jindex += 1
+    end 
+    journeys = 1:jindex-1
+        
+    model = Model(Gurobi.Optimizer)
+    set_optimizer_attribute(model, "OutputFlag", 0)
+    @variable(model, y[j in journeys] >= 0, Int)
+    @variable(model, flow[(i,j) in allpairs, t in 1:T, (l1,l2) in union([(a,b) for (a,b) in corridors],[(b,a) for (a,b) in corridors])] >= 0, Int)
+    @objective(model, Min, sum(journeydist[j] * y[j] for j in journeys))
+    @constraint(model, [(l1,l2) in corridors, t in 1:T], sum(y[jrny] for jrny in journeyscovering[l1,l2,t]) >= sum(flow[(i,j),t,(l1,l2)] for (i,j) in allpairs))
+    @constraint(model, [(l2,l1) in corridors, t in 1:T], sum(y[jrny] for jrny in journeyscovering[l1,l2,t]) >= sum(flow[(i,j),t,(l1,l2)] for (i,j) in allpairs))
+    @constraint(model, departorig[(i,j) in allpairs, t in 1:T], sum(flow[(i,j),t,(i,l)] for l in corridoredwith[i]) == demand[i,j,t])
+    @constraint(model, flowbalance[(i,j) in allpairs, l1 in setdiff(pitstops, [i,j]), t in 1:T], sum(flow[(i,j),t,(l1,l2)] for l2 in corridoredwith[l1]) == sum(flow[(i,j),t,(l2,l1)] for l2 in corridoredwith[l1])) 
+    @constraint(model, arrivedest[(i,j) in allpairs, t in 1:T], sum(flow[(i,j),t,(l,j)] for l in corridoredwith[j]) == demand[i,j,t])
+    @constraint(model, noarriveorig[(i,j) in allpairs, t in 1:T], sum(flow[(i,j),t,(l,i)] for l in corridoredwith[i]) == 0)
+    @constraint(model, nodepartdest[(i,j) in allpairs, t in 1:T], sum(flow[(i,j),t,(j,l)] for l in corridoredwith[j]) == 0)
+
+    #@constraint(model, flow[(1,13), 1, (1,29)] >= 1)
+
+    optimize!(model)
+    #println("Relay bound = ", relay_bound)
+    relay_obj = objective_value(model)
+
+    #=
+    relay_empties = 0
+    for (i,j) in corridors, t in 1:T
+        global relay_empties += (sum(value(y[jrny]) for jrny in journeyscovering[i,j,t]) - flow[i,j,t]) * tripdistance[i,j]
+    end
+    for (j,i) in corridors, t in 1:T
+        global relay_empties += (sum(value(y[jrny]) for jrny in journeyscovering[i,j,t]) - flow[i,j,t]) * tripdistance[i,j]
+    end
+    =#
+
+    consolidateddemand = 0
+    if consolidation_flag == 1
+        consolidateddemand += sum(sum(sum(value(flow[(i,j),t,(l1,l2)]) for (i,j) in allpairs) for (l1,l2) in consolidationpaths) for t in 1:T)
+    end
+    println("  Consolidated demand = ", 0.5 * consolidateddemand)
+
+    #for t in 1:T, (l1,l2) in consolidationpaths
+    #    if sum(value(flow[(i,j),t,(l1,l2)]) for (i,j) in allpairs) > 1e-4
+    #        println("flow[(i,j),$t,($l1,$l2)])  = ", sum(value(flow[(i,j),t,(l1,l2)]) for (i,j) in allpairs))
+    #    end
+    #end
+    println("  Total demand = ", sum(demand))
+    println("Relay miles = ", relay_obj)
+
 end
-for (j,i) in corridors, t in 1:T
-    global relay_empties += (sum(value(y[jrny]) for jrny in journeyscovering[i,j,t]) - flow[i,j,t]) * tripdistance[i,j]
-end
-=#
-
-consolidateddemand = 0
-if consolidation_flag == 1
-    consolidateddemand += sum(sum(sum(value(flow[(i,j),t,(l1,l2)]) for (i,j) in allpairs) for (l1,l2) in consolidationpaths) for t in 1:T)
-end
-println("Consolidated demand = ", 0.5 * consolidateddemand)
-
-#for t in 1:T, (l1,l2) in consolidationpaths
-#    if sum(value(flow[(i,j),t,(l1,l2)]) for (i,j) in allpairs) > 1e-4
-#        println("flow[(i,j),$t,($l1,$l2)])  = ", sum(value(flow[(i,j),t,(l1,l2)]) for (i,j) in allpairs))
-#    end
-#end
-println("Total demand = ", sum(demand))
-println("Relay miles = ", relay_obj)
 
 #theorynetwork("relay.png", y, 2000, 2000)
 
@@ -373,18 +382,12 @@ for (j,i) in corridors, t in 1:T
 end
 =#
 
-consolidateddemand = 0
-if consolidation_flag == 1
-    consolidateddemand += sum(sum(sum(value(flow[(i,j),t,(l1,l2)]) for (i,j) in allpairs) for (l1,l2) in consolidationpaths) for t in 1:T)
-end
-println("Consolidated demand = ", 0.5 * consolidateddemand)
-
 #for t in 1:T, (l1,l2) in consolidationpaths
 #    if sum(value(flow[(i,j),t,(l1,l2)]) for (i,j) in allpairs) > 1e-4
 #        println("flow[(i,j),$t,($l1,$l2)])  = ", sum(value(flow[(i,j),t,(l1,l2)]) for (i,j) in allpairs))
 #    end
 #end
-println("Total demand = ", sum(demand))
+
 println("Relay no consol miles = ", relay_obj_noconsol)
 
 #theorynetwork("relay.png", y, 2000, 2000)
@@ -625,10 +628,14 @@ end
 #df = DataFrame(ab=[actualAB], db=[actualDB], cd=[actualCB], flow=[totalflow], stdev=[stdev_base], relay=[relay_delay_obj], ptp=[ptp_obj], relay_bound=[relay_bound2], ptp_bound=[ptp_bound3])
 #CSV.write(string("outputs/heatmapdata/exp", experiment_id,".csv"), df)
 
-df = DataFrame(experiment_id=[experiment_id], seed=[randomseedval], m=[m], K=[K], q=[q], n=[n], stdev=[stdev_base], relay=[relay_obj], relay_noconsol=[relay_obj_noconsol])
-#CSV.write(string("outputs/heatmapdata/heatmap2_outputs.csv"), df, append=true)
-CSV.write(string("outputs/heatmapdata/heatmap2_outputs_exp",experiment_id,".csv"), df)
-
+if heatmaptype == "consolidation"
+    df = DataFrame(experiment_id=[experiment_id], seed=[randomseedval], m=[m], K=[K], q=[q], n=[n], stdev=[stdev_base], relay=[relay_obj], relay_noconsol=[relay_obj_noconsol])
+    #CSV.write(string("outputs/heatmapdata/heatmap2_outputs.csv"), df, append=true)
+    CSV.write(string("outputs/heatmapdata/heatmap2/heatmap1_outputs_exp",experiment_id,".csv"), df)
+elseif heatmaptype == "relayvsptp"
+    df = DataFrame(experiment_id=[experiment_id], seed=[randomseedval], m=[m], K=[K], q=[q], n=[n], stdev=[stdev_base], relay=[relay_obj_noconsol], ptp=[ptp_obj])
+    CSV.write(string("outputs/heatmapdata/heatmap1/heatmap1_outputs_exp",experiment_id,".csv"), df)
+end
 #--------------------------------------------------------------#
 
 println("Done!")

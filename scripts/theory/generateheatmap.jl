@@ -20,7 +20,7 @@ size_x, size_y = 2000,2000
 #File names
 #inputfilename = "outputs/heatmapdata/heatmap1_repos_outputs.csv"
 #outputfilename = string("figures/heatmap_repos.png")
-inputfilename = "outputs/heatmapdata/heatmap2/heatmap2_combined.csv"
+inputfilename = "outputs/heatmapdata/heatmap2/he_combined_squared.csv"
 outputfilename = string("figures/heatmap2.png")
 
 #---------------------------------------------------------------------------------------#
@@ -187,9 +187,9 @@ function generateheatmap2(inputfilename, outputfilename, size_x, size_y)
 
 	#Read the input file
 	mapdata = CSV.read(inputfilename, DataFrame)
-    filtereddata = filter(:q => q -> q == 2, mapdata)
+    filtereddata = filter(:q => q -> q > 0, mapdata)
 	n_list = sort(unique(filtereddata[:,6]))
-	#filtereddata = filter(:n => n -> n in n_list, mapdata)
+	filtereddata = filter(:n => n -> n in n_list, filtereddata)
 	mileslookup, denomlookup, countlookup = Dict(), Dict(), Dict()
 
 	#-------------------------------------------------------------------------#
