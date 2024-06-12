@@ -183,7 +183,16 @@ end
 
 function generateheatmap2(inputfilename, outputfilename, size_x, size_y)
 
-    buffer_xy = 300
+	buffer_xy = 300
+
+	#Read the input file
+	mapdata = CSV.read(inputfilename, DataFrame)
+    filtereddata = filter(:q => q -> q == 2, mapdata)
+	n_list = sort(unique(filtereddata[:,6]))
+	#filtereddata = filter(:n => n -> n in n_list, mapdata)
+	mileslookup, denomlookup, countlookup = Dict(), Dict(), Dict()
+
+	#-------------------------------------------------------------------------#
 
 	#Find coordinates for each workstation and pod storage location
 	boxwidth = (size_x - buffer_xy) / (length(n_list)+1)
@@ -200,12 +209,6 @@ function generateheatmap2(inputfilename, outputfilename, size_x, size_y)
 	end
 
 	#-------------------------------------------------------------------------#
-
-	#Read the input file
-	mapdata = CSV.read(inputfilename, DataFrame)
-    filtereddata = filter(:n => n -> n in n_list, mapdata)
-	filtereddata = filter(:q => q -> q==6, mapdata)
-	mileslookup, denomlookup, countlookup = Dict(), Dict(), Dict()
 
 	for stdv in 0:stdev_stepsize:1, n in n_list
 		mileslookup[n,stdv] = "X"
