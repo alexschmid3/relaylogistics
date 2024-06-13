@@ -137,6 +137,7 @@ end
 #File names					
 vizfoldername = string("visualizations/static/run ", runid)
 resultsfilename = string(csvfoldername, runid, "_output.csv")
+deliverytimefilename = string(csvfoldername, "deliverytimes/", runid, "_deliverytimes.csv")
 convergencedatafilename = string(csvfoldername, "convergence_exp", runid, ".csv")
 
 #---------------------------------IMPORT FINAL SCRIPTS----------------------------------# 
@@ -264,7 +265,7 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 	global currfragments = newfragments
 
 	#Update orders
-	updateorders(x_ip, timedelta, currentdatetime, basisarcs)
+	updateorders(x_ip, timedelta, currentdatetime, basisarcs, currtime)
 	
 	#Better way to do this without the global var update?
 	neworderarcs, newmagarcs = updateorderarcs()

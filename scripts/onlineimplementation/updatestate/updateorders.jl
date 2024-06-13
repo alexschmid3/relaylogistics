@@ -1,5 +1,5 @@
 
-function updateorders(x, timedelta, currentdatetime, basisarcs)
+function updateorders(x, timedelta, currentdatetime, basisarcs, currtime)
 
 	#Update the time 
 	totaldelta = Dates.value(Dates.Hour(currentdatetime - weekstart))
@@ -109,6 +109,12 @@ function updateorders(x, timedelta, currentdatetime, basisarcs)
 				orderdelayoutcomes[i] += arcendtime + totaldelta - orderOriginalStartTime[i]
                 shortestpossible_ordermiles[totaldelta-timedelta] += distbetweenlocs[originloc[i], destloc[i]]
                 shortestpossible_delivtime[totaldelta-timedelta] += currstate.shortesttriptimes[i]
+
+				if operations == "relay"
+					writedeliverytimetofile(deliverytimefilename, currtime, i, orddeliverytime, currstate.shortesttriptimes[i])
+				elseif operations == "ptp"
+					writedeliverytimetofile(deliverytimefilename, currtime, i, orddeliverytime, arcLength_raw[originloc[i], destloc[i]])
+				end
 			else
 				#Create new origin set
 				newOriginList = []

@@ -169,3 +169,19 @@ function writeresults_onlinefinal(filename, currtime)
     CSV.write(filename, df, append=true)
 
 end
+
+#--------------------------------------------------------------------------#
+
+function writedeliverytimetofile(filename, currtime, i, actualdelivtime, bestdelivtime)
+
+    df = DataFrame(
+        experiment_id = [experiment_id],
+        currtime = [currtime],
+        ordernumber = [i],
+        totaldeliverytime = [actualdelivtime],
+        shortestdeliverytime = [bestdelivtime]
+    )
+    
+    CSV.write(filename, df, append=true)
+
+end

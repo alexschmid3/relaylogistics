@@ -8,8 +8,8 @@ include("scripts/theory/realizedemand.jl")
 include("scripts/visualizations/theorynetwork.jl")
 
 #Read experiment parameters from file
-experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-params = CSV.read("data/heatmap1_revised.csv", DataFrame)
+experiment_id += 1 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+params = CSV.read("data/heatmap1_revised.csv", DataFrame) #CSV.read("data/heatmap2.csv", DataFrame)
 
 T = 1
 C = 5
@@ -64,7 +64,7 @@ if heatmaptype == "relayvsptp"
     end
     jindex = 1
     journeyarclookup = Dict()
-    for i in W, j in E, t in 1:T, i2 in W, j2 in E #i2 in [i], j2 in [j]
+    for i in W, j in E, t in 1:T, i2 in [i], j2 in [j] # i2 in W, j2 in E 
         push!(journeyscovering[i,j,t], jindex)
         push!(journeyscovering[j2,i2,mod(t+C-1,T)+1], jindex)
         journeydist[jindex] = tripdistance[i,j] + tripdistance[i2,j2] + tripdistance[i,i2] + tripdistance[j,j2] 
@@ -631,7 +631,7 @@ end
 if heatmaptype == "consolidation"
     df = DataFrame(experiment_id=[experiment_id], seed=[randomseedval], m=[m], K=[K], q=[q], n=[n], stdev=[stdev_base], relay=[relay_obj], relay_noconsol=[relay_obj_noconsol])
     #CSV.write(string("outputs/heatmapdata/heatmap2_outputs.csv"), df, append=true)
-    CSV.write(string("outputs/heatmapdata/heatmap2/heatmap1_outputs_exp",experiment_id,".csv"), df)
+    CSV.write(string("outputs/heatmapdata/heatmap2/heatmap2_outputs_exp",experiment_id,".csv"), df)
 elseif heatmaptype == "relayvsptp"
     df = DataFrame(experiment_id=[experiment_id], seed=[randomseedval], m=[m], K=[K], q=[q], n=[n], stdev=[stdev_base], relay=[relay_obj_noconsol], ptp=[ptp_obj])
     CSV.write(string("outputs/heatmapdata/heatmap1/heatmap1_outputs_exp",experiment_id,".csv"), df)

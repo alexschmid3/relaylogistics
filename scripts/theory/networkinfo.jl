@@ -83,7 +83,7 @@ function networkinfo_configurable(K, m, q, n)
     for i in W
         coordinates[i,1] = 0
         coordinates[i,2] = curr_y
-        curr_y -= 1 / (length(W) - 1)
+        curr_y -= 2*h / (length(W) - 1)
     end
 
     if length(W) == 1
@@ -94,7 +94,7 @@ function networkinfo_configurable(K, m, q, n)
     for i in E
         coordinates[i,1] = m*w
         coordinates[i,2] = curr_y
-        curr_y -= 1 / (length(W) - 1)
+        curr_y -= 2*h / (length(W) - 1)
     end
 
     pitstops = []

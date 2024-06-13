@@ -1,5 +1,7 @@
 
-figuredirectory = string("outputs/table2/deadlines/")
+using CSV, DataFrames
+
+figuredirectory = string("outputs/heatmapdata/heatmap1/")
 
 #Get list of files
 filelist = readdir(figuredirectory)
