@@ -34,8 +34,8 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters from file
-experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/table3.csv"
+experiment_id = 1874 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+paramsfilename = "data/table2.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
 ex = expparms[experiment_id, 2]		
@@ -248,9 +248,10 @@ currfragments = (driversets=driversets, driversingroup=driversingroup, numdriver
 
 println("Nights away = ", maxnightsaway)
 println("Journeys = ", sum(sum(numfragments[l,s] for s in 1:numeffshifts) for l in 1:numlocs))
+sum(sum(numfragments[l,s] for s in 1:numeffshifts) for l in 1:numlocs)
 
 #---------------------------------------SOLVE----------------------------------------# 
-
+#=
 if solutionmethod == "lp"
 
 	lp_obj, x_lp, z_lp, lp_time, lp_bound = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts, nocuts)
@@ -531,5 +532,5 @@ elseif solutionmethod == "cg"
 end
 
 #-----------------------------------------------------------------------------#
-
+=#
 println("Done!")

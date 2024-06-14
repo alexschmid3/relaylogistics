@@ -47,7 +47,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 
 #Read experiment parameters from file
 experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/relayvsptp.csv"
+paramsfilename = "data/driverstaffing.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 11]  # Drivers = homogeneous, heterogeneous
 ex = expparms[experiment_id, 2]		

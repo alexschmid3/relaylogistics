@@ -227,7 +227,7 @@ function findminimalcovercuts(z, lifting_flag)
         for journeysubset in powerset(usedjourneys)
             if length(journeysubset) >= 2 
                 
-                #If identical cover found, check whether the min cover cut is violated by current solution
+                #If minimal cover found, check whether the min cover cut is violated by current solution
                 if checkminimalcover(l,s,journeysubset)
 
                     bestrhs = length(journeysubset) - 1
@@ -249,7 +249,6 @@ function findminimalcovercuts(z, lifting_flag)
                             ss, coeff = sequenceindependentlifting(ss, coeff, journeysubset, l, s)
                         end
 
-                       
                         #Add the cut for all drivers identical to driver d to avoid adding the same cut for another driver in a future iteration
                         for d_sym in driversets[l,s]
                            
