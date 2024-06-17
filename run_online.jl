@@ -15,7 +15,7 @@ include("scripts/onlineimplementation/assessendofhorizonpenalties.jl")
 include("scripts/onlineimplementation/onlinereporting.jl")
 include("scripts/instancegeneration/initializearcsets.jl")
 include("scripts/multiarcgeneration/initializeorderarcsets.jl")
-include("scripts/visualizations/timespacenetwork.jl")
+#include("scripts/visualizations/timespacenetwork.jl")
 include("scripts/journeybasedmodel/solvejourneymodel_online.jl")
 include("scripts/onlineimplementation/updatestate/updatepastsegments.jl")
 include("scripts/onlineimplementation/updatestate/updatedrivers.jl")
@@ -24,7 +24,7 @@ include("scripts/onlineimplementation/updatestate/getnextorders.jl")
 include("scripts/onlineimplementation/updatestate/updatearcsets.jl")
 include("scripts/onlineimplementation/updatestate/updateorders.jl")
 include("scripts/onlineimplementation/journeygeneration.jl")
-include("scripts/visualizations/timespacenetwork.jl")
+#include("scripts/visualizations/timespacenetwork.jl")
 
 #-------------------------------------FOUR INSTANCES------------------------------------#  
 
