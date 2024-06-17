@@ -329,6 +329,7 @@ function translatearcsbetweenTSNs_withextendedarcs(arcset, originaltsn, targetts
 		if t1 >= targettsn.horizon     #Remove arcs that begin on or after horizon
 			1+1
 		elseif t2 > targettsn.horizon  #Send arcs that cross horizon to dummy end time
+			println(a)
 			a_prime = targettsn.arcs[targettsn.nodes[l1,t1], targettsn.nodes[l2,dummyendtime]]
 			push!(newarcset, a_prime)
 		else 
