@@ -319,7 +319,8 @@ function initializearcsets(A_space, A_plus, A_minus, orders, Origin, Destination
 		@time driverarcset, driverarcset_space, availabledrivers, A_plus_d, A_minus_d, closelocs = driverarcreduction(driverStartNodes, T_off)
         @time A_hasdriver, yupperbound, A_hasdriver_space, A_plus_hd, A_minus_hd = truckarcreduction(A_space, A_plus, A_minus, availabledrivers)
 		#ghost_driverarcset, ghost_driverarcset_space, ghost_availabledrivers, ghost_A_plus_d, ghost_A_minus_d, ghost_closelocs = driverarcreduction_sp(ghosttsn)
-		@time ghostdriverarcs = () #A=ghost_driverarcset, A_minus=ghost_A_minus_d, A_plus=ghost_A_plus_d);
+		@time ghost_driverarcset, ghost_driverarcset_space, ghost_availabledrivers, ghost_A_plus_d, ghost_A_minus_d, ghost_closelocs = driverarcreduction_sp(ghosttsn)
+		@time ghostdriverarcs = (A=ghost_driverarcset, A_minus=ghost_A_minus_d, A_plus=ghost_A_plus_d); #A=ghost_driverarcset, A_minus=ghost_A_minus_d, A_plus=ghost_A_plus_d);
 	end
 
     #Format arc sets

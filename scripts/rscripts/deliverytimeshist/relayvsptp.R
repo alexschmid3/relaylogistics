@@ -41,8 +41,8 @@ update_geom_defaults("text", list(size = 24))
 
 dev.new(width=8, height=4)
 
-png(file="relaydelivtimes.png",
-    width=2600, height=1200)
+png(file="relaydelivtimes_raw.png",
+    width=2400, height=1800)
 
 relaydata %>%
   ggplot(aes(x=deliverytime, color=datalabel, fill=datalabel)) +
@@ -57,8 +57,8 @@ relaydata %>%
   #ylim(0, 100)+
   labs(x="Delivery time (hours)", y="Density") +
   scale_x_continuous(limits=c(0,150)) +
-  theme(legend.position="none") +
-  #theme(legend.position="bottom", legend.text = element_text(size = 18)) +
+  #theme(legend.position="none") +
+  theme(legend.position="bottom", legend.text = element_text(size = 70)) +
   theme(axis.text = element_text(size = 60)) +
   theme(axis.title = element_text(size = 75))
 
@@ -66,6 +66,9 @@ dev.off()
 
 
 #---------------------------------------------------------------#
+
+ptpdata <- read_csv('ex4_exp64_ptp_rundate2024-06-13_deliverytimes.csv')
+
 
 ptpdata1 <- ptpdata %>% select(id, order, actual)
 vec1 <- rep("Actual delivery time", nrow(ptpdata1))
@@ -92,7 +95,7 @@ update_geom_defaults("text", list(size = 24))
 dev.new(width=8, height=4)
 
 png(file="ptpdelivtimes_raw.png",
-    width=2600, height=1300)
+    width=2400, height=1800)
 
 ptpdata %>%
   ggplot(aes(x=deliverytime, color=datalabel, fill=datalabel)) +

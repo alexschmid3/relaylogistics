@@ -20,7 +20,9 @@ function finddriversets_online(T_off_online, driverStartNodes, lasttimehome)
 	end
 	for d in drivers
 		#If the driver has a start node, add them to the proper group
-		if typeof(currstate.driverStartNodes[d])==Int
+		if runtype == "static"
+			push!(driversingroup[driverHomeLocs[d], drivershift[d], driverStartNodes[d], lasttimehome[d]], d)
+		elseif typeof(currstate.driverStartNodes[d])==Int
 			push!(driversingroup[driverHomeLocs[d], drivershift[d], driverStartNodes[d], lasttimehome[d]], d)
 		end
 		#If the driver's start node is a placeholder for after the end of the horizon, then ignore the driver this iteration

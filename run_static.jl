@@ -34,8 +34,8 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters from file
-experiment_id = 1874 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/table2.csv"
+experiment_id = 850 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+paramsfilename = "data/table3.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
 ex = expparms[experiment_id, 2]		
@@ -213,7 +213,7 @@ arcLookup, nodesLookup, arcfinishtime, dummyarc, allarcs = calcarcfinishtimes()
 #----------------------------------CREATE ARC SETS-----------------------------------# 
 
 basetsn = (arcsbetween=arcsbetween, arcsbetween_back=arcsbetween_back, numlocs=numlocs, arcLookup=arcLookup, nodesLookup=nodesLookup, nodes=extendednodes, arcs=extendedarcs, numarcs=numarcs, numnodes=numnodes, horizon=horizon, tstep=tstep, extendednumarcs=extendednumarcs, extendednumnodes=extendednumnodes, A_minus=A_minus, A_plus=A_plus)
-ghosttsn = createghostTSN(maxnightsaway)
+ghosttsn = createghostTSN(maxnightsaway+2)
 
 primaryarcs, extendedtimearcs, orderarcs, driverarcs, hasdriverarcs, ghostdriverarcs = initializearcsets(A_space, A_plus, A_minus, orders, Origin, Destination, driverStartNodes, T_off)
 R_off = findreturnhomearcsets(driverarcs, T_off_constr)
@@ -221,7 +221,7 @@ magarcs = initializeorderarcsets(k, orders, originloc, destloc, Origin, Destinat
 driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = initializejourneymodel(maxnightsaway, T_off, T_on_0)
 nocuts=(vars=[], rhs=[], coeff=[])
 
-#=
+
 include("scripts/onlineimplementation/initializecurrentstatearcs.jl")
 lasttimehome = [0 for d in drivers]
 driversets, driversingroup, numdrivergroups, drivergroupnum, drivergroupdesc, numeffshifts, effshift, shiftsincluded = finddriversets_online(T_off, driverStartNodes, lasttimehome) 
@@ -237,21 +237,21 @@ currstate = (m_0=m_0, m_end=m_end, trucksintransit=trucksintransit, orders=order
     lasttimehome=lasttimehome)
 
 journeystart = time()
-numfragments, fragmentscontaining, fragmentarcs, F_plus_g, F_minus_g, N_flow_g = initializedriversetjourneys(currstate, driversets, drivergroupnum, driversingroup, drivergroupdesc, driverarcs, ghostdriverarcs)
+numfragments, fragmentscontaining, fragmentarcs, F_plus_g, F_minus_g, N_flow_g = initializedriversetjourneys(currstate, driversets, drivergroupnum, driversingroup, drivergroupdesc, driverarcs, ghostdriverarcs, 1)
 journeytime = time() - journeystart
 
 fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = getfragmentstats(currstate, driversets, numfragments, fragmentarcs)
 
 currarcs = (orderarcs=orderarcs, driverarcs=driverarcs, hasdriverarcs=hasdriverarcs, magarcs=magarcs); #, R_off=R_off)
 currfragments = (driversets=driversets, driversingroup=driversingroup, numdrivergroups=numdrivergroups, drivergroupnum=drivergroupnum, drivergroupdesc=drivergroupdesc, numeffshifts=numeffshifts, effshift=effshift, shiftsincluded=shiftsincluded,numfragments=numfragments, fragmentscontaining=fragmentscontaining, fragmentarcs=fragmentarcs, F_plus_g=F_plus_g, F_minus_g=F_minus_g, N_flow_g=N_flow_g, fragdrivinghours=fragdrivinghours, fragworkinghours=fragworkinghours, workingfragments=workingfragments, fragmentnightsaway=fragmentnightsaway);
-=#
+
 
 println("Nights away = ", maxnightsaway)
 println("Journeys = ", sum(sum(numfragments[l,s] for s in 1:numeffshifts) for l in 1:numlocs))
 sum(sum(numfragments[l,s] for s in 1:numeffshifts) for l in 1:numlocs)
 
 #---------------------------------------SOLVE----------------------------------------# 
-#=
+
 if solutionmethod == "lp"
 
 	lp_obj, x_lp, z_lp, lp_time, lp_bound = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts, nocuts)
@@ -333,7 +333,7 @@ elseif solutionmethod == "lpcuts"
 
 elseif (solutionmethod == "ip") #& (knapsackcuttype == 0)
 
-	lp_obj, x_lp, z_lp, lp_time, lp_bound = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts, nocuts)
+	lp_obj, x_lp, z_lp, lp_time, lp_bound, lpbasisarcs = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts, nocuts)
 	timeslist = (mp=lp_time, pp=0, pppar=0, ip=0, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 0, "LP", lp_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_lp, z_lp)
 
@@ -532,5 +532,5 @@ elseif solutionmethod == "cg"
 end
 
 #-----------------------------------------------------------------------------#
-=#
+
 println("Done!")

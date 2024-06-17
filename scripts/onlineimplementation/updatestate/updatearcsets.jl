@@ -5,7 +5,8 @@ function updatedriverarcsets()
 		#No need to update because the shift schedule didn't change
 		1+1
 	else
-		throw(DomainError(timedelta, "timedelta not valid: must be multiple of 24"))
+		1+1
+		#throw(DomainError(timedelta, "timedelta not valid: must be multiple of 24"))
 	end
 
 end
