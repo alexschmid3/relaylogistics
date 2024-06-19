@@ -46,7 +46,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters from file
-experiment_id = 24 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 paramsfilename = "data/driverstaffing.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 11]  # Drivers = homogeneous, heterogeneous
@@ -67,10 +67,11 @@ println("Experiment = ", experiment_id)
 becomesavailablehours = expparms[experiment_id, 15]	
 onlineweeks = expparms[experiment_id, 16]
 timedelta = expparms[experiment_id, 17]
-onlinetimehorizon = 24*7*onlineweeks		  	    			# Length of the online time horizon in hours (ex. run 1 week of online iterations), should be multiple of timedelta
-numiterations_online = convert(Int64, onlinetimehorizon/timedelta)		
+onlinetimehorizon = convert(Int64, round(24*7*onlineweeks,digits=0))			  	    # Length of the online time horizon in hours (ex. run 1 week of online iterations), should be multiple of timedelta
+numiterations_online = convert(Int64, round(onlinetimehorizon/timedelta,digits=0))		
 pruneorderarcs_flag = 1								# 1 = prune order arcs that are no longer usable after each online iteration, 0 = do not
 maxorderdelayhours = onlinetimehorizon * 2
+writedeliverytimes_flag = 0
 
 #Driver movement parameters
 maxnightsaway = expparms[experiment_id, 18]
@@ -92,7 +93,7 @@ else
 end
 
 #Definition of the instance 
-iterationordercap = ordercapslist[ex]					 
+iterationordercap = 10000 #ordercapslist[ex]					 
 maxlocs = loclist[ex]
 maxdrivers1 = round(driverlist[ex] / basedriverfactor, digits = 0)	
 maxdrivers2 = round(driverlist[ex] / driverfactor, digits = 0)							 

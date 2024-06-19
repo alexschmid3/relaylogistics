@@ -122,8 +122,11 @@ function updatedriversshifts(currentdatetime, weekstart, T_off_Monday8am)
 		for hr in T_off_Monday8am[ss]
 			if wklydelta <= hr <= wklydelta+horizon + 2*24*maxnightsaway
 				push!(shiftedshift, hr - wklydelta)
+			elseif hr < wklydelta
+				push!(shiftedshift, hr - wklydelta + 168)
 			end
 		end
+		shiftedshift = sort(shiftedshift)
 		currstate.T_off[ss] = shiftedshift
 	end
 

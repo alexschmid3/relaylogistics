@@ -296,6 +296,7 @@ function solvejourneymodel_relayred(lprelax_flag, opt_gap, arcspassed, currentda
 	#--------------------------------------------#
 
 	optimize!(ip)
+	objective_value(ip)
 
 	println("Solve time = ", solve_time(ip), " seconds")
 
@@ -325,14 +326,16 @@ end
 
 #=
 
+include("scripts/visualizations/timespacenetwork.jl")
+
 myarcs, usedarcs = [], []
-for j in 1:currfragments.numfragments[(46, 2, 46, -168)]
-	myarcs = union(myarcs, currfragments.fragmentarcs[46, 2, 46, -168, j])
+for j in 1:currfragments.numfragments[(2,1,2,0)]
+	myarcs = union(myarcs, currfragments.fragmentarcs[2,1,2,0, j])
 end
-for j in 1:currfragments.numfragments[46, 2, 46, -168]
-	if value(z[(46, 2, 46, -168), j]) > 1e-4
+for j in 1:currfragments.numfragments[2,1,2,0]
+	if value(z[(2,1,2,0), j]) > 1e-4
 		println(j)
-		usedarcs = union(usedarcs, currfragments.fragmentarcs[46, 2, 46, -168, j])
+		usedarcs = union(usedarcs, currfragments.fragmentarcs[2,1,2,0, j])
 	end
 end
 timespacenetwork("outputs/viz/aaa_all.png", [myarcs, usedarcs], [(150,150,150),(0,0,0)], [3,6,6], ["solid","solid","solid"], [0,0,0], 2400, 1800)

@@ -659,11 +659,14 @@ function pullorders_rivigoroutes(lh_filename, vnt_filename, maxorders, orderwind
 		psseq = split(psseq_raw, "-")
 		orderid = data_agg[i,1]
 		if orderid in includelist
+
 			pickup_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,6][i])
 			deliv_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,5][i])
 
-			#start_avail_ts = floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)			
-			start_avail_ts = floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8) + timedelta*floor(Dates.Millisecond(floor(Dates.value(pickup_ts - (floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)))/timedelta)), Dates.Hour)
+			#start_avail_ts = floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)	
+			avail_day_8am = floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)		
+			#start_avail_ts = avail_day_8am + timedelta*floor(Dates.Millisecond(floor(Dates.value(pickup_ts - (floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)))/timedelta)), Dates.Hour)
+			start_avail_ts = avail_day_8am + 48*floor(Dates.Millisecond(floor(Dates.value(pickup_ts - (floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)))/48)), Dates.Hour)
 			end_avail_ts = start_avail_ts + Dates.Day(1)
 			start_due_ts = floor(deliv_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)
 			end_due_ts = start_due_ts + Dates.Day(1) 
@@ -687,6 +690,9 @@ function pullorders_rivigoroutes(lh_filename, vnt_filename, maxorders, orderwind
 			if (orig != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & (intermedlocs_flag == 0) & (orderwindowstart <= start_avail_ts <= orderwindowend) 
 			#if (orig != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & (orderwindowstart <= start_avail_ts <= orderwindowend) & (orderwindowstart <= end_due_ts <= orderwindowend ) & (start_avail_ts <= start_due_ts)
 
+				df = DataFrame(timedelta=[timedelta], currtime=[currentdatetime], id=[orderid], orderwindowstart=[orderwindowstart], start_avail_ts=[start_avail_ts], orderwindowend=[orderwindowend])
+				CSV.write(string(csvfoldername, runid, "_orders.csv"), df, append=true)
+			
 				start_avail = (start_avail_ts - currentdatetime) / (Millisecond(1) * 1000 * 3600)
 				#end_avail = (end_avail_ts - currentdatetime) / (Millisecond(1) * 1000 * 3600)
 				end_avail = horizon
@@ -767,7 +773,7 @@ function readdrivers(filename, maxdrivers1, maxdrivers2, numlocs, nodes, horizon
 
 		remaining = maxdrivers1 - adjtotal
 		if remaining < 0 
-			println("You allocated too many drivers :(")
+			println("You allocated too many drivers = $adjtotal > $maxdrivers1 :(")
 		end
 
 		for loc in randperm(numlocs)[1:convert(Int64,remaining)]
@@ -777,7 +783,7 @@ function readdrivers(filename, maxdrivers1, maxdrivers2, numlocs, nodes, horizon
 		adjusteddrivers = realdrivers
 	end
 
-	if paramsfilename == "data/driverstaffing.csv"
+	if (paramsfilename == "data/driverstaffing.csv") & (ex == 4)
 
 		flowdata = CSV.read("data/driversensitivity/flowlocations.csv", DataFrame)
 		sortedflowlocations = flowdata[:,1]

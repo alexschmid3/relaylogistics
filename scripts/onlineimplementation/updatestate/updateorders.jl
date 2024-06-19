@@ -110,10 +110,12 @@ function updateorders(x, timedelta, currentdatetime, basisarcs, currtime)
                 shortestpossible_ordermiles[totaldelta-timedelta] += distbetweenlocs[originloc[i], destloc[i]]
                 shortestpossible_delivtime[totaldelta-timedelta] += currstate.shortesttriptimes[i]
 
-				if operations == "relay"
-					writedeliverytimetofile(deliverytimefilename, currtime, i, orddeliverytime, currstate.shortesttriptimes[i])
-				elseif operations == "ptp"
-					writedeliverytimetofile(deliverytimefilename, currtime, i, orddeliverytime, arcLength_raw[originloc[i], destloc[i]])
+				if writedeliverytimes_flag == 1
+					if operations == "relay"
+						writedeliverytimetofile(deliverytimefilename, currtime, i, orddeliverytime, currstate.shortesttriptimes[i])
+					elseif operations == "ptp"
+						writedeliverytimetofile(deliverytimefilename, currtime, i, orddeliverytime, arcLength_raw[originloc[i], destloc[i]])
+					end
 				end
 			else
 				#Create new origin set
