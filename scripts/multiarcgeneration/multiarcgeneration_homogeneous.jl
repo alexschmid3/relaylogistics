@@ -192,6 +192,9 @@ function multiarcgeneration!(magarcs, hasdriverarcs)
 	@variable(smp, w[a in primaryarcs.A_space] >= 0)
 	@variable(smp, ordtime[orders])
 	@variable(smp, orderdelay[orders] >= 0)
+	if abs(driverstohire) > 1e-4
+        @variable(smp, hireat[l = 1:numlocs, s = 1:numeffshifts])
+    end
 
 	#Objective
 	if deadlines_flag == 0
@@ -237,7 +240,13 @@ function multiarcgeneration!(magarcs, hasdriverarcs)
 	end
 
 	#Driver constraints
-    @constraint(smp, driverStartingLocs[l in 1:numlocs, s in 1:numeffshifts], sum(sum(z[l,s,f] for f in F_plus_ls[l,s,n]) for n in driverSetStartNodes[l,s]) == length(driversets[l,s]))
+    if abs(driverstohire) > 1e-4
+        @constraint(smp, totalDriversHired, sum(sum(hireat[l,s] for s in 1:numeffshifts) for l in 1:numlocs) == driverstohire)
+        @constraint(smp, sameSign[l in 1:numlocs, s in 1:numeffshifts], hireat[l,s] * sign(driverstohire) >= 0)
+        @constraint(smp, driverStartingLocs[l in 1:numlocs, s in 1:numeffshifts], sum(sum(z[l,s,f] for f in F_plus_ls[l,s,n]) for n in driverSetStartNodes[l,s]) == length(driversets[l,s]) + hireat[l,s])
+	else
+        @constraint(smp, driverStartingLocs[l in 1:numlocs, s in 1:numeffshifts], sum(sum(z[l,s,f] for f in F_plus_ls[l,s,n]) for n in driverSetStartNodes[l,s]) == length(driversets[l,s]))
+    end
 	@constraint(smp, driverFlowBalance[l in 1:numlocs, s in 1:numeffshifts, n in N_flow_ls[l,s]], sum(z[l,s,f] for f in F_minus_ls[l,s,n]) - sum(z[l,s,f] for f in F_plus_ls[l,s,n]) == 0)
 
 	#Return named tuple of constraints needed for column generation

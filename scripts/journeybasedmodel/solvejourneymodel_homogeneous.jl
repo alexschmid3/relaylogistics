@@ -90,6 +90,9 @@ function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts, cuts)
     @variable(ip, w[a in primaryarcs.A_space] >= 0)
 	@variable(ip, ordtime[orders])
     @variable(ip, orderdelay[orders] >= 0)    #only used when deadlines turned on
+    if abs(driverstohire) > 1e-4
+        @variable(ip, hireat[l = 1:numlocs, s = 1:numeffshifts], Int)
+    end
   
 	#Objective
 	if deadlines_flag == 0
@@ -136,7 +139,13 @@ function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts, cuts)
 	end
 
 	#Driver constraints
-	@constraint(ip, driverStartingLocs[l in 1:numlocs, s in 1:numeffshifts], sum(sum(z[l,s,f] for f in F_plus_ls[l,s,n]) for n in driverSetStartNodes[l,s]) == length(driversets[l,s]))
+    if abs(driverstohire) > 1e-4
+        @constraint(ip, totalDriversHired, sum(sum(hireat[l,s] for s in 1:numeffshifts) for l in 1:numlocs) == driverstohire)
+        @constraint(ip, sameSign[l in 1:numlocs, s in 1:numeffshifts], hireat[l,s] * sign(driverstohire) >= 0)
+        @constraint(ip, driverStartingLocs[l in 1:numlocs, s in 1:numeffshifts], sum(sum(z[l,s,f] for f in F_plus_ls[l,s,n]) for n in driverSetStartNodes[l,s]) == length(driversets[l,s]) + hireat[l,s])
+	else
+        @constraint(ip, driverStartingLocs[l in 1:numlocs, s in 1:numeffshifts], sum(sum(z[l,s,f] for f in F_plus_ls[l,s,n]) for n in driverSetStartNodes[l,s]) == length(driversets[l,s]))	
+    end
 	@constraint(ip, driverFlowBalance[l in 1:numlocs, s in 1:numeffshifts, n in N_flow_ls[l,s]], sum(z[l,s,f] for f in F_minus_ls[l,s,n]) - sum(z[l,s,f] for f in F_plus_ls[l,s,n]) == 0)
 
 	optimize!(ip)
@@ -161,6 +170,16 @@ function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts, cuts)
         totalrepomiles = sum(u[a]*(value(w[a]) ) for a in primaryarcs.A_space) 
         totaldelay = sum((value(ordtime[i]) - shortesttriptimes[i])/shortesttriptimes[i] for i in orders)
         totalordertime = sum(value(ordtime[i]) for i in orders)
+    end
+
+    #Report on hiring
+    if abs(driverstohire) > 1e-4
+        df = DataFrame(
+            loc = [i for i in 1:numlocs],
+            originaldrivers = [sum(length(driversets[l,s]) for s in 1:numeffshifts) for l in 1:numlocs],
+            hired = [sum(value(hireat[l,s]) for s in 1:numeffshifts) for l in 1:numlocs]
+        )
+        CSV.write(string("outputs/driverhiring/exp", experiment_id,"_hiringdecisions.csv"), df)
     end
     
 	#Find the basis arcs

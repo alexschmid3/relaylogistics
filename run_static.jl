@@ -34,8 +34,8 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters from file
-experiment_id = 850 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/table3.csv"
+experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+paramsfilename = "data/staffingdecisions.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
 ex = expparms[experiment_id, 2]		
@@ -50,7 +50,7 @@ maxweeklydriverhours = expparms[experiment_id, 11]
 lambda2 = expparms[experiment_id, 12]
 runtype = "static"
 operations = "relay" 					   # "ptp" or "relay"
-ptpvsrelay = 0
+ptpvsrelay = 1
 println("Experiment = ", experiment_id)
 
 #Manual parameters for response/appendix experiments
@@ -62,7 +62,7 @@ if formulation == "heterogeneous"
 	finallegtimepenalty = 0.70					# Time/delay penalty assessed for orders that finish beyond the planning horizon
 	deadlineasmultipleofshortestpath = 2
 elseif formulation == "homogeneous"
-	csvfoldername = string("outputs/table3/")
+	csvfoldername = string("outputs/driverhiring/")
 	deadlines_flag = 0
 	finallegdistancepenalty = 0.40 			    # Distance penalty assessed for orders that finish beyond the planning horizon
 	finallegtimepenalty = 0.30					# Time/delay penalty assessed for orders that finish beyond the planning horizon
@@ -96,6 +96,7 @@ else
 	knapsackcuts_flag = 0
 end
 mip_focus = expparms[experiment_id, 23]  
+driverstohire = expparms[experiment_id, 24]  
 
 #Transform date
 weekstart = DateTime(weekstart) + Dates.Hour(8)
@@ -214,19 +215,7 @@ arcLookup, nodesLookup, arcfinishtime, dummyarc, allarcs = calcarcfinishtimes()
 
 basetsn = (arcsbetween=arcsbetween, arcsbetween_back=arcsbetween_back, numlocs=numlocs, arcLookup=arcLookup, nodesLookup=nodesLookup, nodes=extendednodes, arcs=extendedarcs, numarcs=numarcs, numnodes=numnodes, horizon=horizon, tstep=tstep, extendednumarcs=extendednumarcs, extendednumnodes=extendednumnodes, A_minus=A_minus, A_plus=A_plus)
 ghosttsn = createghostTSN(maxnightsaway+2)
-
-primaryarcs, extendedtimearcs, orderarcs, driverarcs, hasdriverarcs, ghostdriverarcs = initializearcsets(A_space, A_plus, A_minus, orders, Origin, Destination, driverStartNodes, T_off)
-R_off = findreturnhomearcsets(driverarcs, T_off_constr)
-magarcs = initializeorderarcsets(k, orders, originloc, destloc, Origin, Destination, shortesttriptimes)
-driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = initializejourneymodel(maxnightsaway, T_off, T_on_0)
-nocuts=(vars=[], rhs=[], coeff=[])
-
-
-include("scripts/onlineimplementation/initializecurrentstatearcs.jl")
 lasttimehome = [0 for d in drivers]
-driversets, driversingroup, numdrivergroups, drivergroupnum, drivergroupdesc, numeffshifts, effshift, shiftsincluded = finddriversets_online(T_off, driverStartNodes, lasttimehome) 
-basetsn = (arcsbetween=arcsbetween, arcsbetween_back=arcsbetween_back, numlocs=numlocs, arcLookup=arcLookup, nodesLookup=nodesLookup, nodes=extendednodes, arcs=extendedarcs, numarcs=numarcs, numnodes=numnodes, horizon=horizon, tstep=tstep, extendednumarcs=extendednumarcs, extendednumnodes=extendednumnodes, A_minus=A_minus, A_plus=A_plus)
-ghosttsn = createghostTSN(maxnightsaway)
 
 currstate = (m_0=m_0, m_end=m_end, trucksintransit=trucksintransit, orders=orders, 
     Origin=Origin, Destination=Destination, driversintransit=driversintransit, N_flow_d=N_flow_d, N_flow_i=N_flow_i,
@@ -236,19 +225,27 @@ currstate = (m_0=m_0, m_end=m_end, trucksintransit=trucksintransit, orders=order
     driverStartNodes=driverStartNodes, driverEndNodes=driverEndNodes, assignedDrivers=assignedDrivers,
     lasttimehome=lasttimehome)
 
-journeystart = time()
-numfragments, fragmentscontaining, fragmentarcs, F_plus_g, F_minus_g, N_flow_g = initializedriversetjourneys(currstate, driversets, drivergroupnum, driversingroup, drivergroupdesc, driverarcs, ghostdriverarcs, 1)
-journeytime = time() - journeystart
+primaryarcs, extendedtimearcs, orderarcs, driverarcs, hasdriverarcs, ghostdriverarcs = initializearcsets(A_space, A_plus, A_minus, orders, Origin, Destination, driverStartNodes, T_off)
+R_off = findreturnhomearcsets(driverarcs, T_off_constr)
+magarcs = initializeorderarcsets(k, orders, originloc, destloc, Origin, Destination, shortesttriptimes)
+driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = initializejourneymodel(maxnightsaway, T_off, T_on_0)
+nocuts=(vars=[], rhs=[], coeff=[])
 
-fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = getfragmentstats(currstate, driversets, numfragments, fragmentarcs)
+#include("scripts/onlineimplementation/initializecurrentstatearcs.jl")
+#driversets, driversingroup, numdrivergroups, drivergroupnum, drivergroupdesc, numeffshifts, effshift, shiftsincluded = finddriversets_online(T_off, driverStartNodes, lasttimehome) 
+#basetsn = (arcsbetween=arcsbetween, arcsbetween_back=arcsbetween_back, numlocs=numlocs, arcLookup=arcLookup, nodesLookup=nodesLookup, nodes=extendednodes, arcs=extendedarcs, numarcs=numarcs, numnodes=numnodes, horizon=horizon, tstep=tstep, extendednumarcs=extendednumarcs, extendednumnodes=extendednumnodes, A_minus=A_minus, A_plus=A_plus)
+#ghosttsn = createghostTSN(maxnightsaway)
 
-currarcs = (orderarcs=orderarcs, driverarcs=driverarcs, hasdriverarcs=hasdriverarcs, magarcs=magarcs); #, R_off=R_off)
-currfragments = (driversets=driversets, driversingroup=driversingroup, numdrivergroups=numdrivergroups, drivergroupnum=drivergroupnum, drivergroupdesc=drivergroupdesc, numeffshifts=numeffshifts, effshift=effshift, shiftsincluded=shiftsincluded,numfragments=numfragments, fragmentscontaining=fragmentscontaining, fragmentarcs=fragmentarcs, F_plus_g=F_plus_g, F_minus_g=F_minus_g, N_flow_g=N_flow_g, fragdrivinghours=fragdrivinghours, fragworkinghours=fragworkinghours, workingfragments=workingfragments, fragmentnightsaway=fragmentnightsaway);
+#journeystart = time()
+#numfragments, fragmentscontaining, fragmentarcs, F_plus_g, F_minus_g, N_flow_g = initializedriversetjourneys(currstate, driversets, drivergroupnum, driversingroup, drivergroupdesc, driverarcs, ghostdriverarcs, 1)
+#journeytime = time() - journeystart
+#fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = getfragmentstats(currstate, driversets, numfragments, fragmentarcs)
 
+#currarcs = (orderarcs=orderarcs, driverarcs=driverarcs, hasdriverarcs=hasdriverarcs, magarcs=magarcs); #, R_off=R_off)
+#currfragments = (driversets=driversets, driversingroup=driversingroup, numdrivergroups=numdrivergroups, drivergroupnum=drivergroupnum, drivergroupdesc=drivergroupdesc, numeffshifts=numeffshifts, effshift=effshift, shiftsincluded=shiftsincluded,numfragments=numfragments, fragmentscontaining=fragmentscontaining, fragmentarcs=fragmentarcs, F_plus_g=F_plus_g, F_minus_g=F_minus_g, N_flow_g=N_flow_g, fragdrivinghours=fragdrivinghours, fragworkinghours=fragworkinghours, workingfragments=workingfragments, fragmentnightsaway=fragmentnightsaway);
 
-println("Nights away = ", maxnightsaway)
-println("Journeys = ", sum(sum(numfragments[l,s] for s in 1:numeffshifts) for l in 1:numlocs))
-sum(sum(numfragments[l,s] for s in 1:numeffshifts) for l in 1:numlocs)
+#println("Nights away = ", maxnightsaway)
+#println("Journeys = ", sum(sum(numfragments[l,s] for s in 1:numeffshifts) for l in 1:numlocs))
 
 #---------------------------------------SOLVE----------------------------------------# 
 
