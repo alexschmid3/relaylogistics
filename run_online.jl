@@ -249,7 +249,8 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 	updatedriverlocations(currentdatetime, driverarcstaken);
 	updatedriversshifts(currentdatetime, weekstart, T_off_Monday8am);
 	updatetrucks(timedelta, currentdatetime, weekstart, x_ip, y_ip, basisarcs);
-	updatedriverarcsets();
+	newghostdriverarcs = updatedriverarcsets();
+	global currarcs = (orderarcs=currarcs.orderarcs, driverarcs=currarcs.driverarcs, hasdriverarcs=currarcs.hasdriverarcs, magarcs=currarcs.magarcs, ghostdriverarcs=newghostdriverarcs) 
 
 	#=myarcs = [a for a in currarcs.driverarcs.A[driverHomeLocs[7],drivershift[7]]]
 	include("scripts/visualizations/timespacenetwork.jl")

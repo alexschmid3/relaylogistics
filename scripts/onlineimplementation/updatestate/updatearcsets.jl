@@ -3,9 +3,11 @@ function updatedriverarcsets()
 
 	if mod(timedelta,24) == 0
 		#No need to update because the shift schedule didn't change
-		1+1
+		return currarcs.ghostdriverarcs
 	else
-		1+1
+		ghost_driverarcset, ghost_driverarcset_space, ghost_availabledrivers, ghost_A_plus_d, ghost_A_minus_d, ghost_closelocs = driverarcreduction_sp(ghosttsn)
+		newghostdriverarcs = (A=ghost_driverarcset, A_minus=ghost_A_minus_d, A_plus=ghost_A_plus_d);
+		return newghostdriverarcs
 		#throw(DomainError(timedelta, "timedelta not valid: must be multiple of 24"))
 	end
 
@@ -17,8 +19,8 @@ function updatedriverjourneys(enumeratestandardjourneys_flag)
 
 	#Create driver sets and journeys
     @time driversets, driversingroup, numdrivergroups, drivergroupnum, drivergroupdesc, numeffshifts, effshift, shiftsincluded = finddriversets_online(currstate.T_off, currstate.driverStartNodes, currstate.lasttimehome) 
-	@time numfragments, fragmentscontaining, fragmentarcs, F_plus_g, F_minus_g, N_flow_g = initializedriversetjourneys(currstate, driversets, drivergroupnum, driversingroup, drivergroupdesc, currarcs.driverarcs, currarcs.ghostdriverarcs, enumeratestandardjourneys_flag)
-	@time fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = getfragmentstats(currstate, driversets, numfragments, fragmentarcs)
+	@time numfragments, fragmentscontaining, fragmentarcs, F_plus_g, F_minus_g, N_flow_g = initializedriversetjourneys(driversets, drivergroupnum, driversingroup, drivergroupdesc, currarcs.driverarcs, currarcs.ghostdriverarcs, enumeratestandardjourneys_flag)
+	@time fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = getfragmentstats(driversets, numfragments, fragmentarcs)
 
 	#=
 	for item in currfragments.driversets
@@ -38,7 +40,6 @@ function updatedriverjourneys(enumeratestandardjourneys_flag)
 	for ky in driversets
 		currfragments.fragments[ky] = [j for j in 1:numfragments[ky]]
 	end
-
 
 	newfragments = (#driversets=driversets, driversingroup=driversingroup, numdrivergroups=numdrivergroups, drivergroupnum=drivergroupnum, 
                 #drivergroupdesc=drivergroupdesc, numeffshifts=numeffshifts, 

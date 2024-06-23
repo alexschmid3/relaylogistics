@@ -344,7 +344,7 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function createfragmentsets_online(currstate, hl, ss, sn, lth, drivergroupnum, driversingroup, drivergroupdesc, driverarcs, ghostdriverarcs, odpairs, matchabletrips, enumeratestandardjourneys_flag)
+function createfragmentsets_online(hl, ss, sn, lth, drivergroupnum, driversingroup, drivergroupdesc, driverarcs, ghostdriverarcs, odpairs, matchabletrips, enumeratestandardjourneys_flag)
 	                                  
 	journeys = []
 
@@ -797,6 +797,12 @@ function createfragmentsets_online(currstate, hl, ss, sn, lth, drivergroupnum, d
 		myarcs = union(myarcs, item)
 	end
 	timespacenetwork("outputs/viz/aaa_all.png", [myarcs], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
+
+	myarcs = []
+	for item in journeys
+		myarcs = union(myarcs, item)
+	end
+	timespacenetwork("outputs/viz/aaa_all.png", [myarcs], [(150,150,150)], [3], ["solid"], [0], 2400, 1800)
 	=#
 
 	time_extended = time() - starttime_extended 
@@ -838,9 +844,9 @@ end
 
 #-----------------------------------------------------------------------------------------#
 
-function initializedriversetjourneys(currstate, driversets, drivergroupnum, driversingroup, drivergroupdesc, driverarcs, ghostdriverarcs, enumeratestandardjourneys_flag)
+function initializedriversetjourneys(driversets, drivergroupnum, driversingroup, drivergroupdesc, driverarcs, ghostdriverarcs, enumeratestandardjourneys_flag)
 		
-	#(hl,ss,sn,lth) = (1, 1, 309, -12) driversets[1]
+	#(hl,ss,sn,lth) =  (1, 1, 1, 0) driversets[1]
 	numfragments = Dict()
 	fragmentscontaining = Dict()
 	fragmentarcs = Dict()
@@ -869,7 +875,7 @@ function initializedriversetjourneys(currstate, driversets, drivergroupnum, driv
             push!(N_flow_g[hl,ss,sn,lth], n)
         end
 
-		journeys, time_standard, time_extended = createfragmentsets_online(currstate, hl,ss,sn,lth, drivergroupnum, driversingroup, drivergroupdesc, driverarcs, ghostdriverarcs, odpairs, matchabletrips, enumeratestandardjourneys_flag)
+		journeys, time_standard, time_extended = createfragmentsets_online(hl,ss,sn,lth, drivergroupnum, driversingroup, drivergroupdesc, driverarcs, ghostdriverarcs, odpairs, matchabletrips, enumeratestandardjourneys_flag)
 		totalstandardtime += time_standard
 		totalextendedtime += time_extended
 
@@ -904,7 +910,7 @@ end
 
 #-----------------------------------------------------------------------------------------#
 
-function getfragmentstats(currstate, driversets, numfragments, fragmentarcs)
+function getfragmentstats(driversets, numfragments, fragmentarcs)
 
     fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = Dict(), Dict(), Dict(), Dict()
 
@@ -963,9 +969,9 @@ function initializecurrentstatearcs(currstate, enumeratestandardjourneys_flag)
     #Create driver sets and journeys
     @time driversets, driversingroup, numdrivergroups, drivergroupnum, drivergroupdesc, numeffshifts, effshift, shiftsincluded = finddriversets_online(currstate.T_off, currstate.driverStartNodes, currstate.lasttimehome) 
 	startofjtime = time()
-	numfragments, fragmentscontaining, fragmentarcs, F_plus_g, F_minus_g, N_flow_g = initializedriversetjourneys(currstate, driversets, drivergroupnum, driversingroup, drivergroupdesc, driverarcs, ghostdriverarcs, enumeratestandardjourneys_flag)
+	numfragments, fragmentscontaining, fragmentarcs, F_plus_g, F_minus_g, N_flow_g = initializedriversetjourneys(driversets, drivergroupnum, driversingroup, drivergroupdesc, driverarcs, ghostdriverarcs, enumeratestandardjourneys_flag)
 	journeytime = time() - startofjtime
-	@time fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = getfragmentstats(currstate, driversets, numfragments, fragmentarcs)
+	@time fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = getfragmentstats(driversets, numfragments, fragmentarcs)
 
 	fragments = Dict()
 	for item in driversets

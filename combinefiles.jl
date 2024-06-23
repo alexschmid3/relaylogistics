@@ -1,7 +1,7 @@
 
 using CSV, DataFrames
 
-figuredirectory = string("outputs/heatmapdata/heatmap1/")
+figuredirectory = string("outputs/online/stability/")
 
 #Get list of files
 filelist = readdir(figuredirectory)
@@ -27,12 +27,13 @@ for t in filetypes
 
 	#Combine files and save to combofile
 	for file in dataDict[t]
+		filenum = file[4:findfirst("_", file)[1]-1]
 		#Add all rows (including header) from first file
 		if file == dataDict[t][1]
 			open(string(figuredirectory, "/", file)) do input
 			    open(combofile, "a") do output
 			        for line in eachline(input)
-			            println(output, line)
+			            println(output, string(line))
 			        end
 			    end
 			end
@@ -41,7 +42,7 @@ for t in filetypes
 			open(string(figuredirectory, "/", file)) do input
 			    open(combofile, "a") do output
 			        for line in Iterators.drop(eachline(input), 1)
-			            println(output, line)
+			            println(output, string(line))
 			        end
 			    end
 			end

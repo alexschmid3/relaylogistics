@@ -112,6 +112,8 @@ function updatedriversshifts(currentdatetime, weekstart, T_off_Monday8am)
 	#Update the time 
 	wklydelta = mod(Dates.value(Dates.Hour(currentdatetime - weekstart)), 168)
 
+	println("Weekly delta = $wklydelta")
+
 	#====================================================#
 
 	#UPDATE DRIVER SCHEDULES

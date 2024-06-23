@@ -242,9 +242,9 @@ nocuts=(vars=[], rhs=[], coeff=[])
 #ghosttsn = createghostTSN(maxnightsaway)
 
 #journeystart = time()
-#numfragments, fragmentscontaining, fragmentarcs, F_plus_g, F_minus_g, N_flow_g = initializedriversetjourneys(currstate, driversets, drivergroupnum, driversingroup, drivergroupdesc, driverarcs, ghostdriverarcs, 1)
+#numfragments, fragmentscontaining, fragmentarcs, F_plus_g, F_minus_g, N_flow_g = initializedriversetjourneys(driversets, drivergroupnum, driversingroup, drivergroupdesc, driverarcs, ghostdriverarcs, 1)
 #journeytime = time() - journeystart
-#fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = getfragmentstats(currstate, driversets, numfragments, fragmentarcs)
+#fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = getfragmentstats(driversets, numfragments, fragmentarcs)
 
 #currarcs = (orderarcs=orderarcs, driverarcs=driverarcs, hasdriverarcs=hasdriverarcs, magarcs=magarcs); #, R_off=R_off)
 #currfragments = (driversets=driversets, driversingroup=driversingroup, numdrivergroups=numdrivergroups, drivergroupnum=drivergroupnum, drivergroupdesc=drivergroupdesc, numeffshifts=numeffshifts, effshift=effshift, shiftsincluded=shiftsincluded,numfragments=numfragments, fragmentscontaining=fragmentscontaining, fragmentarcs=fragmentarcs, F_plus_g=F_plus_g, F_minus_g=F_minus_g, N_flow_g=N_flow_g, fragdrivinghours=fragdrivinghours, fragworkinghours=fragworkinghours, workingfragments=workingfragments, fragmentnightsaway=fragmentnightsaway);
