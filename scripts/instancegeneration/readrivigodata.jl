@@ -754,10 +754,28 @@ function readdrivers(filename, maxdrivers1, maxdrivers2, numlocs, nodes, horizon
 		assignedDrivers[l] = []
 	end
 
+	if basedriverfactor != -1
+		pilotscolumn = 4
+	elseif driverfactor == -75
+		pilotscolumn = 7
+	elseif driverfactor == -50
+		pilotscolumn = 8
+	elseif driverfactor == -25
+		pilotscolumn = 9
+	elseif driverfactor == 0
+		pilotscolumn = 10
+	elseif driverfactor == 25
+		pilotscolumn = 11
+	elseif driverfactor == 50
+		pilotscolumn = 12
+	elseif driverfactor == 75
+		pilotscolumn = 13
+	end
+
 	totaldrivers = 0
 	for i in 1:size(data)[1]
 		loc = data[i,2]
-		drivers = data[i,4]
+		drivers = data[i,pilotscolumn]
 		if loc <= numlocs
 			totaldrivers += drivers
 			realdrivers[loc] = drivers
@@ -783,7 +801,7 @@ function readdrivers(filename, maxdrivers1, maxdrivers2, numlocs, nodes, horizon
 		adjusteddrivers = realdrivers
 	end
 
-	if (paramsfilename == "data/driverstaffing.csv") & (ex == 4)
+	if (paramsfilename == "data/driverstaffing.csv") & (ex == 4) & (basedriverfactor != -1)
 
 		flowdata = CSV.read("data/driversensitivity/flowlocations.csv", DataFrame)
 		sortedflowlocations = flowdata[:,1]
@@ -833,7 +851,12 @@ function readdrivers(filename, maxdrivers1, maxdrivers2, numlocs, nodes, horizon
 		println("Total hybrid = ", sum(adjusteddrivers[l] for l in sortedflowlocations[14:34]))
 		println("Total corridor = ", sum(adjusteddrivers[l] for l in sortedflowlocations[1:13]))
 		println("------------------------------------------")
+	else
+		println("------------------------------------------")
+		println("Total drivers = ", sum(adjusteddrivers[l] for l in 1:numlocs))
+		println("------------------------------------------")
 	end
+	
 
 	driver = 1
 	for loc in 1:numlocs

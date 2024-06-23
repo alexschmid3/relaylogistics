@@ -95,9 +95,9 @@ end
 #Definition of the instance 
 iterationordercap = 10000 #ordercapslist[ex]					 
 maxlocs = loclist[ex]
-maxdrivers1 = round(driverlist[ex] / basedriverfactor, digits = 0)	
-maxdrivers2 = round(driverlist[ex] / driverfactor, digits = 0)							 
-numtrucks = round(trucklist[ex] / basedriverfactor, digits = 0)
+maxdrivers1 = round(driverlist[ex] / abs(basedriverfactor), digits = 0)	
+maxdrivers2 = round(driverlist[ex] / abs(driverfactor), digits = 0)							 
+numtrucks = round(trucklist[ex] / abs(basedriverfactor), digits = 0)
 randomseedval = seedlist[ex]
 Random.seed!(randomseedval)
 

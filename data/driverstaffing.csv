@@ -47,3 +47,16 @@ experiment_id,instance,method,weekstart,horizon,tstep,driverfactor,rho-value,opt
 46,1,basisip,2019-06-23,3,6,2,0,0.01,10,homogeneous,online,relay,1,72,1.714285714,12,1,0,all,2
 47,1,basisip,2019-06-23,3,6,2,0,0.01,10,homogeneous,online,relay,1,72,1.714285714,24,1,0,all,2
 48,1,basisip,2019-06-23,3,6,2,0,0.01,10,homogeneous,online,relay,1,72,1.714285714,48,1,0,all,2
+49,4,basisip,2019-06-23,3,6,8,0,0.01,10,homogeneous,online,relay,1,192,1.142857143,24,1,0,all,8
+50,4,basisip,2019-06-30,3,6,8,0,0.01,10,homogeneous,online,relay,1,192,1.142857143,24,1,0,all,8
+51,4,basisip,2019-07-07,3,6,8,0,0.01,10,homogeneous,online,relay,1,192,1.142857143,24,1,0,all,8
+52,4,basisip,2019-07-14,8,6,8,0,0.01,10,homogeneous,online,relay,1,192,1.142857143,192,1,0,all,8
+53,1,basisip,2019-06-23,3,6,2,0,0.01,10,homogeneous,online,relay,1,72,1.142857143,24,1,0,all,2
+54,1,basisip,2019-06-23,8,6,2,0,0.01,10,homogeneous,online,relay,1,192,1.142857143,192,1,0,all,2
+55,4,basisip,2019-06-23,3,6,-75,0,0.01,10,homogeneous,online,relay,1,72,2,24,1,0,all,-1
+56,4,basisip,2019-06-23,3,6,-50,0,0.01,10,homogeneous,online,relay,1,72,2,24,1,0,all,-1
+57,4,basisip,2019-06-23,3,6,-25,0,0.01,10,homogeneous,online,relay,1,72,2,24,1,0,all,-1
+58,4,basisip,2019-06-23,3,6,0,0,0.01,10,homogeneous,online,relay,1,72,2,24,1,0,all,-1
+59,4,basisip,2019-06-23,3,6,25,0,0.01,10,homogeneous,online,relay,1,72,2,24,1,0,all,-1
+60,4,basisip,2019-06-23,3,6,50,0,0.01,10,homogeneous,online,relay,1,72,2,24,1,0,all,-1
+61,4,basisip,2019-06-23,3,6,75,0,0.01,10,homogeneous,online,relay,1,72,2,24,1,0,all,-1

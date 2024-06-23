@@ -34,7 +34,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters from file
-experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+experiment_id += 8 # ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 paramsfilename = "data/staffingdecisions.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
@@ -206,6 +206,11 @@ loctruckcounter, trucksintransit = findtrucksintransit(ordersinprogress, originl
 m_0 = adjust_m_0(m_0, loctruckcounter)
 driversintransit, drivers, driverStartNodes, driverEndNodes, driverHomeLocs, assignedDrivers, N_flow_t, N_flow_d, alltimeswithinview, T_off_Monday8am, T_off, drivershift, T_off_0, T_off_constr, numshifts, T_on_0 = getdriverandshiftinfo()
 distbetweenlocs, shortesttriptimes, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr = findtraveltimesanddistances(orders, Origin, Destination)
+
+println(weekstart)
+println(sum(distbetweenlocs[originloc[i], destloc[i]] for i in orders))
+
+#=
 orderdeadline = calcorderdeadlines(shortesttriptimes)
 nodesLookup, arcLookup, A_minus, A_plus, c, extendednodes, extendednumnodes, extendedarcs, extendednumarcs, u = extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c, u, distbetweenlocs)
 Destination = extendDestination(orders, Destination, extendednodes)
@@ -529,5 +534,5 @@ elseif solutionmethod == "cg"
 end
 
 #-----------------------------------------------------------------------------#
-
+=#
 println("Done!")
