@@ -139,7 +139,7 @@ function writeresults_onlinefinal(filename, currtime)
         method = [solutionmethod],
         currtime = [currtime],
         currorders = [length(currstate.orders)],
-        totalorders = [maximum(currstate.orders)],
+        totalorders = [highestorderindex],
         orderscompleted = [maximum(currstate.orders) - length(currstate.orders)],
         totalcost = [sum(values(totalpastcost))],
         ordertrips = [sum(values(totalordertrips))],

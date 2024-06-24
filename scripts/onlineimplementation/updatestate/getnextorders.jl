@@ -14,10 +14,10 @@ function getnextorders(timedelta, currentdatetime, lh_data_file, vnt_data_file)
 	if maxneworders > 0
 
 		#orderwindowstart, orderwindowend = weekstart + Dates.Hour(totaltimedelta) + Dates.Hour(becomesavailablehours) - Dates.Hour(timedelta) + Dates.Millisecond(10), weekstart + Dates.Hour(totaltimedelta) + Dates.Hour(becomesavailablehours)
-		orderwindowstart = weekstart + Dates.Hour(totaltimedelta) + Dates.Hour(becomesavailablehours) - Dates.Hour(timedelta) + Dates.Millisecond(10)
-		orderwindowend = min(weekstart + Dates.Hour(totaltimedelta) + Dates.Hour(becomesavailablehours), weekstart + Dates.Hour(onlinetimehorizon - 48) + Dates.Hour(becomesavailablehours))
-		orderwindowend = min(weekstart + Dates.Hour(horizon) + Dates.Millisecond(10), orderwindowend)
-		numneworders, originloc_ol, destloc_ol, available_ol, duedate_ol, orderidlist_new, psseq_ol, trueorderorigins = pullorders_rivigoroutes(lh_data_file, vnt_data_file, maxneworders, orderwindowstart, orderwindowend, currentdatetime + Dates.Hour(timedelta), tstep, horizon, prearcs, numlocs, timedelta, includeorderidlist)
+		orderwindowstart = currentdatetime - Dates.Hour(timedelta) + Dates.Hour(becomesavailablehours) 
+		orderwindowend = min(currentdatetime + Dates.Hour(becomesavailablehours) - Dates.Millisecond(1), weekstart + Dates.Hour(onlinetimehorizon - 48) + Dates.Hour(becomesavailablehours) - Dates.Millisecond(1))
+		#orderwindowend = min(currentdatetime + Dates.Hour(horizon) - Dates.Millisecond(1), orderwindowend)
+		numneworders, originloc_ol, destloc_ol, available_ol, duedate_ol, orderidlist_new, psseq_ol, trueorderorigins = pullorders_rivigoroutes(lh_data_file, vnt_data_file, maxneworders, orderwindowstart, orderwindowend, currentdatetime, tstep, horizon, prearcs, numlocs, timedelta, includeorderidlist)
 		
 		for orderid in orderidlist_new
 			push!(currstate.usedorderidlist, orderid)

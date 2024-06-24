@@ -87,9 +87,11 @@ weekstart = DateTime(weekstart) + Dates.Hour(8)
 if paramsfilename == "data/driverstaffing.csv"
 	basedriverfactor = expparms[experiment_id, 21]
 	hiredriversto = expparms[experiment_id, 20]
+	timedeltaexp_flag = expparms[experiment_id, 22]
 else 
 	basedriverfactor = driverfactor
 	hiredriversto = "all"
+	timedeltaexp_flag = 0
 end
 
 #Definition of the instance 
@@ -115,6 +117,11 @@ dummyendtime = 1000									# Dummy time assigned to the "beyond the horizon" no
 driveroffdays_flag = 0
 vizflag = 0
 saveconvergencedata_flag = 1
+if timedeltaexp_flag == 1
+	ordergenerationtstep = 48
+else
+	ordergenerationtstep = timedelta
+end
 
 #Travel time calculation parameters
 excludeoutliers_flag = 1							# 0 = include outliers in travel time calculation, 1 = exclude outliers

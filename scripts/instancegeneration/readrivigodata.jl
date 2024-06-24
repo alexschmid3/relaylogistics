@@ -508,7 +508,6 @@ function generateorderlist(lh_filename, vnt_filename, ordermaxcap, numlocs)
 end
 
 #---------------------------------------------------------------------------------------#
-
 function pullorders_initrivigoroutes(lh_filename, vnt_filename, maxorders, orderwindowstart, orderwindowend, tstep, horizon, prearcs, numlocs, timedelta, includelist)
 
 	#println("--------------------------------")
@@ -555,7 +554,7 @@ function pullorders_initrivigoroutes(lh_filename, vnt_filename, maxorders, order
 			deliv_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,5][i])
 
 			#start_avail_ts = floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)			
-			start_avail_ts = floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8) + timedelta*floor(Dates.Millisecond(floor(Dates.value(pickup_ts - (floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)))/timedelta)), Dates.Hour)
+			start_avail_ts = floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8) + timedeltaexp_flag*floor(Dates.Millisecond(floor(Dates.value(pickup_ts - (floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)))/timedeltaexp_flag)), Dates.Hour)
 			end_avail_ts = start_avail_ts + Dates.Day(1)
 			start_due_ts = floor(deliv_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)
 			end_due_ts = start_due_ts + Dates.Day(1) 
@@ -579,7 +578,11 @@ function pullorders_initrivigoroutes(lh_filename, vnt_filename, maxorders, order
 			if (orig != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & (intermedlocs_flag == 0) & (orderwindowstart <= start_avail_ts <= orderwindowend) 
 			#if (orig != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & (orderwindowstart <= start_avail_ts <= orderwindowend) & (orderwindowstart <= end_due_ts <= orderwindowend ) & (start_avail_ts <= start_due_ts)
 
+				df = DataFrame(timedelta=[timedelta], currtime=[weekstart], id=[orderid], orderwindowstart=[orderwindowstart], start_avail_ts=[start_avail_ts], orderwindowend=[orderwindowend])
+				CSV.write(string(csvfoldername, runid, "_orders.csv"), df, append=true)
+
 				start_avail = (start_avail_ts - orderwindowstart) / (Millisecond(1) * 1000 * 3600)
+				start_avail = min(start_avail, horizon)
 				#println("Order $orderid, avail ts = ", start_avail_ts,", avail = ", start_avail)
 				#end_avail = (end_avail_ts - orderwindowstart) / (Millisecond(1) * 1000 * 3600)
 				end_avail = horizon
@@ -599,12 +602,15 @@ function pullorders_initrivigoroutes(lh_filename, vnt_filename, maxorders, order
 			elseif (currentLocation[orderid][1] != orig) & (orig != dest) & (currentLocation[orderid][1] != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & (intermedlocs_flag == 0) & (1 <= currentLocation[orderid][1] <= numlocs) & (orderwindowstart <= currentLocation[orderid][2] <= orderwindowend) 
 			#elseif (orig != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & (1 <= currentLocation[orderid][1] <= numlocs) & (orderwindowstart <= currentLocation[orderid][2] <= orderwindowend) & (orderwindowstart <= end_due_ts <= orderwindowend) & (start_avail_ts <= start_due_ts)
 			
-				start_avail_ts2 = floor(currentLocation[orderid][2] - Dates.Hour(8), Dates.Day) + Dates.Hour(8) + timedelta*floor(Dates.Millisecond(floor(Dates.value(currentLocation[orderid][2] - (floor(currentLocation[orderid][2] - Dates.Hour(8), Dates.Day) + Dates.Hour(8)))/timedelta)), Dates.Hour)
+				start_avail_ts2 = floor(currentLocation[orderid][2] - Dates.Hour(8), Dates.Day) + Dates.Hour(8) + timedeltaexp_flag*floor(Dates.Millisecond(floor(Dates.value(currentLocation[orderid][2] - (floor(currentLocation[orderid][2] - Dates.Hour(8), Dates.Day) + Dates.Hour(8)))/timedeltaexp_flag)), Dates.Hour)
 				start_avail = (start_avail_ts2 - orderwindowstart) / (Millisecond(1) * 1000 * 3600)
 				#end_avail = (start_avail_ts2 + Dates.Day(1) - orderwindowstart) / (Millisecond(1) * 1000 * 3600)
 				#end_avail = horizon
 				end_avail = start_avail
 
+				df = DataFrame(timedelta=[-1], currtime=[weekstart], id=[orderid], orderwindowstart=[orderwindowstart], start_avail_ts=[start_avail_ts], orderwindowend=[orderwindowend])
+				CSV.write(string(csvfoldername, runid, "_orders.csv"), df, append=true)
+	
 				start_due = min(horizon, start_avail + traveltime[currentLocation[orderid][1], dest])
 				end_due = horizon
 
@@ -673,7 +679,7 @@ function pullorders_rivigoroutes(lh_filename, vnt_filename, maxorders, orderwind
 			#start_avail_ts = floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)	
 			avail_day_8am = floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)		
 			#start_avail_ts = avail_day_8am + timedelta*floor(Dates.Millisecond(floor(Dates.value(pickup_ts - (floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)))/timedelta)), Dates.Hour)
-			start_avail_ts = avail_day_8am + 48*floor(Dates.Millisecond(floor(Dates.value(pickup_ts - (floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)))/48)), Dates.Hour)
+			start_avail_ts = avail_day_8am + timedeltaexp_flag*floor(Dates.Millisecond(floor(Dates.value(pickup_ts - (floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)))/timedeltaexp_flag)), Dates.Hour)
 			end_avail_ts = start_avail_ts + Dates.Day(1)
 			start_due_ts = floor(deliv_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)
 			end_due_ts = start_due_ts + Dates.Day(1) 
@@ -701,6 +707,7 @@ function pullorders_rivigoroutes(lh_filename, vnt_filename, maxorders, orderwind
 				CSV.write(string(csvfoldername, runid, "_orders.csv"), df, append=true)
 			
 				start_avail = (start_avail_ts - currentdatetime) / (Millisecond(1) * 1000 * 3600)
+				start_avail = min(start_avail, horizon)
 				#end_avail = (end_avail_ts - currentdatetime) / (Millisecond(1) * 1000 * 3600)
 				end_avail = horizon
 				#start_due = (start_due_ts - currentdatetime) / (Millisecond(1) * 1000 * 3600)
