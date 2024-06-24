@@ -511,6 +511,12 @@ end
 
 function pullorders_initrivigoroutes(lh_filename, vnt_filename, maxorders, orderwindowstart, orderwindowend, tstep, horizon, prearcs, numlocs, timedelta, includelist)
 
+	#println("--------------------------------")
+	#println("orderwindowstart = ", orderwindowstart)
+	#println("--------------------------------")
+	#println("orderwindowend = ", orderwindowend)
+	#println("--------------------------------")
+
 	traveltime = cacheShortestTravelTimes(numlocs, prearcs, "rdd time")
 
 	data_agg = CSV.read(lh_filename, DataFrame)
@@ -574,6 +580,7 @@ function pullorders_initrivigoroutes(lh_filename, vnt_filename, maxorders, order
 			#if (orig != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & (orderwindowstart <= start_avail_ts <= orderwindowend) & (orderwindowstart <= end_due_ts <= orderwindowend ) & (start_avail_ts <= start_due_ts)
 
 				start_avail = (start_avail_ts - orderwindowstart) / (Millisecond(1) * 1000 * 3600)
+				#println("Order $orderid, avail ts = ", start_avail_ts,", avail = ", start_avail)
 				#end_avail = (end_avail_ts - orderwindowstart) / (Millisecond(1) * 1000 * 3600)
 				end_avail = horizon
 				#start_due = (start_due_ts - orderwindowstart) / (Millisecond(1) * 1000 * 3600)

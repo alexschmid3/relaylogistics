@@ -10,7 +10,7 @@ maxlocs = 66
 pixelshift = 30
 firecolor = (84, 144, 255)
 hirecolor = (230, 28, 28)
-viztype = "fewer"
+viztype = "more"
 
 data = CSV.read("data/driversensitivity/hiringresults.csv", DataFrame)
 
@@ -137,11 +137,11 @@ function driverstaffingnetwork(drawingname, data, lhdataisbfilename, xdim, ydim)
     end
 
 	#Add pit stop labels
-	fontsize(22)
-	#setcolor("white")
-	#for item in listofpoints_labels
-	#	Luxor.text(item[2],  Point(item[1]), halign=:center,   valign = :middle)
-	#end
+	fontsize(25)
+	setcolor("white")
+	for item in listofpoints_labels
+		Luxor.text(item[2],  Point(item[1]), halign=:center,   valign = :middle)
+	end
 	setcolor("black")
 
 	#--------------------------------------------------------#

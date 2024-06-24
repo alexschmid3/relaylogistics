@@ -36,6 +36,7 @@ function getinitialstate(nodesLookup, arcLookup, A_minus, A_plus, c, u)
 
     #Initialize orders
     orderwindowstart, orderwindowend = weekstart, weekstart + Dates.Hour(becomesavailablehours) - Dates.Second(1)
+    orderwindowend = min(weekstart + Dates.Hour(horizon) + Dates.Millisecond(10), orderwindowend)
     includeorderidlist = generateorderlist(lhdataisbfilename, vntdataisbfilename, iterationordercap, numlocs)
     numorders, originloc, destloc, available, duedate, usedorderidlist, psseq, orderOriginalStartLoc, ordersinprogress = pullorders_initrivigoroutes(lhdataisbfilename, vntdataisbfilename, 10000, orderwindowstart, orderwindowend, tstep, horizon, prearcs, numlocs, tstepforordercreation, includeorderidlist)
     orders = [i for i in 1:numorders]
