@@ -7,9 +7,10 @@ using Luxor, CSV, DataFrames
 hubdataisbfilename = "data/hub_data_isb_connect.csv"
 lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 maxlocs = 66
-pixelshift = 25
+pixelshift = 30
 firecolor = (84, 144, 255)
 hirecolor = (230, 28, 28)
+viztype = "fewer"
 
 data = CSV.read("data/driversensitivity/hiringresults.csv", DataFrame)
 
@@ -58,7 +59,13 @@ function driverstaffingnetwork(drawingname, data, lhdataisbfilename, xdim, ydim)
     #Sort locs into categories
     totalhires = Dict()
     for row in 1:size(data,1)
-        totalhires[convert(Int, data[row,1])] = sign(data[row,2]) * sqrt(abs(data[row,2]))
+        if viztype == "more"   
+            totalhires[convert(Int, data[row,1])] = max(0,sign(data[row,2]) * sqrt(abs(data[row,2])))
+        elseif viztype == "fewer"   
+            totalhires[convert(Int, data[row,1])] = min(0,sign(data[row,2]) * sqrt(abs(data[row,2])))
+        elseif viztype == "all"   
+            totalhires[convert(Int, data[row,1])] = sign(data[row,2]) * sqrt(abs(data[row,2]))
+        end
     end
     maxhires, minhires = maximum(values(totalhires)), minimum(values(totalhires))
     #maxhires = max(maxhires, -1*minhires)
@@ -123,19 +130,18 @@ function driverstaffingnetwork(drawingname, data, lhdataisbfilename, xdim, ydim)
             b_val = hirecolor[3] * totalhires[i] / maxhires           
         end
         setcolor(convert(Colors.HSV, Colors.RGB(r_val/255, g_val/255, b_val/255)))
-        circle(locationPoints[i], 20, :fill)
+        circle(locationPoints[i], 22, :fill)
         setcolor("black")
         setline(3)
-        circle(locationPoints[i], 20, :stroke)
+        circle(locationPoints[i], 22, :stroke)
     end
 
 	#Add pit stop labels
 	fontsize(22)
-	setcolor("white")
-	for item in listofpoints_labels
- 		#label(item[2], :0, Point(item[1]))
-		Luxor.text(item[2],  Point(item[1]), halign=:center,   valign = :middle)
-	end
+	#setcolor("white")
+	#for item in listofpoints_labels
+	#	Luxor.text(item[2],  Point(item[1]), halign=:center,   valign = :middle)
+	#end
 	setcolor("black")
 
 	#--------------------------------------------------------#
@@ -143,28 +149,34 @@ function driverstaffingnetwork(drawingname, data, lhdataisbfilename, xdim, ydim)
     #Legend box
     setline(4)
     legendstartx = 0.5*xdim - 0.43*xdim
-    legendstarty = 0.5*ydim - 0.3*ydim
-    rect(legendstartx, legendstarty, 0.4*xdim, 0.25*ydim, :stroke)
+    legendstarty = 0.5*ydim - 0.25*ydim
+    rect(legendstartx, legendstarty, 0.4*xdim, 0.18*ydim, :stroke)
 
     #Arcs for the legend
-    fontsize(70)
-    numlegendarcs = 3
-    legendlabels = ["Drivers needed", "No change", "Driver surplus"]
+    fontsize(80)
+    if viztype == "more"   
+        legendlabels = ["Drivers needed", "No change"]
+    elseif viztype == "fewer"   
+        legendlabels = ["Driver surplus", "No change"]
+    elseif viztype == "all"   
+        legendlabels = ["Drivers needed", "No change", "Driver surplus"]
+    end
+    numlegendarcs = length(legendlabels)
     for legendarc in 1:numlegendarcs
-        centerPoint = Point(legendstartx + 0.03*xdim, legendstarty + (legendarc-0.5)/numlegendarcs * 0.25*ydim)
+        centerPoint = Point(legendstartx + 0.03*xdim, legendstarty + (legendarc-0.5)/numlegendarcs * 0.18*ydim)
                 
-        if legendarc == 1
+        if legendlabels[legendarc] == "Drivers needed"
             r_val, g_val, b_val = hirecolor[1], hirecolor[2], hirecolor[3]
-        elseif legendarc == 2
+        elseif legendlabels[legendarc] == "No change"
             r_val, g_val, b_val = 0, 0, 0
-        elseif legendarc == 3
+        elseif legendlabels[legendarc] == "Driver surplus"
             r_val, g_val, b_val = firecolor[1], firecolor[2], firecolor[3]
         end
         setcolor(convert(Colors.HSV, Colors.RGB(r_val/255, g_val/255, b_val/255)))
-        circle(centerPoint, 20, :fill)
+        circle(centerPoint, 22, :fill)
         setcolor("black")
         setline(3)
-        circle(centerPoint, 20, :stroke)
+        circle(centerPoint, 22, :stroke)
         
         #Add the label
         label(legendlabels[legendarc], :E , centerPoint + Point(xdim/40, 0))
@@ -177,4 +189,4 @@ function driverstaffingnetwork(drawingname, data, lhdataisbfilename, xdim, ydim)
 
 end
 
-driverstaffingnetwork("figures/driverhiringviz.png", data, lhdataisbfilename, 2000, 1900)
+driverstaffingnetwork(string("figures/driverhiringviz_",viztype,".png"), data, lhdataisbfilename, 2000, 1900)
