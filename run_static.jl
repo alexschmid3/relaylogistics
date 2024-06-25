@@ -124,6 +124,8 @@ maxnightsaway = 1
 driveroffdays_flag = 0
 vizflag = 0
 saveconvergencedata_flag = 1
+timedeltaexp_flag = 0
+ordergenerationtstep = 48
 
 #Travel time calculation parameters
 excludeoutliers_flag = 1							# 0 = include outliers in travel time calculation, 1 = exclude outliers
