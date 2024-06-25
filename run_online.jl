@@ -15,7 +15,6 @@ include("scripts/onlineimplementation/assessendofhorizonpenalties.jl")
 include("scripts/onlineimplementation/onlinereporting.jl")
 include("scripts/instancegeneration/initializearcsets.jl")
 include("scripts/multiarcgeneration/initializeorderarcsets.jl")
-include("scripts/visualizations/timespacenetwork.jl")
 include("scripts/journeybasedmodel/solvejourneymodel_online.jl")
 include("scripts/onlineimplementation/updatestate/updatepastsegments.jl")
 include("scripts/onlineimplementation/updatestate/updatedrivers.jl")
@@ -24,7 +23,7 @@ include("scripts/onlineimplementation/updatestate/getnextorders.jl")
 include("scripts/onlineimplementation/updatestate/updatearcsets.jl")
 include("scripts/onlineimplementation/updatestate/updateorders.jl")
 include("scripts/onlineimplementation/journeygeneration.jl")
-include("scripts/visualizations/timespacenetwork.jl")
+#include("scripts/visualizations/timespacenetwork.jl")
 
 #-------------------------------------FOUR INSTANCES------------------------------------#  
 
@@ -239,7 +238,7 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 	driverarcstaken = updatepastsegments(timedelta, x_ip, y_ip, z_ip, w_ip, candidatejourneys, currentdatetime, basisarcs)
 	updatelasttimehome(driverarcstaken)
 
-	for (i1,i2,i3,i4) in currfragments.driversets
+	#=for (i1,i2,i3,i4) in currfragments.driversets
 		myarcs = []
 		for j in 1:currfragments.numfragments[(i1,i2,i3,i4)]
 			myarcs = union(myarcs, currfragments.fragmentarcs[i1,i2,i3,i4, j])
@@ -247,7 +246,7 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 		for d in currfragments.driversingroup[i1,i2,i3,i4]
 			timespacenetwork(string("outputs/viz/online/driver",d,"_iter",currtime,".png"), [myarcs, driverarcstaken[d]], [(150,150,150),(0,0,0)], [3,6], ["solid", "solid"], [0, 0], 2400, 1800)
 		end	
-	end
+	end=#
 	
 	#Update local datetime 
 	currentdatetime = currentdatetime + Dates.Hour(timedelta)
