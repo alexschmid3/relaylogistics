@@ -34,8 +34,8 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters from file
-experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/static_sensitivity.csv"
+experiment_id = 49 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+paramsfilename = "data/laborandshift_sensitivity.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
 ex = expparms[experiment_id, 2]		
@@ -56,7 +56,7 @@ println("Experiment = ", experiment_id)
 #Manual parameters for response/appendix experiments
 roundeddrivinghours_flag = 0
 if formulation == "heterogeneous"
-	csvfoldername = string("outputs/table3/")
+	csvfoldername = string("outputs/laborandshiftsensitivity/")
 	deadlines_flag = 1
 	finallegdistancepenalty = 0.80				# Distance penalty assessed for orders that finish beyond the planning horizon
 	finallegtimepenalty = 0.70					# Time/delay penalty assessed for orders that finish beyond the planning horizon
@@ -136,7 +136,7 @@ ensureconnectivity_flag = 1
 onlinetimehorizon = horizon*2
 
 #Sensitivity analysis
-percentnightshift = expparms[experiment_id, 17]
+percentnightshift = paramsfilename == "data/laborandshift_sensitivity.csv" ? expparms[experiment_id, 25] : 0.50
 laborcost_delta = expparms[experiment_id, 17]
 driverinentorycost_theta = expparms[experiment_id, 17]
 basedriverfactor = driverfactor 					#Online use only 
@@ -424,12 +424,12 @@ elseif solutionmethod == "basisip"
 elseif ((solutionmethod == "mag") || (solutionmethod == "sag")) & ((formulation == "homogeneous") || (formulation == "homogeneousdeadlines"))
 
 	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter = multiarcgeneration!(magarcs, hasdriverarcs) 
-	magip_obj, x_magip, z_magip, magip_time, magip_bound, ipbasisarcs, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles = solvejourneymodel(0, opt_gap, magarcs, numeffshifts, nocuts)
+	magip_obj, x_magip, z_magip, magip_time, magip_bound, ipbasisarcs, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles, totalshortestpathmiles, totalordermiles, totalpenaltymiles = solvejourneymodel(0, opt_gap, magarcs, numeffshifts, nocuts)
 
 	timeslist1 = (mp=smptime, pp=pptime, pppar=pptime_par, ip=0, cut=0, full=0)
-	writeresultsforrun_deadlines(resultsfilename, 0, mag_iter, mag_obj, timeslist1, totalmagarcs, x_smp, z_smp, 0, 0, 0, 0, 0)
+	writeresultsforrun_deadlines(resultsfilename, 0, mag_iter, mag_obj, timeslist1, totalmagarcs, x_smp, z_smp, 0, 0, 0, 0, 0, 0, 0, 0)
 	timeslist2 = (mp=0, pp=0, pppar=0, ip=magip_time, cut=0, full=0)
-	writeresultsforrun_deadlines(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs, x_magip, z_magip, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles)
+	writeresultsforrun_deadlines(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs, x_magip, z_magip, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles, totalshortestpathmiles, totalordermiles, totalpenaltymiles)
 	
 elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 

@@ -164,14 +164,20 @@ function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts, cuts)
         totalrepomiles = sum(u[a]*(value(w[a]) ) for a in primaryarcs.A_space) 
 	    totaldelay = sum(value(orderdelay[i]) for i in orders)
         totalordertime = sum(value(ordtime[i]) for i in orders)
+        totalshortestpathmiles = sum(distbetweenlocs[originloc[i], destloc[i]] for i in orders)
+        totalordermiles = sum(sum(c[a]*value(x[i,a]) for a in orderarcs.A[i]) for i in orders)
+        totalpenaltymiles = sum(sum(c[a]*value(x[i,a]) for a in intersect(orderarcs.A[i], numarcs+1:extendednumarcs)) for i in orders)
     else
         totalmiles = sum(sum(c[a]*value(x[i,a]) for a in orderarcs.A[i]) for i in orders) + sum(c[a]*(value(y[a])) for a in hasdriverarcs.A) + sum(u[a]*(value(w[a]) ) for a in primaryarcs.A_space) 
 	    totalemptymiles = sum(c[a]*(value(y[a])) for a in hasdriverarcs.A) 
         totalrepomiles = sum(u[a]*(value(w[a]) ) for a in primaryarcs.A_space) 
         totaldelay = sum((value(ordtime[i]) - shortesttriptimes[i])/shortesttriptimes[i] for i in orders)
         totalordertime = sum(value(ordtime[i]) for i in orders)
+	    totalshortestpathmiles = sum(distbetweenlocs[originloc[i], destloc[i]] for i in orders)
+        totalordermiles = sum(sum(c[a]*value(x[i,a]) for a in orderarcs.A[i]) for i in orders)
+        totalpenaltymiles = sum(sum(c[a]*value(x[i,a]) for a in intersect(orderarcs.A[i], numarcs+1:extendednumarcs)) for i in orders)
     end
-
+    
     #Report on hiring
     if abs(driverstohire) > 1e-4
         df = DataFrame(
@@ -186,7 +192,7 @@ function solvejourneymodel(lprelax_flag, opt_gap, orderarcs, numeffshifts, cuts)
 	orderArcSet_basis, orderArcSet_space_basis, A_plus_i_basis, A_minus_i_basis = getnonzeroarcs(value.(x), orderarcs)
 	basisarcs = (A=orderArcSet_basis, A_space=orderArcSet_space_basis, A_minus=A_minus_i_basis, A_plus=A_plus_i_basis, available=[], closelocs=[]);
     
-	return ip_obj, value.(x), value.(z), solve_time(ip), objective_bound(ip), basisarcs, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles
+	return ip_obj, value.(x), value.(z), solve_time(ip), objective_bound(ip), basisarcs, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles, totalshortestpathmiles, totalordermiles, totalpenaltymiles
 	
 end
 

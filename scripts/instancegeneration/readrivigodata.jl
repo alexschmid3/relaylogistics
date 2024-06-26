@@ -1428,7 +1428,7 @@ end
 #---------------------------------------------------------------------------------------#
 
 function createdrivershifts(drivers, shiftlength, tstep, drivershifttstep, alltimeswithinview)
-
+	
 	#Driver shifts
 	T_off_Monday8am = []	
 	baseshift = []
@@ -1471,9 +1471,22 @@ function createdrivershifts(drivers, shiftlength, tstep, drivershifttstep, allti
 		push!(T_off, newshift)
 	end
 
+	dayshifts, nightshifts = [], []
+	for ss in 1:numshifts
+		if 0 in T_off[ss]
+			push!(nightshifts, ss)
+		else
+			push!(dayshifts, ss)
+		end
+	end
+
 	drivershift = []
 	for d in drivers
-		push!(drivershift, rand(1:numshifts))
+		if rand() <= percentnightshift
+			push!(drivershift, rand(nightshifts))
+		else
+			push!(drivershift, rand(dayshifts))
+		end
 	end
 
 	T_off_0, T_off_constr = Dict(), Dict()

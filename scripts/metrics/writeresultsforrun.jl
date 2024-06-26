@@ -13,6 +13,25 @@ end
 
 #----------------------------------------------------------------------------------------#
 
+function calcdrivermetrics_homogeneous(z)
+
+	hoursworkedperdriver = [] 
+	for l in 1:numlocs, s in 1:numshifts
+		for d in 1:length(driversets[l,s])
+			push!(hoursworkedperdriver, sum(fragworkinghours[l,s,f] * value(z[l,s,f]) for f in 1:numfragments[l,s]) / length(driversets[l,s]))
+		end
+	end
+	driversunused = length([d for d in hoursworkedperdriver if d==0])
+
+	util = sum(hoursworkedperdriver) / sum(shiftlength*horizon/24 for d in drivers)
+	nightsaway = sum(sum(sum(fragmentnightsaway[l,s,f] * value(z[l,s,f]) for f in 1:numfragments[l,s]) for l in 1:numlocs if length(driversets[l,s]) > 1e-4) for s in 1:numshifts)
+
+	return util, nightsaway, driversunused
+
+end
+
+#----------------------------------------------------------------------------------------#
+
 function calcordermetrics(x)
 
 	return 0
@@ -26,7 +45,7 @@ function writeresultsforrun(resultsfilename, appendflag, iteration, obj, timesli
 	if (formulation == "heterogeneous") & !(solutionmethod == "arcip")
 		util, nightsaway, driversunused = calcdrivermetrics(z)
 	else
-		util, nightsaway, driversunused = 0, 0, 0
+		util, nightsaway, driversunused = calcdrivermetrics_homogeneous(z)
 	end
 	
 	df = DataFrame(experiment_id = [experiment_id],
@@ -70,15 +89,14 @@ function writeresultsforrun(resultsfilename, appendflag, iteration, obj, timesli
 
 end
 
-
 #----------------------------------------------------------------------------------------#
 
-function writeresultsforrun_deadlines(resultsfilename, appendflag, iteration, obj, timeslist, totalarcs, x, z, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles)
+function writeresultsforrun_deadlines(resultsfilename, appendflag, iteration, obj, timeslist, totalarcs, x, z, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles, totalshortestpathmiles, totalordermiles, totalpenaltymiles)
 
 	if (formulation == "heterogeneous") & !(solutionmethod == "arcip")
 		util, nightsaway, driversunused = calcdrivermetrics(z)
 	else
-		util, nightsaway, driversunused = 0, 0, 0
+		util, nightsaway, driversunused = calcdrivermetrics_homogeneous(z)
 	end
 	
 	df = DataFrame(experiment_id = [experiment_id],
@@ -117,7 +135,10 @@ function writeresultsforrun_deadlines(resultsfilename, appendflag, iteration, ob
 			totalordertime = [totalordertime], 
 			totalemptymiles = [totalemptymiles], 
 			totalrepomiles = [totalrepomiles],
-			deadline_sp = [deadlineasmultipleofshortestpath]
+			deadline_sp = [deadlineasmultipleofshortestpath],
+			totalshortestpathmiles = [totalshortestpathmiles], 
+			totalordermiles = [totalordermiles], 
+			totalpenaltymiles = [totalpenaltymiles]
 		)
 
 	if appendflag == 1
