@@ -190,7 +190,7 @@ end
 
 #-------------------------------------------------------------------------#
 
-function solvejourneymodel_relayred(lprelax_flag, opt_gap, arcspassed, currentdatetime, orderarcs)
+function solvejourneymodel_relayred(lprelax_flag, opt_gap, arcspassed, currentdatetime, orderarcs, iptimelimit)
 					
 	totaldelta = Dates.value(Dates.Hour(currentdatetime - weekstart))
 
@@ -207,7 +207,7 @@ function solvejourneymodel_relayred(lprelax_flag, opt_gap, arcspassed, currentda
 	end
 
 	ip = Model(Gurobi.Optimizer)
-	set_optimizer_attribute(ip, "TimeLimit", 60*60*3)
+	set_optimizer_attribute(ip, "TimeLimit", iptimelimit)
 	set_optimizer_attribute(ip, "OutputFlag", 0)
 	set_optimizer_attribute(ip, "MIPGap", opt_gap)
 

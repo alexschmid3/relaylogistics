@@ -16,6 +16,9 @@ function getnextorders(timedelta, currentdatetime, lh_data_file, vnt_data_file)
 		#orderwindowstart, orderwindowend = weekstart + Dates.Hour(totaltimedelta) + Dates.Hour(becomesavailablehours) - Dates.Hour(timedelta) + Dates.Millisecond(10), weekstart + Dates.Hour(totaltimedelta) + Dates.Hour(becomesavailablehours)
 		orderwindowstart = currentdatetime - Dates.Hour(timedelta) + Dates.Hour(becomesavailablehours) 
 		orderwindowend = min(currentdatetime + Dates.Hour(becomesavailablehours) - Dates.Millisecond(1), weekstart + Dates.Hour(onlinetimehorizon - 48) + Dates.Hour(becomesavailablehours) - Dates.Millisecond(1))
+		if becomesavailablehours >= onlinetimehorizon
+			orderwindowend = min(weekstart + Dates.Hour(becomesavailablehours) - Dates.Millisecond(1), orderwindowend)
+		end
 		#orderwindowend = min(currentdatetime + Dates.Hour(horizon) - Dates.Millisecond(1), orderwindowend)
 		numneworders, originloc_ol, destloc_ol, available_ol, duedate_ol, orderidlist_new, psseq_ol, trueorderorigins = pullorders_rivigoroutes(lh_data_file, vnt_data_file, maxneworders, orderwindowstart, orderwindowend, currentdatetime, tstep, horizon, prearcs, numlocs, timedelta, includeorderidlist)
 		

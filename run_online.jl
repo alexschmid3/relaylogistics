@@ -45,7 +45,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters from file
-experiment_id = 49 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 paramsfilename = "data/driverstaffing.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 11]  # Drivers = homogeneous, heterogeneous
@@ -211,8 +211,9 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 		ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel(0, opt_gap, -1, currentdatetime);
 		candidatejourneys, basisarcs = -1, []
 	elseif (operations == "relay") & (solutionmethod == "basisip") 
-		lp_obj, x_lp, z_lp, w_lp, y_lp, solvetime_lp, bound_lp, basisarcs = solvejourneymodel_relayred(1, opt_gap, -1, currentdatetime, currarcs.orderarcs);
-		ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel_relayred(0, opt_gap, -1, currentdatetime, basisarcs);
+		lptimelimit, iptimelimit = 3600*24, 3600*48
+		lp_obj, x_lp, z_lp, w_lp, y_lp, solvetime_lp, bound_lp, basisarcs = solvejourneymodel_relayred(1, opt_gap, -1, currentdatetime, currarcs.orderarcs, lptimelimit);
+		ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel_relayred(0, opt_gap, -1, currentdatetime, basisarcs, iptimelimit);
 		candidatejourneys = -1
 	elseif (operations == "ptp") & (solutionmethod == "basisip") 
 		lp_obj, x_lp, z_lp, w_lp, y_lp, solvetime_lp, bound_lp, candidatejourneys = solvejourneymodel(1, opt_gap, -1, currentdatetime);
