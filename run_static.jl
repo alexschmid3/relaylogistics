@@ -34,7 +34,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters from file
-experiment_id = 257 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 paramsfilename = "data/static_sensitivity.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
@@ -134,6 +134,14 @@ includesymmetricarcs_flag = 1						# 1 = if arc A-->B present in Rivigo data but
 traveltimefordelay_flag = 2 						# 0 = use rounded travel times for shortest path used in delay objective, 1 = use raw travel times (best for comparing across multiple tsteps), 2 = use rounded travel times, except on the final leg of the journey where raw is used 
 ensureconnectivity_flag = 1
 onlinetimehorizon = horizon*2
+
+#Sensitivity analysis
+percentnightshift = expparms[experiment_id, 17]
+laborcost_delta = expparms[experiment_id, 17]
+driverinentorycost_theta = expparms[experiment_id, 17]
+basedriverfactor = driverfactor 					#Online use only 
+hiredriversto = "all"								#Online use only 
+timedeltaexp_flag = 0								#Online use only 
 
 #Uniform k and ABCG + k control parameters
 ktype_flag = "pct"									# "hrs" = # of hours acceptable delay, "pct" = acceptable delay as percent of shortest path time, "min24" = max(24 hrs, percent of shortest path)
