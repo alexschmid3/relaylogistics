@@ -35,9 +35,10 @@ end
 function getinitialstate(nodesLookup, arcLookup, A_minus, A_plus, c, u)
 
     #Initialize orders
-    orderwindowstart, orderwindowend = weekstart, weekstart + Dates.Hour(becomesavailablehours) - Dates.Millisecond(1)
-    if becomesavailablehours >= onlinetimehorizon
-        orderwindowend = min(weekstart + Dates.Hour(becomesavailablehours) - Dates.Millisecond(1), orderwindowend)
+    orderwindowstart = weekstart
+    orderwindowend = min(weekstart + Dates.Hour(becomesavailablehours) - Dates.Millisecond(1), weekstart + Dates.Hour(horizon) - Dates.Millisecond(1))
+    if  timedeltaexp_flag == 1 #Hard stop logic: Ensures orders "seen" in each experiment are the same, regardless of timedelta
+        orderwindowend = min(weekstart + Dates.Hour(onlinetimehorizon - 48 + 72) - Dates.Millisecond(1), orderwindowend)
     end
     #orderwindowend = min(weekstart + Dates.Hour(horizon) - Dates.Millisecond(1), orderwindowend)
     includeorderidlist = generateorderlist(lhdataisbfilename, vntdataisbfilename, iterationordercap, numlocs)

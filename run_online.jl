@@ -48,8 +48,8 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 paramsfilename = "data/driverstaffing.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
-formulation = expparms[experiment_id, 11]  # Drivers = homogeneous, heterogeneous
-ex = expparms[experiment_id, 2]		
+formulation = expparms[experiment_id, 11]  #Drivers = homogeneous, heterogeneous
+ex = expparms[experiment_id, 2]
 weekstart = expparms[experiment_id, 4]
 horizon = expparms[experiment_id, 5] * 24
 tstep = expparms[experiment_id, 6]

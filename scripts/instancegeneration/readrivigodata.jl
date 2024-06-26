@@ -508,6 +508,7 @@ function generateorderlist(lh_filename, vnt_filename, ordermaxcap, numlocs)
 end
 
 #---------------------------------------------------------------------------------------#
+
 function pullorders_initrivigoroutes(lh_filename, vnt_filename, maxorders, orderwindowstart, orderwindowend, tstep, horizon, prearcs, numlocs, timedelta, includelist)
 
 	#println("--------------------------------")

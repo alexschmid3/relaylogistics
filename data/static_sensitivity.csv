@@ -255,3 +255,4 @@ experiment_id,instance,method,weekstart,horizon,tstep,driverfactor,rho-value,opt
 254,4,mag,2019-07-28,5,6,13,0,0.01,0.001,0,0,0,0,homogeneousdeadlines,1000,1,1,1,-1,6,0,,1
 255,4,mag,2019-08-04,5,6,13,0,0.01,0.001,0,0,0,0,homogeneousdeadlines,1000,1,1,1,-1,6,0,,1
 256,4,mag,2019-08-11,5,6,13,0,0.01,0.001,0,0,0,0,homogeneousdeadlines,1000,1,1,1,-1,6,0,,1
+257,1,mag,2019-06-23,5,6,2,0,0.01,0.1,0,0,0,0,homogeneousdeadlines,1000,1,1,1,-1,6,0,,1
