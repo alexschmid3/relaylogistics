@@ -137,8 +137,8 @@ onlinetimehorizon = horizon*2
 
 #Sensitivity analysis
 percentnightshift = paramsfilename == "data/laborandshift_sensitivity.csv" ? expparms[experiment_id, 25] : 0.50
-laborcost_delta = expparms[experiment_id, 17]
-driverinentorycost_theta = expparms[experiment_id, 17]
+laborcost_delta = paramsfilename == "data/laborandshift_sensitivity.csv" ? expparms[experiment_id, 26] : 0
+driverinventorycost_theta = paramsfilename == "data/laborandshift_sensitivity.csv" ? expparms[experiment_id, 27] : 0
 basedriverfactor = driverfactor 					#Online use only 
 hiredriversto = "all"								#Online use only 
 timedeltaexp_flag = 0								#Online use only 
@@ -240,8 +240,14 @@ currstate = (m_0=m_0, m_end=m_end, trucksintransit=trucksintransit, orders=order
 primaryarcs, extendedtimearcs, orderarcs, driverarcs, hasdriverarcs, ghostdriverarcs = initializearcsets(A_space, A_plus, A_minus, orders, Origin, Destination, driverStartNodes, T_off)
 R_off = findreturnhomearcsets(driverarcs, T_off_constr)
 magarcs = initializeorderarcsets(k, orders, originloc, destloc, Origin, Destination, shortesttriptimes)
-driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway = initializejourneymodel(maxnightsaway, T_off, T_on_0)
+driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway, fragmentarcs = initializejourneymodel(maxnightsaway, T_off, T_on_0)
 nocuts=(vars=[], rhs=[], coeff=[])
+
+#Sensitivity: labor costs and inventory costs
+if laborcost_delta + driverinventorycost_theta > 1e-4
+	include("scripts/extensions/calculatelaborandinventorycosts.jl")
+	journeylaborcost, journeyinventorycost = calculatelaborandinventorycosts()
+end
 
 #include("scripts/onlineimplementation/initializecurrentstatearcs.jl")
 #driversets, driversingroup, numdrivergroups, drivergroupnum, drivergroupdesc, numeffshifts, effshift, shiftsincluded = finddriversets_online(T_off, driverStartNodes, lasttimehome) 
@@ -424,12 +430,12 @@ elseif solutionmethod == "basisip"
 elseif ((solutionmethod == "mag") || (solutionmethod == "sag")) & ((formulation == "homogeneous") || (formulation == "homogeneousdeadlines"))
 
 	mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs, mag_iter = multiarcgeneration!(magarcs, hasdriverarcs) 
-	magip_obj, x_magip, z_magip, magip_time, magip_bound, ipbasisarcs, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles, totalshortestpathmiles, totalordermiles, totalpenaltymiles = solvejourneymodel(0, opt_gap, magarcs, numeffshifts, nocuts)
+	magip_obj, x_magip, z_magip, magip_time, magip_bound, ipbasisarcs, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles, totalshortestpathmiles, totalordermiles, totalpenaltymiles, timelaboring, timeasinventory = solvejourneymodel(0, opt_gap, magarcs, numeffshifts, nocuts)
 
 	timeslist1 = (mp=smptime, pp=pptime, pppar=pptime_par, ip=0, cut=0, full=0)
-	writeresultsforrun_deadlines(resultsfilename, 0, mag_iter, mag_obj, timeslist1, totalmagarcs, x_smp, z_smp, 0, 0, 0, 0, 0, 0, 0, 0)
+	writeresultsforrun_deadlines(resultsfilename, 0, mag_iter, mag_obj, timeslist1, totalmagarcs, x_smp, z_smp, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 	timeslist2 = (mp=0, pp=0, pppar=0, ip=magip_time, cut=0, full=0)
-	writeresultsforrun_deadlines(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs, x_magip, z_magip, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles, totalshortestpathmiles, totalordermiles, totalpenaltymiles)
+	writeresultsforrun_deadlines(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs, x_magip, z_magip, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles, totalshortestpathmiles, totalordermiles, totalpenaltymiles, timelaboring, timeasinventory)
 	
 elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 

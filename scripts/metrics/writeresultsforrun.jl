@@ -91,7 +91,7 @@ end
 
 #----------------------------------------------------------------------------------------#
 
-function writeresultsforrun_deadlines(resultsfilename, appendflag, iteration, obj, timeslist, totalarcs, x, z, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles, totalshortestpathmiles, totalordermiles, totalpenaltymiles)
+function writeresultsforrun_deadlines(resultsfilename, appendflag, iteration, obj, timeslist, totalarcs, x, z, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles, totalshortestpathmiles, totalordermiles, totalpenaltymiles, timelaboring, timeasinventory)
 
 	if (formulation == "heterogeneous") & !(solutionmethod == "arcip")
 		util, nightsaway, driversunused = calcdrivermetrics(z)
@@ -138,7 +138,12 @@ function writeresultsforrun_deadlines(resultsfilename, appendflag, iteration, ob
 			deadline_sp = [deadlineasmultipleofshortestpath],
 			totalshortestpathmiles = [totalshortestpathmiles], 
 			totalordermiles = [totalordermiles], 
-			totalpenaltymiles = [totalpenaltymiles]
+			totalpenaltymiles = [totalpenaltymiles], 
+			timelaboring = [timelaboring], 
+			timeasinventory = [timeasinventory],
+			percentnightshift = [percentnightshift], 
+			laborcost_delta = [laborcost_delta], 
+			driverinventorycost_theta = [driverinventorycost_theta] 
 		)
 
 	if appendflag == 1

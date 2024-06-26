@@ -114,7 +114,7 @@ function initializejourneymodel(maxnightsaway, T_off, T_on_0)
 	end
 
 	numfragments = Dict()
-	fragmentscontaining = Dict()
+	fragmentscontaining, fragmentarcs = Dict(), Dict()
 	F_plus_ls, F_minus_ls = Dict(), Dict()
 	fragdrivinghours, fragworkinghours = Dict(), Dict()
 	for l in 1:numlocs, s in 1:numeffshifts
@@ -145,10 +145,12 @@ function initializejourneymodel(maxnightsaway, T_off, T_on_0)
 					currnode = nodes[frag[1][1], frag[1][2]]
 					push!(F_plus_ls[l,s,currnode], fragindex)
 
+					fragmentarcs[l,s,fragindex] = []
 					for n in 2:length(frag)
 						newnode = nodes[frag[n][1], frag[n][2]]
 						newarc = arcs[currnode, newnode]
 						push!(fragmentscontaining[l,s,newarc], fragindex)
+						push!(fragmentarcs[l,s,fragindex], newarc)
 						currnode = newnode
 					end
 
@@ -179,12 +181,14 @@ function initializejourneymodel(maxnightsaway, T_off, T_on_0)
 							fragworkinghours[l,s,fragindex] = 0
 
 							fragarcs = []
+							fragmentarcs[l,s,fragindex] = []
 							for n in 2:length(frag)
 								if frag[n][2] + t <= horizon
 									newnode = nodes[frag[n][1], frag[n][2] + t]
 									newarc = arcs[currnode, newnode]
 									push!(fragmentscontaining[l,s,newarc], fragindex)
 									push!(fragarcs, newarc)
+									push!(fragmentarcs[l,s,fragindex], newarc)
 									currnode = newnode
 								end
 							end
@@ -249,6 +253,6 @@ function initializejourneymodel(maxnightsaway, T_off, T_on_0)
 		end
 	end
 
-	return driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway
+	return driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F_minus_ls, N_flow_ls, numeffshifts, effshift, shiftsincluded, fragdrivinghours, fragworkinghours, workingfragments, fragmentnightsaway, fragmentarcs
 
 end 
