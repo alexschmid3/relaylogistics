@@ -129,6 +129,11 @@ includesymmetricarcs_flag = 1						# 1 = if arc A-->B present in Rivigo data but
 traveltimefordelay_flag = 2 						# 0 = use rounded travel times for shortest path used in delay objective, 1 = use raw travel times (best for comparing across multiple tsteps), 2 = use rounded travel times, except on the final leg of the journey where raw is used 
 ensureconnectivity_flag = 1
 
+#Sensitivity analysis
+percentnightshift = paramsfilename == "data/laborandshift_sensitivity.csv" ? expparms[experiment_id, 25] : 0.50
+laborcost_delta = paramsfilename == "data/laborandshift_sensitivity.csv" ? expparms[experiment_id, 26] : 0
+driverinventorycost_theta = paramsfilename == "data/laborandshift_sensitivity.csv" ? expparms[experiment_id, 27] : 0
+
 #Uniform k and ABCG + k control parameters
 ktype_flag = "pct"									# "hrs" = # of hours acceptable delay, "pct" = acceptable delay as percent of shortest path time, "min24" = max(24 hrs, percent of shortest path)
 
