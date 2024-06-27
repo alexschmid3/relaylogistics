@@ -68,7 +68,8 @@ elseif formulation == "homogeneous"
 	finallegtimepenalty = 0.30					# Time/delay penalty assessed for orders that finish beyond the planning horizon
 	deadlineasmultipleofshortestpath = 2
 elseif formulation == "homogeneousdeadlines"
-	csvfoldername = string("outputs/ordersensitivity/")
+	#csvfoldername = string("outputs/ordersensitivity/")
+	csvfoldername = string("outputs/laborandshiftsensitivity/")
 	deadlines_flag = 1
 	finallegdistancepenalty = 0.40 			    # Distance penalty assessed for orders that finish beyond the planning horizon
 	finallegtimepenalty = 0.30	
@@ -244,7 +245,7 @@ driversets, driverSetStartNodes, numfragments, fragmentscontaining, F_plus_ls, F
 nocuts=(vars=[], rhs=[], coeff=[])
 
 #Sensitivity: labor costs and inventory costs
-if laborcost_delta + driverinventorycost_theta > 1e-4
+if paramsfilename == "data/laborandshift_sensitivity.csv"
 	include("scripts/extensions/calculatelaborandinventorycosts.jl")
 	journeylaborcost, journeyinventorycost = calculatelaborandinventorycosts()
 end
