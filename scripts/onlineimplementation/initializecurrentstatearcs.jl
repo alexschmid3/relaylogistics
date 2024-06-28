@@ -880,7 +880,7 @@ function initializedriversetjourneys(driversets, drivergroupnum, driversingroup,
 		totalextendedtime += time_extended
 
         #Process the list of journeys
-        for journey in journeys
+        for journey in setdiff(journeys, [])
             
             #Get journey number
             numfragments[hl,ss,sn,lth] += 1

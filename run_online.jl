@@ -1,4 +1,4 @@
-
+#=
 using JuMP, Gurobi, Random, CSV, DataFrames, Statistics, Dates, SparseArrays 
 
 #-----------------------------------LOAD OTHER FILES------------------------------------#
@@ -45,7 +45,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters from file
-experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+experiment_id = 88 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 paramsfilename = "data/driverstaffing.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 11]  #Drivers = homogeneous, heterogeneous
@@ -198,7 +198,7 @@ totalnumjourneys = sum(currfragments.numfragments[ds] for ds in currfragments.dr
 println("Total journeys = ", totalnumjourneys)
 
 total_delivtime, max_delivtime, shortestpossible_delivtime, shortestpossible_ordermiles, totalemptytrips, totalemptymiles, totaltaxitrips, totaltaximiles, ordermilespenalty, orderdelaypenalty, totalpastcost, totalordertrips, totalordermiles, ordermilesoutcomes, orderdelayoutcomes, totaldriverhours, pastordersegments, pastdriversegments_space, pastdriversegments, pastemptysegments, pasttaxisegments = initializeonlinereporting()
-
+=#
 #---------------------------------------SOLVE----------------------------------------# 
 
 for currtime in 0:timedelta:timedelta*(numiterations_online-1)

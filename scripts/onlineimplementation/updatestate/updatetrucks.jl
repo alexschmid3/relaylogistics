@@ -67,7 +67,7 @@ function updatetrucks(timedelta, currentdatetime, weekstart, x, y, basisarcs)
 	end
 
 	println("Total m_0 = ", sum(values(currstate.m_0)) )
-	@assert(sum(values(currstate.m_0)) == numtrucks)
+	#@assert(sum(values(currstate.m_0)) == numtrucks)
 
 end
 

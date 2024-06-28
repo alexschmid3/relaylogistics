@@ -35,7 +35,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 
 #Read experiment parameters from file
 experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/laborandshift_sensitivity.csv"
+paramsfilename = "data/static_sensitivity.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
 ex = expparms[experiment_id, 2]		
@@ -68,8 +68,8 @@ elseif formulation == "homogeneous"
 	finallegtimepenalty = 0.30					# Time/delay penalty assessed for orders that finish beyond the planning horizon
 	deadlineasmultipleofshortestpath = 2
 elseif formulation == "homogeneousdeadlines"
-	#csvfoldername = string("outputs/ordersensitivity/")
-	csvfoldername = string("outputs/laborandshiftsensitivity/")
+	csvfoldername = string("outputs/ordersensitivity/")
+	#csvfoldername = string("outputs/laborandshiftsensitivity/")
 	deadlines_flag = 1
 	finallegdistancepenalty = 0.40 			    # Distance penalty assessed for orders that finish beyond the planning horizon
 	finallegtimepenalty = 0.30	

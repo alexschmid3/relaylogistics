@@ -11,4 +11,5 @@ data <- read_csv('lambdasensitivity.csv')
 
 #---------------------------------------------------------------#
 
-
+ggplot(data, aes(x=totalmiles, y=delay)) + 
+  geom_point()
