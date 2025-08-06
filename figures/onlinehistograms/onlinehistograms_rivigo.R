@@ -2,15 +2,15 @@ install.packages(c("tidyverse", "shiny", "leaflet", "DT", "hash"))
 library(shiny)
 library(DT)
 library(tidyverse)
-library(leaflet)
-library(lubridate)
+#library(leaflet)
+#library(lubridate)
 library(dplyr)
-library(network)
-library(outliers)
-library(geosphere)
-library(fields)
-library(hash)
-library(naniar)
+#library(network)
+#library(outliers)
+#library(geosphere)
+#library(fields)
+#library(hash)
+#library(naniar)
 
 #---------------------------------------------------------------#
 #---------------------------------------------------------------#
@@ -176,26 +176,26 @@ dev.off()
 
 #Read in driver empty distribution
 abcgdata <- read_csv('driverempty_abcg.csv')
-otddata <- read_csv('driverempty_otd.csv')
+rrdata <- read_csv('driverempty_rr.csv')
 
 #---------------------------------------------------------------#
 
 vec_mvg <- rep("Optimized solution", 2998)
-vec_otd <- rep("Orders-then-drivers solution", 2337)
+vec_rr <- rep("Orders-then-drivers (historical) solution", 3316)
 
 mvghist <- abcgdata %>% select(driverid, emptymiles, percentempty)
-otdhist <- otddata %>% select(driverid, emptymiles, percentempty)
+rrhist <- rrdata %>% select(driverid, emptymiles, percentempty)
 
 mvghist <- mvghist %>%
   mutate(datalabel = vec_mvg)
-otdhist <- otdhist %>%
-  mutate(datalabel = vec_otd)
+rrhist <- rrhist %>%
+  mutate(datalabel = vec_rr)
 
-alldata = rbind(mvghist, otdhist)
+alldata = rbind(mvghist, rrhist)
 
 alldata$datalabel <- factor(alldata$datalabel, 
-                            levels=c("Optimized solution", "Orders-then-drivers solution"), 
-                            labels=c("Optimized solution", "Orders-then-drivers solution"))
+                            levels=c("Optimized solution", "Orders-then-drivers (historical) solution"), 
+                            labels=c("Optimized solution", "Orders-then-drivers (historical) solution"))
 
 alldata <- subset(alldata, !is.na(percentempty))
 alldata <- subset(alldata, !is.na(emptymiles))
@@ -208,13 +208,17 @@ mean_empty <- alldata %>%
   group_by(datalabel) %>%
   summarize(mean=mean(emptymiles))
 
-mean_pct["mean"][mean_pct["datalabel"] == "Orders-then-drivers solution"] <- 0.24
+#mean_pct["mean"][mean_pct["datalabel"] == "Orders-then-drivers (historical) solution"] <- 0.24
 mean_pct["mean"][mean_pct["datalabel"] == "Optimized solution"] <- 0.13
 
 #---------------------------------------------------------------#
 
 #Driver empty percent
-png(file="plots/driveremptypct.png",
+update_geom_defaults("text", list(size = 24))
+
+dev.new(width=8, height=4)
+
+png(file="driveremptypct.png",
     width=450, height=600)
 
 alldata %>%
@@ -225,9 +229,9 @@ alldata %>%
   #xlim(0, 0.00000001)+
   #ylim(0, 100)+
   scale_colour_manual("", 
-                      breaks = c("Optimized solution", "Orders-then-drivers solution"),
+                      breaks = c("Optimized solution", "Orders-then-drivers (historical) solution"),
                       values = c("#DA853E", "#649BCB"))+
-  scale_fill_manual("", breaks = c("Optimized solution", "Orders-then-drivers solution"),
+  scale_fill_manual("", breaks = c("Optimized solution", "Orders-then-drivers (historical) solution"),
                     values = c("#DA853E", "#649BCB")) +
   labs(x="Empty miles per driver\n(% of miles)", y="Density")+
   scale_x_continuous(limits=c(0,0.5), labels = scales::percent_format(accuracy = 1)) +
@@ -235,32 +239,6 @@ alldata %>%
   #theme(legend.position="bottom", legend.text = element_text(size = 18)) +
   theme(axis.text = element_text(size = 18)) +
   theme(axis.title = element_text(size = 20))
-
-dev.off()
-
-
-#Driver empty miles
-png(file="plots/driverempty.png",
-    width=450, height=600)
-
-alldata %>%
-  ggplot(aes(x=emptymiles, color=datalabel, fill=datalabel)) +
-  geom_density(alpha=0.3,size=1)+ 
-  geom_vline(data = mean_empty, aes(xintercept = mean, 
-                                    color = datalabel), size=1.5)+
-  #xlim(0, 0.00000001)+
-  #ylim(0, 100)+
-  scale_colour_manual("", 
-                      breaks = c("Optimized solution", "Orders-then-drivers solution"),
-                      values = c("#DA853E", "#649BCB"))+
-  scale_fill_manual("", breaks = c("Optimized solution", "Orders-then-drivers solution"),
-                    values = c("#DA853E", "#649BCB")) +
-  labs(x="Empty miles per driver", y="Density")+
-  #scale_x_continuous(limits=c(0,1), labels = scales::percent_format(accuracy = 1)) +
-  #theme(legend.position="none") +
-  theme(legend.position="bottom", legend.text = element_text(size = 18)) +
-  theme(axis.text = element_text(size = 18)) +
-  theme(axis.title = element_text(size = 26))
 
 dev.off()
 

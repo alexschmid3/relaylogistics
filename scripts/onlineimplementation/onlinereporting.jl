@@ -74,7 +74,7 @@ function calculatedriverstatistics()
     T_off_Monday8am_0 = []
     for item in T_off_Monday8am
         newlist = []
-        for hr in item
+        for hr in intersect(item, 0:tstep:onlinetimehorizon)
             if !(hr-tstep in item)
                 push!(newlist, hr)
             end

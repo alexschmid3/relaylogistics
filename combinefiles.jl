@@ -1,7 +1,7 @@
 
 using CSV, DataFrames
 
-figuredirectory = string("outputs/online/stability/")
+figuredirectory = string("outputs/ordersensitivity/run3/")
 
 #Get list of files
 filelist = readdir(figuredirectory)

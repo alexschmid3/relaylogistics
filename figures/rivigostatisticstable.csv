@@ -1,0 +1,8 @@
+Metric,Avg,Min,Max,Metric & Avg & Min & Max \\ 
+Pit-stops,66,---,---,Pit-stops & 66 & --- & --- \\ 
+Orders per day,117.6,69,155,Orders per day & 117.6 & 69 & 155 \\ 
+Shipment miles,897,52,2674,Shipment miles & 897 & 52 & 2674 \\ 
+Pitstops per shipment,2,4.92,13,Pitstops per shipment & 2 & 4.92 & 13 \\ 
+Recorded lead time ,2.5 days,2.8 hrs.,35 days,Recorded lead time  & 2.5 days & 2.8 hrs. & 35 days \\ 
+Drivers,474,---,---,Drivers & 474 & --- & --- \\ 
+Vehicles,,---,---,Vehicles &  & --- & --- \\ 

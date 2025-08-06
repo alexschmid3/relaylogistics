@@ -56,6 +56,11 @@ function timespacenetwork(drawingname, arclistlist, colorlist, thicknesslist, da
         push!(arcinfo, (startPoint, endPoint, arcColor, arcDash, arcThickness, arcLabel))
     end
 
+	#Legend arcs
+	#legendarcs = []
+	#push!(legendarcs, (Point(200,800), Point(200,800)+Point(120,0), colorlist[1], dashlist[1], thicknesslist[1]*2, ""))
+	#push!(legendarcs, (Point(-700,800), Point(-700,800)+Point(120,0), colorlist[2], dashlist[2], thicknesslist[2]*2, ""))
+
 	#-------------------------------------------------------------------------#
 
 	#Initiailize drawing
@@ -63,8 +68,20 @@ function timespacenetwork(drawingname, arclistlist, colorlist, thicknesslist, da
 	origin()
 	background("white")
 
+	#Add in gray boxes for night shifts
+	#sethue(convert(Colors.HSV, Colors.RGB(220/255, 220/255, 220/255)))
+	#rect(nodePoints[nodes[1,12]]+Point(-3,-6), 246, 1490, :fill)
+	#rect(nodePoints[nodes[1,36]]+Point(-3,-6), 246, 1490, :fill)
+	#rect(nodePoints[nodes[1,60]]+Point(-3,-6), 246, 1490, :fill)
+	#rect(nodePoints[nodes[1,84]]+Point(-3,-6), 246, 1490, :fill)
+	#fontsize(40)
+	#setcolor("black")
+	#for i in 1:4
+	#	Luxor.text("Night $i", nodePoints[nodes[1,12+24*(i-1)]]+Point(120,1453), halign=:center, valign = :middle)
+	#end
+
 	#Draw arcs
-	for i in arcinfo
+	for i in arcinfo #union(arcinfo,legendarcs)
 		
 		#Set arc attributes from the arcinfo
 		r_val, g_val, b_val = i[3][1]/255, i[3][2]/255, i[3][3]/255
@@ -78,10 +95,15 @@ function timespacenetwork(drawingname, arclistlist, colorlist, thicknesslist, da
 		#Figure out the angle of the arrow head
 		theta = atan((i[2][2] - i[1][2])/(i[2][1] - i[1][1]))
 		dist = distance(i[1], i[2])
-		arrowhead = (1-12/dist)*i[2] + (12/dist)*i[1] #8 pixels from the end node
+		if i in legendarcs
+			arrowhead = (1-1/dist)*i[2] + (1/dist)*i[1] #1 pixels from the end node
+			local p = ngon(arrowhead, max(10, i[5]*2), 3, theta, vertices=true)
+		else
+			arrowhead = (1-12/dist)*i[2] + (12/dist)*i[1] #12 pixels from the end node
+			local p = ngon(arrowhead, max(10, i[5]), 3, theta, vertices=true)
+		end
 		
 		#Draw the arrow head
-		local p = ngon(arrowhead, max(10, i[5]), 3, theta, vertices=true)
 		poly(p, :fill,  close=true)
 
 	end
@@ -91,7 +113,7 @@ function timespacenetwork(drawingname, arclistlist, colorlist, thicknesslist, da
 	circle.(nodePoints, 9, :fill)
 
 	#Set font size for labels
-	fontsize(30)
+	fontsize(40)
 
 	#Add location labels
 	for l in 1:numlocs
@@ -116,6 +138,11 @@ function timespacenetwork(drawingname, arclistlist, colorlist, thicknesslist, da
 			label(i[6], :N , coord)
 		end
 	end
+
+	#Legend labels
+	#fontsize(60)
+	#Luxor.text("Standard journey", Point(-500,800), halign=:left, valign = :middle)
+	#Luxor.text("Extended journey", Point(400,800), halign=:left, valign = :middle)
 
 	finish()
 	preview()

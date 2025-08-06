@@ -1,4 +1,4 @@
-#=
+
 using JuMP, Gurobi, Random, CSV, DataFrames, Statistics, Dates, SparseArrays 
 
 #-----------------------------------LOAD OTHER FILES------------------------------------#
@@ -45,7 +45,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters from file
-experiment_id = 88 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+experiment_id = 87 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 paramsfilename = "data/driverstaffing.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 11]  #Drivers = homogeneous, heterogeneous
@@ -198,7 +198,7 @@ totalnumjourneys = sum(currfragments.numfragments[ds] for ds in currfragments.dr
 println("Total journeys = ", totalnumjourneys)
 
 total_delivtime, max_delivtime, shortestpossible_delivtime, shortestpossible_ordermiles, totalemptytrips, totalemptymiles, totaltaxitrips, totaltaximiles, ordermilespenalty, orderdelaypenalty, totalpastcost, totalordertrips, totalordermiles, ordermilesoutcomes, orderdelayoutcomes, totaldriverhours, pastordersegments, pastdriversegments_space, pastdriversegments, pastemptysegments, pasttaxisegments = initializeonlinereporting()
-=#
+
 #---------------------------------------SOLVE----------------------------------------# 
 
 for currtime in 0:timedelta:timedelta*(numiterations_online-1)
@@ -250,9 +250,15 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 			myarcs = union(myarcs, currfragments.fragmentarcs[i1,i2,i3,i4, j])
 		end
 		for d in currfragments.driversingroup[i1,i2,i3,i4]
-			timespacenetwork(string("outputs/viz/online/driver",d,"_iter",currtime,".png"), [myarcs, driverarcstaken[d]], [(150,150,150),(0,0,0)], [3,6], ["solid", "solid"], [0, 0], 2400, 1800)
+			timespacenetwork(string("outputs/viz/examplesforpaper/driver",d,"_iter",currtime,".png"), [myarcs], [(150,150,150)], [3,6], ["solid"], [0], 2400, 1800)
 		end	
-	end=#
+	end
+	
+	currtime = 0
+	(i1,i2,i3,i4) = (8,2,8,0)
+	include("scripts/visualizations/timespacenetwork.jl")
+	timespacenetwork(string("outputs/viz/examplesforpaper2/ptpjourneys.png"), [currfragments.fragmentarcs[i1,i2,i3,i4,141],currfragments.fragmentarcs[i1,i2,i3,i4,13]], [(254,97,0), (100,143,255)], [8,8], ["solid", "solid"], [0,0], 2400, 1800)
+	=#
 	
 	#Update local datetime 
 	currentdatetime = currentdatetime + Dates.Hour(timedelta)

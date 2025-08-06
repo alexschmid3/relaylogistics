@@ -34,7 +34,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters from file
-experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+experiment_id = 113 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 paramsfilename = "data/static_sensitivity.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
@@ -225,7 +225,7 @@ Destination = extendDestination(orders, Destination, extendednodes)
 arcLookup, nodesLookup, arcfinishtime, dummyarc, allarcs = calcarcfinishtimes()
 
 #----------------------------------CREATE ARC SETS-----------------------------------# 
-
+#=
 basetsn = (arcsbetween=arcsbetween, arcsbetween_back=arcsbetween_back, numlocs=numlocs, arcLookup=arcLookup, nodesLookup=nodesLookup, nodes=extendednodes, arcs=extendedarcs, numarcs=numarcs, numnodes=numnodes, horizon=horizon, tstep=tstep, extendednumarcs=extendednumarcs, extendednumnodes=extendednumnodes, A_minus=A_minus, A_plus=A_plus)
 ghosttsn = createghostTSN(maxnightsaway+2)
 lasttimehome = [0 for d in drivers]
@@ -546,7 +546,7 @@ elseif solutionmethod == "cg"
 	writeresultsforrun(resultsfilename, 1, "IP", cgip_obj, timeslist2, totalcgpaths, x_cgip, z_cgip)
 
 end
-
+=#
 #-----------------------------------------------------------------------------#
 
 println("Done!")

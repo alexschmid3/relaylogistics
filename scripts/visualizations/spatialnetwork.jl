@@ -8,6 +8,8 @@ using CSV, Luxor, Colors, Random, DataFrames, Dates, StatsBase
 thickest, thinnest = 20, 1
 pixelshift = 22
 maxlocs = 66
+lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
+
 hubCoords, hubsLookup, hubsReverseLookup, hubsTravelTimeIndex, numlocs = readlocations(hubdataisbfilename, maxlocs)
 
 #--------------------------------------------------------------------------------------------------#
@@ -25,6 +27,8 @@ function getrivigotriphistory(lhdataisbfilename)
 		destinationcount[i] = 0
     end
 
+	numpitstops, tripdists = [], []
+
     hubsList = collect(values(hubsLookup))
 	for i in 1:size(data_agg)[1]
 		#if data_agg[i,1] in [7882,8502,8388,7221,2723,5581,2606,8,737,1219]
@@ -35,6 +39,7 @@ function getrivigotriphistory(lhdataisbfilename)
 			#Check whether all intermediate nodes from the Rivigo pitstop sequence are included in the subset of locs
 			intermedlocs_flag = 0
 			stopsequence = []
+			
 			for ps in psseq
 				if ps in hubsList
 					loc = hubsReverseLookup[ps]
@@ -51,11 +56,15 @@ function getrivigotriphistory(lhdataisbfilename)
 			end
 
 			if (orig != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & (intermedlocs_flag == 0) #& (orderwindowstart <= start_avail_ts <= orderwindowend) 
+				tripdist = 0
 				for i in 1:length(stopsequence)-1
 					tripson[stopsequence[i], stopsequence[i+1]] += 1
+					tripdist += distbetweenlocs[stopsequence[i], stopsequence[i+1]] 
 				end
 				origincount[orig] += 1
 				destinationcount[dest] += 1
+				push!(numpitstops, length(psseq))
+				push!(tripdists, tripdist)
 			end
 		#end
 	end
