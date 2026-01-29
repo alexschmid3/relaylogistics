@@ -11,3 +11,5 @@
 
 module load julia/1.5.2
 module load sloan/gurobi/10.0.2
+
+julia run_online.jl $SLURM_ARRAY_TASK_ID

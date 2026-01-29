@@ -44,7 +44,7 @@ vntdataisbfilename = "data/vnt_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters from file
-experiment_id = 1 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
 paramsfilename = "data/orderbalance.csv"
 syntheticdata_flag = true
 expparms = CSV.read(paramsfilename, DataFrame)
