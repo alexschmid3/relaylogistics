@@ -40,13 +40,13 @@ hubdistancesfilename = "data/hubdistances.csv"
 traveltimesfilename = "data/traveltimes_outliers.csv"
 hubdataisbfilename = "data/hub_data_isb_connect.csv"
 vntdataisbfilename = "data/vnt_data_isb_connect_clean.csv"
-lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters from file
-experiment_id = 87 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/driverstaffing.csv"
+experiment_id = 1 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+paramsfilename = "data/orderbalance.csv"
+syntheticdata_flag = true
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 11]  #Drivers = homogeneous, heterogeneous
 ex = expparms[experiment_id, 2]
@@ -60,6 +60,7 @@ lambda = expparms[experiment_id, 10]
 runtype = expparms[experiment_id, 12]
 operations = expparms[experiment_id, 13]
 ptpvsrelay = expparms[experiment_id, 14]
+lhdataisbfilename = paramsfilename == "data/orderbalance.csv" ? "data/orderbalance/"*expparms[experiment_id, 20]*".csv" : "data/lh_data_isb_connect_clean.csv"
 println("Experiment = ", experiment_id)
 
 #Online parameters

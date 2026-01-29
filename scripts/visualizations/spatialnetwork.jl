@@ -1,26 +1,40 @@
 
 using CSV, Luxor, Colors, Random, DataFrames, Dates, StatsBase
 
-#include("scripts/instancegeneration/readrivigodata.jl")
+include("scripts/instancegeneration/readrivigodata.jl")
 
 #--------------------------------------------------------------------------------------------------#
 
 thickest, thinnest = 20, 1
 pixelshift = 22
 maxlocs = 66
+tstep = 6
+roundup_flag = 1	
+excludeoutliers_flag = 1
+googlemapstraveltimes_flag = 1
+includesymmetricarcs_flag = 1	
+ensureconnectivity_flag = 1
+shiftlength = 12
 lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
+hubdistancesfilename = "data/hubdistances.csv"
+hubdataisbfilename = "data/hub_data_isb_connect.csv"
+traveltimesfilename = "data/traveltimes_outliers.csv"
+operations = "relay" 
 
 hubCoords, hubsLookup, hubsReverseLookup, hubsTravelTimeIndex, numlocs = readlocations(hubdataisbfilename, maxlocs)
+prearcs, arcLength, arcLength_raw = readandprocessarcs(operations, traveltimesfilename, hubdistancesfilename, tstep, numlocs, hubsTravelTimeIndex, roundup_flag, excludeoutliers_flag, hubsReverseLookup, googlemapstraveltimes_flag)
+distbetweenlocs, shortestpatharclists = cacheShortestDistance(numlocs, prearcs)
 
 #--------------------------------------------------------------------------------------------------#
 
-function getrivigotriphistory(lhdataisbfilename)
+function getrivigotriphistory(lhdataisbfilename, loclist)
 
 	data_agg = CSV.read(lhdataisbfilename, DataFrame)
 
-	tripson, origincount, destinationcount = Dict(), Dict(), Dict()
+	tripson, origincount, destinationcount, ordersbetween = Dict(), Dict(), Dict(), Dict()
     for i in 1:numlocs, j in 1:numlocs
         tripson[i,j] = 0
+		ordersbetween[i,j] = 0
     end
 	for i in 1:numlocs
         origincount[i] = 0
@@ -35,6 +49,7 @@ function getrivigotriphistory(lhdataisbfilename)
 			orig, dest = data_agg[!,26][i], data_agg[!,27][i]
 			psseq_raw = data_agg[i,8]
 			psseq = split(psseq_raw, "-")
+			
 
 			#Check whether all intermediate nodes from the Rivigo pitstop sequence are included in the subset of locs
 			intermedlocs_flag = 0
@@ -55,7 +70,8 @@ function getrivigotriphistory(lhdataisbfilename)
 				end
 			end
 
-			if (orig != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & (intermedlocs_flag == 0) #& (orderwindowstart <= start_avail_ts <= orderwindowend) 
+			if (orig != dest) & (orig in loclist) & (dest in loclist) & (intermedlocs_flag == 0) #& (orderwindowstart <= start_avail_ts <= orderwindowend) 
+				ordersbetween[orig,dest] += 1
 				tripdist = 0
 				for i in 1:length(stopsequence)-1
 					tripson[stopsequence[i], stopsequence[i+1]] += 1
@@ -69,7 +85,7 @@ function getrivigotriphistory(lhdataisbfilename)
 		#end
 	end
 
-	return tripson, origincount, destinationcount
+	return tripson, origincount, destinationcount, ordersbetween
 
 end
 
@@ -77,7 +93,30 @@ end
 
 function spatialnetwork(drawingname, lhdataisbfilename, xdim, ydim)
 
-    tripson, origincount, destinationcount = getrivigotriphistory(lhdataisbfilename)
+	#westlocs = [64,61,60,62,56,55,53,54,45,37,30] 
+	westlocs = [63,65,66,58,52,41,42,46,51,59,49,48,57,34,38] 
+	#eastlocs = [25, 19, 20, 17, 16, 13, 14, 8, 7, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 15, 18, 22] 
+	eastlocs = [50, 56, 55, 53, 28, 27, 31, 36, 40, 39, 35, 32, 29, 26]
+    loclist = [63,65,66,58,52,41,42,46,51,59,49,48,57,50,56,55,53,34,38,28,27,31,36,40,39,35,32,29,26] #1:numlocs
+	#loclist = [64,61,60,62,56,55,53,54,45,37,30,25,19,20,17,16,13,14,8,7,1,2,3,4,5,6,9,10,11,12,15,18,22]
+
+	tripson, origincount, destinationcount, ordersbetween = getrivigotriphistory(lhdataisbfilename, loclist)
+
+	edgeimbalance, nodeimbalance, totalflow = 0, 0, 0
+	for i in westlocs, j in eastlocs
+		totalflow += ordersbetween[i,j] + ordersbetween[j,i]
+		edgeimbalance += abs(ordersbetween[i,j] - ordersbetween[j,i])
+	end
+	for i in westlocs
+		nodeimbalance += abs(sum(ordersbetween[i,j] for j in eastlocs) - sum(ordersbetween[j,i] for j in eastlocs) )
+	end
+	for i in eastlocs
+		nodeimbalance += abs(sum(ordersbetween[i,j] for j in westlocs) - sum(ordersbetween[j,i] for j in westlocs) )
+	end
+	globalimbalance = abs(sum(sum(ordersbetween[i,j] for j in eastlocs) for i in westlocs) - sum(sum(ordersbetween[j,i] for j in eastlocs) for i in westlocs))
+	println("Edge imbalance = ", edgeimbalance/totalflow)
+	println("Node imbalance = ", nodeimbalance/totalflow/2)
+	println("Global imbalance = ", globalimbalance/totalflow)
 
     #--------------------------------------------------------#
 
@@ -175,7 +214,7 @@ function spatialnetwork(drawingname, lhdataisbfilename, xdim, ydim)
 	setcolor("black")
 
     #Legend box
-    setline(4)
+    #=setline(4)
     legendstartx = 0.5*xdim - 0.43*xdim
     legendstarty = 0.5*ydim - 0.3*ydim
     rect(legendstartx, legendstarty, 0.4*xdim, 0.25*ydim, :stroke)
@@ -213,7 +252,7 @@ function spatialnetwork(drawingname, lhdataisbfilename, xdim, ydim)
         
         #Add the label
         label(legendlabels[legendarc], :E , endPoint + Point(xdim/40, 0))
-    end
+    end=#
 
 	#--------------------------------------------------------#
 

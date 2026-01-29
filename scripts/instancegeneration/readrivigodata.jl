@@ -432,20 +432,25 @@ function cacheShortestDistance(numlocs, prearcs)
 end
 
 #---------------------------------------------------------------------------------------#
-
+# lh_filename, vnt_filename, ordermaxcap, numlocs = lhdataisbfilename, vntdataisbfilename, iterationordercap, numlocs
 function generateorderlist(lh_filename, vnt_filename, ordermaxcap, numlocs)
 
 	data_agg = CSV.read(lh_filename, DataFrame)
 
 	orderDictHelper = Dict()
 	for i in 1:size(data_agg)[1]
-		orig, dest = data_agg[!,26][i], data_agg[!,27][i]
-		psseq_raw = data_agg[i,8]
+		orig, dest = data_agg[!,"Origin_PS"][i], data_agg[!,"Destination_PS"][i]
+		psseq_raw = data_agg[i,"ps_seq"]
 		psseq = split(psseq_raw, "-")
-		orderid = data_agg[!,1][i]
+		orderid = data_agg[!,"id"][i]
 
-		pickup_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,6][i])
-		deliv_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,5][i])
+		if syntheticdata_flag
+			pickup_ts = data_agg[!,"departure_timestamp"][i]
+			deliv_ts = data_agg[!,"arrival_timestamp"][i]
+		else
+			pickup_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,"departure_timestamp"][i])
+			deliv_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,"arrival_timestamp"][i])
+		end
 
 		#start_avail_ts = floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)			
 		start_avail_ts = floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8) + 6*floor(Dates.Millisecond(floor(Dates.value(pickup_ts - (floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)))/6)), Dates.Hour)
@@ -469,7 +474,7 @@ function generateorderlist(lh_filename, vnt_filename, ordermaxcap, numlocs)
 			end
 		end
 
-		if (orig != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & (intermedlocs_flag == 0) #& (orderwindowstart <= start_avail_ts <= orderwindowend) 
+		if (orig != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & ((intermedlocs_flag == 0) || (syntheticdata_flag)) #& (orderwindowstart <= start_avail_ts <= orderwindowend) 
 			try 
 				push!(orderDictHelper[start_avail_ts], orderid)
 			catch 
@@ -545,14 +550,19 @@ function pullorders_initrivigoroutes(lh_filename, vnt_filename, maxorders, order
 
 	#Filter to find the orders 
 	for i in 1:size(data_agg)[1]
-		orig, dest = data_agg[!,26][i], data_agg[!,27][i]
-		psseq_raw = data_agg[i,8]
+		orig, dest = data_agg[!,"Origin_PS"][i], data_agg[!,"Destination_PS"][i]
+		psseq_raw = data_agg[i,"ps_seq"]
 		psseq = split(psseq_raw, "-")
-		orderid = data_agg[!,1][i]
+		orderid = data_agg[!,"id"][i]
 		if orderid in includelist
 			
-			pickup_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,6][i])
-			deliv_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,5][i])
+			if syntheticdata_flag
+				pickup_ts = data_agg[!,"departure_timestamp"][i]
+				deliv_ts = data_agg[!,"arrival_timestamp"][i]
+			else
+				pickup_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,"departure_timestamp"][i])
+				deliv_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,"arrival_timestamp"][i])
+			end
 
 			#start_avail_ts = floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)			
 			start_avail_ts = floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8) + ordergenerationtstep*floor(Dates.Millisecond(floor(Dates.value(pickup_ts - (floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)))/ordergenerationtstep)), Dates.Hour)
@@ -576,7 +586,7 @@ function pullorders_initrivigoroutes(lh_filename, vnt_filename, maxorders, order
 				end
 			end
 
-			if (orig != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & (intermedlocs_flag == 0) & (orderwindowstart <= start_avail_ts <= orderwindowend) 
+			if (orig != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & ((intermedlocs_flag == 0) || syntheticdata_flag) & (orderwindowstart <= start_avail_ts <= orderwindowend) 
 			#if (orig != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & (orderwindowstart <= start_avail_ts <= orderwindowend) & (orderwindowstart <= end_due_ts <= orderwindowend ) & (start_avail_ts <= start_due_ts)
 
 				df = DataFrame(timedelta=[timedelta], currtime=[weekstart], id=[orderid], orderwindowstart=[orderwindowstart], start_avail_ts=[start_avail_ts], orderwindowend=[orderwindowend])
@@ -674,8 +684,8 @@ function pullorders_rivigoroutes(lh_filename, vnt_filename, maxorders, orderwind
 		orderid = data_agg[i,1]
 		if orderid in includelist
 
-			pickup_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,6][i])
-			deliv_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,5][i])
+			pickup_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,"departure_timestamp"][i])
+			deliv_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,"arrival_timestamp"][i])
 
 			#start_avail_ts = floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)	
 			avail_day_8am = floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)		

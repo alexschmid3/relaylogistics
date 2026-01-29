@@ -79,7 +79,7 @@ else
 end	
 
 #Read algorithm control parameters from file
-solutionmethod = expparms[experiment_id, 3]		
+solutionmethod = expparms[expeFriment_id, 3]		
 variablefixing_ub = expparms[experiment_id, 18]
 variablefixing_lb = expparms[experiment_id, 17]
 variablefixingthreshold = (variablefixing_lb, variablefixing_ub)
@@ -216,7 +216,7 @@ orderOriginalStartTime, orderintransit_flag = findorderstartsandtransits(orders,
 loctruckcounter, trucksintransit = findtrucksintransit(ordersinprogress, originloc, available)
 m_0 = adjust_m_0(m_0, loctruckcounter)
 driversintransit, drivers, driverStartNodes, driverEndNodes, driverHomeLocs, assignedDrivers, N_flow_t, N_flow_d, alltimeswithinview, T_off_Monday8am, T_off, drivershift, T_off_0, T_off_constr, numshifts, T_on_0 = getdriverandshiftinfo()
-distbetweenlocs, shortesttriptimes, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr = findtraveltimesanddistances(orders, Origin, Destination)
+distbetweenlocs, shortesttriptimes, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr = ƒprear(orders, Origin, Destination)
 #println(weekstart)
 #println(sum(distbetweenlocs[originloc[i], destloc[i]] for i in orders))
 orderdeadline = calcorderdeadlines(shortesttriptimes)
