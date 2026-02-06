@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -a 1-24
+#SBATCH -a 1,4,7,10,13,16,19,22
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G
 #SBATCH --partition=sched_mit_sloan_batch

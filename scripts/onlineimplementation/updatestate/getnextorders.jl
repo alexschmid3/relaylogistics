@@ -1,4 +1,7 @@
 
+#lh_filename, vnt_filename, maxorders, orderwindowstart, orderwindowend, currentdatetime, tstep, horizon, prearcs, numlocs, timedelta, includelist = lh_data_file, vnt_data_file, maxneworders, orderwindowstart, orderwindowend, currentdatetime, tstep, horizon, prearcs, numlocs, timedelta, includeorderidlist
+#lh_data_file, vnt_data_file = lhdataisbfilename, vntdataisbfilename
+
 function getnextorders(timedelta, currentdatetime, lh_data_file, vnt_data_file)
 
 	#lh_data_file, vnt_data_file = "data/lh_data_isb_connect_clean.csv", "data/vnt_data_isb_connect_clean.csv"

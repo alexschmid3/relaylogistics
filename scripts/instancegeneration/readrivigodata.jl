@@ -664,28 +664,35 @@ function pullorders_rivigoroutes(lh_filename, vnt_filename, maxorders, orderwind
 	end
 
 	#Find the current location for any orders that happen within our time period of interest
-	for leg in 1:size(data_byleg)[1]
-		orderid = data_byleg[!,5][leg]
-		hubcode = data_byleg[!,2][leg]
-		if !ismissing(data_byleg[!,3][leg]) & !(hubcode == "BLSP1") & !(hubcode == "BWLP1")
-			in_ts = DateTime(1970) + Dates.Millisecond(data_byleg[!,3][leg])
-			if (currentLocation[orderid] == (99999, DateTime(2099, 1, 1, 8))) & (in_ts >= orderwindowstart) & (in_ts <= orderwindowend + Dates.Hour(timedelta))
-				#starttime = tstep* ceil(((in_ts - orderwindowstart) / (Millisecond(1) * 1000 * 3600)) / tstep)
-				currentLocation[orderid] = (hubsReverseLookup[hubcode], in_ts)
+	if !syntheticdata_flag
+		for leg in 1:size(data_byleg)[1]
+			orderid = data_byleg[!,5][leg]
+			hubcode = data_byleg[!,2][leg]
+			if !ismissing(data_byleg[!,3][leg]) & !(hubcode == "BLSP1") & !(hubcode == "BWLP1")
+				in_ts = DateTime(1970) + Dates.Millisecond(data_byleg[!,3][leg])
+				if (currentLocation[orderid] == (99999, DateTime(2099, 1, 1, 8))) & (in_ts >= orderwindowstart) & (in_ts <= orderwindowend + Dates.Hour(timedelta))
+					#starttime = tstep* ceil(((in_ts - orderwindowstart) / (Millisecond(1) * 1000 * 3600)) / tstep)
+					currentLocation[orderid] = (hubsReverseLookup[hubcode], in_ts)
+				end
 			end
 		end
 	end
 
 	#Filter to find the orders 
 	for i in 1:size(data_agg)[1]
-		orig, dest = data_agg[i,26], data_agg[i,27]
-		psseq_raw = data_agg[i,8]
+		orig, dest = data_agg[i,"Origin_PS"], data_agg[i,"Destination_PS"]
+		psseq_raw = data_agg[i,"ps_seq"]
 		psseq = split(psseq_raw, "-")
 		orderid = data_agg[i,1]
-		if orderid in includelist
+		if (orderid in includelist) || syntheticdata_flag
 
-			pickup_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,"departure_timestamp"][i])
-			deliv_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,"arrival_timestamp"][i])
+			if syntheticdata_flag
+				pickup_ts = data_agg[!,"departure_timestamp"][i]
+				deliv_ts = data_agg[!,"arrival_timestamp"][i]
+			else
+				pickup_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,"departure_timestamp"][i])
+				deliv_ts = DateTime(1970) + Dates.Millisecond(data_agg[!,"arrival_timestamp"][i])
+			end
 
 			#start_avail_ts = floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)	
 			avail_day_8am = floor(pickup_ts - Dates.Hour(8), Dates.Day) + Dates.Hour(8)		
@@ -711,7 +718,7 @@ function pullorders_rivigoroutes(lh_filename, vnt_filename, maxorders, orderwind
 				end
 			end
 
-			if (orig != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & (intermedlocs_flag == 0) & (orderwindowstart <= start_avail_ts <= orderwindowend) 
+			if (orig != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & ((intermedlocs_flag == 0) || syntheticdata_flag) & (orderwindowstart <= start_avail_ts <= orderwindowend) 
 			#if (orig != dest) & (1 <= orig <= numlocs) & (1 <= dest <= numlocs) & (orderwindowstart <= start_avail_ts <= orderwindowend) & (orderwindowstart <= end_due_ts <= orderwindowend ) & (start_avail_ts <= start_due_ts)
 
 				df = DataFrame(timedelta=[timedelta], currtime=[currentdatetime], id=[orderid], orderwindowstart=[orderwindowstart], start_avail_ts=[start_avail_ts], orderwindowend=[orderwindowend])
