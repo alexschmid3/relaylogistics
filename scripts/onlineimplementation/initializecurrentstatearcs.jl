@@ -893,14 +893,8 @@ function initializedriversetjourneys(driversets, drivergroupnum, driversingroup,
 			end
 
             #Get journey flow balance
-			try
-				n1 = arcLookup[first(journey)][1]
-				n2 = arcLookup[last(journey)][2]
-			catch 
-				println("$n1, $n2, $journey")
-				n1 = arcLookup[first(journey)][1]
-				n2 = arcLookup[last(journey)][2]
-			end
+			n1 = arcLookup[first(journey)][1]
+			n2 = arcLookup[last(journey)][2]
             push!(F_plus_g[hl,ss,sn,lth,n1], j)
             push!(F_minus_g[hl,ss,sn,lth,n2], j)
         end
