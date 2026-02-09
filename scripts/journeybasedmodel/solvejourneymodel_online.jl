@@ -1,4 +1,6 @@
 
+# lprelax_flag, opt_gap, arcspassed, currentdatetime = 1, opt_gap, -1, currentdatetime
+
 function solvejourneymodel(lprelax_flag, opt_gap, arcspassed, currentdatetime)
 					
 	totaldelta = Dates.value(Dates.Hour(currentdatetime - weekstart))
