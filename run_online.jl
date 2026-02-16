@@ -202,7 +202,7 @@ total_delivtime, max_delivtime, shortestpossible_delivtime, shortestpossible_ord
 
 #---------------------------------------SOLVE----------------------------------------# 
 
-for currtime in 0:timedelta:timedelta*(numiterations_online-1)
+for currtime in timedelta:timedelta:timedelta*(numiterations_online-1)
 
 	println("------------------------------------BEGIN ITERATION CURRTIME = $currtime------------------------------------")
 
