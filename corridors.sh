@@ -3,7 +3,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G
 #SBATCH --partition=sched_mit_sloan_batch
-#SBATCH --time=0-12:00
+#SBATCH --time=0-09:00
 #SBATCH -o /home/aschmid/relaylogistics/outerr/corridors_\%a.out
 #SBATCH -e /home/aschmid/relaylogistics/outerr/corridors_\%a.err
 #SBATCH --mail-type=BEGIN,END,FAIL
