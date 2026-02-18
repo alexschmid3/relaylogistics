@@ -103,6 +103,19 @@ function solvejourneymodel(lprelax_flag, opt_gap, arcspassed, currentdatetime)
 	@constraint(ip, driverStartingLocs[(i1,i2,i3,i4) in currfragments.driversets], sum(sum(z[(i1,i2,i3,i4),f] for f in intersect(currfragments.F_plus_g[i1,i2,i3,i4,n], journeysfor[i1,i2,i3,i4])) for n in [i3]) == length(currfragments.driversingroup[i1,i2,i3,i4]))
 	@constraint(ip, driverFlowBalance[(i1,i2,i3,i4) in currfragments.driversets, n in currfragments.N_flow_g[i1,i2,i3,i4]], sum(z[(i1,i2,i3,i4),f] for f in intersect(currfragments.F_minus_g[i1,i2,i3,i4,n], journeysfor[i1,i2,i3,i4])) - sum(z[(i1,i2,i3,i4),f] for f in intersect(currfragments.F_plus_g[i1,i2,i3,i4,n], journeysfor[i1,i2,i3,i4])) == 0)
 
+	#=
+	for (i1,i2,i3,i4) in currfragments.driversets
+		println("i1,i2,i3,i4 = $i1, $i2, $i3, $i4")
+		@constraint(ip, sum(sum(z[(i1,i2,i3,i4),f] for f in intersect(currfragments.F_plus_g[i1,i2,i3,i4,n], journeysfor[i1,i2,i3,i4])) for n in [i3]) == length(currfragments.driversingroup[i1,i2,i3,i4]))
+		optimize!(ip)
+		println("  1. ", objective_value(ip))
+		@constraint(ip, [n in currfragments.N_flow_g[i1,i2,i3,i4]], sum(z[(i1,i2,i3,i4),f] for f in intersect(currfragments.F_minus_g[i1,i2,i3,i4,n], journeysfor[i1,i2,i3,i4])) - sum(z[(i1,i2,i3,i4),f] for f in intersect(currfragments.F_plus_g[i1,i2,i3,i4,n], journeysfor[i1,i2,i3,i4])) == 0)
+		optimize!(ip)
+		println("  2. ", objective_value(ip))
+	end =#
+
+	# i1,i2,i3,i4 = 55, 1, 794, -12
+
 	#--------------------------------------------#
 
 	optimize!(ip)

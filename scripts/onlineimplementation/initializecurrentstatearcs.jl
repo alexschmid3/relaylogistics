@@ -881,33 +881,39 @@ function initializedriversetjourneys(driversets, drivergroupnum, driversingroup,
 
         #Process the list of journeys
         for journey in setdiff(journeys, [])
-            
-            #Get journey number
-            numfragments[hl,ss,sn,lth] += 1
-            j = numfragments[hl,ss,sn,lth]
-            
-            #Find arcs contained on journey
-			fragmentarcs[hl,ss,sn,lth,j] = journey
-			for a in journey
-				push!(fragmentscontaining[hl,ss,sn,lth,a], j)
-			end
 
-            #Get journey flow balance
-			try
-				n1 = arcLookup[first(journey)][1]
-				n2 = arcLookup[last(journey)][2]
-			catch
-				println("---------- ERROR ----------")
-				println("journey = ", journey)
-				println("first(journey) = ", first(journey))
-				println("arcLookup[first(journey)] = ", arcLookup[first(journey)])
-				println("typeof(arcLookup) = ", typeof(arcLookup))
-				println("---------------------------")
-				n1 = arcLookup[first(journey)][1]
-				n2 = arcLookup[last(journey)][2]
+			if length(journey) >= 1
+				#Get journey number
+				numfragments[hl,ss,sn,lth] += 1
+				j = numfragments[hl,ss,sn,lth]
+				
+				#Find arcs contained on journey
+				fragmentarcs[hl,ss,sn,lth,j] = journey
+				for a in journey
+					push!(fragmentscontaining[hl,ss,sn,lth,a], j)
+				end
+
+				#Get journey flow balance
+				try
+					n1 = arcLookup[first(journey)][1]
+					n2 = arcLookup[last(journey)][2]
+					push!(F_plus_g[hl,ss,sn,lth,n1], j)
+					push!(F_minus_g[hl,ss,sn,lth,n2], j)
+				catch
+					println("---------- ERROR ----------")
+					println("journey = ", journey)
+					println("first(journey) = ", first(journey))
+					println("arcLookup[first(journey)] = ", arcLookup[first(journey)])
+					println("typeof(arcLookup) = ", typeof(arcLookup))
+					println("---------------------------")
+					n1 = arcLookup[first(journey)][1]
+					n2 = arcLookup[last(journey)][2]
+					push!(F_plus_g[hl,ss,sn,lth,n1], j)
+					push!(F_minus_g[hl,ss,sn,lth,n2], j)
+				end
+
 			end
-            push!(F_plus_g[hl,ss,sn,lth,n1], j)
-            push!(F_minus_g[hl,ss,sn,lth,n2], j)
+            
         end
 
 	end
