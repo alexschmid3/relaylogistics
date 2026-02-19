@@ -5,12 +5,16 @@ include("scripts/instancegeneration/readrivigodata.jl")
 
 #--------------------------------------------------------------------------------------------------#
 
+experiment_id += 1
 ORIENTATION = "NS"
-target_ei, target_ni, target_gi = 0.9, 0.3, 0
+rundata = CSV.read("data/runs.csv", DataFrame)
+target_ei, target_ni, target_gi = rundata[experiment_id,2], rundata[experiment_id,3], rundata[experiment_id,4]
+#target_gi1, target_gi2 = rundata[experiment_id,5], rundata[experiment_id,6]
 weeks = 4
 N = 800 * weeks
 n = N
-outputfilename = "orders_$(target_ei)_$(target_ni)_$(target_gi).csv"
+#outputfilename = "multiregion_orders_$(target_ei)_$(target_ni)_$(target_gi).csv"
+outputfilename = "singleregion_orders_$(target_ei)_$(target_ni)_$(target_gi).csv"
 
 if ORIENTATION == "EW"
     #East/West
@@ -20,8 +24,8 @@ if ORIENTATION == "EW"
     group2 = [56, 55, 53, 28, 27, 31, 36, 40, 39, 35, 32, 29, 26, 45]
     loclist = union(group1, group2)
     region1 = [56, 55, 53, 63, 65, 66, 51, 46, 45, 58] #North
-    region2 = [58, 52, 41, 42, 31, 36, 40, 39, 28, 27, 35, 32, 29, 26, 58] #South
-    DIVIDEINTOREGIONS = false
+    region2 = [52, 41, 42, 31, 36, 40, 39, 28, 27, 35, 32, 29, 26] #South
+    DIVIDEINTOREGIONS = true
 
 elseif ORIENTATION == "NS"
     #North/South
@@ -32,10 +36,12 @@ elseif ORIENTATION == "NS"
 
 elseif ORIENTATION == "NS2"
     #North/South
-    group1 = [60, 45, 54, 36]
-    group2 = [26, 27, 15, 1, 10, 7, 9]
+    group1 = [60, 45, 54, 36,   47,44] #North
+    group2 = [26, 27, 15, 1, 10, 7, 9] #South
+    region1 = [26,27,15,  54,36,   47,44] #West
+    region2 = [1,7,9,10,  45,60] #East
     loclist = union(group1, group2)
-    DIVIDEINTOREGIONS = false
+    DIVIDEINTOREGIONS = true
 
 elseif ORIENTATION == "all"
     #All
@@ -263,6 +269,16 @@ function restorebalance_changedemand(N, target_ei, target_ni, target_gi, ordersb
     @constraint(model, sum(sum(diff_ei[i, j] for j in group2) for i in group1) == N * target_ei)
     @constraint(model, 2 * N * target_ni == sum(diff_ni[i] for i in loclist))
 
+    if DIVIDEINTOREGIONS
+        #Force inter-region demand to zero
+        @constraint(model, [i in region1, j in region2], x[i,j] == 0)
+        @constraint(model, [i in region2, j in region1], x[i,j] == 0)
+
+        #Sufficient demand in each region
+        @constraint(model, sum(sum(x[i, j] + x[j, i] for j in region1) for i in region1) >= N * 0.3)
+        @constraint(model, sum(sum(x[i, j] + x[j, i] for j in region2) for i in region2) >= N * 0.3)
+    end
+
     optimize!(model)
 
     println("Achieved edge imbalance = ", sum(sum(value(diff_ei[i, j]) for j in group2) for i in group1) / N)
@@ -380,7 +396,7 @@ function pullrivigosample(lhdataisbfilename, loclist, target_ei, target_ni, targ
 
     eb, nb, gb = calculatebalance(ordersbetween)
 
-    return sampleddata, tripson, origincount, destinationcount, ordersbetween, group1tripson, group2tripson
+    return sampleddata, tripson, origincount, destinationcount, ordersbetween, group1tripson, group2tripson, eb, nb, gb
 
 end
 
@@ -726,7 +742,11 @@ function writeorderfile(filename, orderdata)
 
 end
 
-sampleddata, tripson, origincount, destinationcount, ordersbetween, group1tripson, group2tripson = pullrivigosample(lhdataisbfilename, loclist, target_ei, target_ni, target_gi)
-#spatialnetwork_downsampled("figures/alex/ordermap_$(target_ei)_$(target_ni)_$(target_gi)_flow.png", "figures/alex/ordermap_$(target_ei)_$(target_ni)_$(target_gi)_OD.png", lhdataisbfilename, 2000, 1900, loclist, tripson, ordersbetween, group1tripson, group2tripson)
+sampleddata, tripson, origincount, destinationcount, ordersbetween, group1tripson, group2tripson, eb, nb, gb = pullrivigosample(lhdataisbfilename, loclist, target_ei, target_ni, target_gi)
+#spatialnetwork_downsampled("figures/alex/multiregion_ordermap_$(target_ei)_$(target_ni)_$(target_gi)_flow.png", "figures/alex/multiregion_ordermap_$(target_ei)_$(target_ni)_$(target_gi)_OD.png", lhdataisbfilename, 2000, 1900, loclist, tripson, ordersbetween, group1tripson, group2tripson)
 writeorderfile(outputfilename, sampleddata)
+
+println("Target global = $target_gi, actual = $gb")
+println("Target node = $target_ni, actual = $nb")
+println("Target edge = $target_ei, actual = $eb")
 

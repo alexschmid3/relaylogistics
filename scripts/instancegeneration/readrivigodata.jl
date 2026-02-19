@@ -775,6 +775,7 @@ function formatorders(numorders, originloc, destloc, available, duedate, tstep)
 end
 
 #---------------------------------------------------------------------------------------#
+# filename, maxdrivers1, maxdrivers2, numlocs, nodes, horizon = "data/pilots.csv", maxdrivers1, maxdrivers2, numlocs, nodes, horizon
 
 function readdrivers(filename, maxdrivers1, maxdrivers2, numlocs, nodes, horizon)
 
@@ -786,7 +787,11 @@ function readdrivers(filename, maxdrivers1, maxdrivers2, numlocs, nodes, horizon
 		assignedDrivers[l] = []
 	end
 
-	if basedriverfactor != -1
+	if (paramsfilename == "data/orderbalance.csv") & (operations == "ptp")
+		pilotscolumn = 15
+	elseif (paramsfilename == "data/orderbalance.csv") & (operations == "relay")
+		pilotscolumn = 14
+	elseif basedriverfactor != -1
 		pilotscolumn = 4
 	elseif driverfactor == -75
 		pilotscolumn = 7
@@ -815,7 +820,7 @@ function readdrivers(filename, maxdrivers1, maxdrivers2, numlocs, nodes, horizon
 	end
 
 	adjtotal = 0
-	if totaldrivers >= maxdrivers1
+	if totaldrivers > maxdrivers1
 		for loc in 1:numlocs
 			adjusteddrivers[loc] = max(1, floor(maxdrivers1 * realdrivers[loc] / totaldrivers))
 			adjtotal += max(1, floor(maxdrivers1 * realdrivers[loc] / totaldrivers))

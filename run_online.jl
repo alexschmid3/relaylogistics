@@ -60,7 +60,7 @@ lambda = expparms[experiment_id, 10]
 runtype = expparms[experiment_id, 12]
 operations = expparms[experiment_id, 13]
 ptpvsrelay = expparms[experiment_id, 14]
-lhdataisbfilename = paramsfilename == "data/orderbalance.csv" ? "data/orderbalance/"*expparms[experiment_id, 20]*".csv" : "data/lh_data_isb_connect_clean.csv"
+lhdataisbfilename = paramsfilename == "data/orderbalance.csv" ? "data/orderbalance/singleregion_"*expparms[experiment_id, 20]*".csv" : "data/lh_data_isb_connect_clean.csv"
 println("Experiment = ", experiment_id)
 
 #Online parameters

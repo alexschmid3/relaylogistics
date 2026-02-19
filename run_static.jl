@@ -225,7 +225,7 @@ Destination = extendDestination(orders, Destination, extendednodes)
 arcLookup, nodesLookup, arcfinishtime, dummyarc, allarcs = calcarcfinishtimes()
 
 #----------------------------------CREATE ARC SETS-----------------------------------# 
-#=
+
 basetsn = (arcsbetween=arcsbetween, arcsbetween_back=arcsbetween_back, numlocs=numlocs, arcLookup=arcLookup, nodesLookup=nodesLookup, nodes=extendednodes, arcs=extendedarcs, numarcs=numarcs, numnodes=numnodes, horizon=horizon, tstep=tstep, extendednumarcs=extendednumarcs, extendednumnodes=extendednumnodes, A_minus=A_minus, A_plus=A_plus)
 ghosttsn = createghostTSN(maxnightsaway+2)
 lasttimehome = [0 for d in drivers]
@@ -546,7 +546,7 @@ elseif solutionmethod == "cg"
 	writeresultsforrun(resultsfilename, 1, "IP", cgip_obj, timeslist2, totalcgpaths, x_cgip, z_cgip)
 
 end
-=#
+
 #-----------------------------------------------------------------------------#
 
 println("Done!")
