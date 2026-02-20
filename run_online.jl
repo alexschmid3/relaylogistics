@@ -227,7 +227,7 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 		lp_obj, x_lp, z_lp, w_lp, y_lp, solvetime_lp, bound_lp, basisarcs = solvejourneymodel_relayred(1, opt_gap, -1, currentdatetime, currarcs.orderarcs, lptimelimit);
 		ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel_relayred(0, opt_gap, -1, currentdatetime, basisarcs, iptimelimit);
 		candidatejourneys = -1
-	elseif (operations == "ptp") & (solutionmethsod == "basisip") 
+	elseif (operations == "ptp") & (solutionmethod == "basisip") 
 		lp_obj, x_lp, z_lp, w_lp, y_lp, solvetime_lp, bound_lp, candidatejourneys = solvejourneymodel(1, opt_gap, -1, currentdatetime);
 		ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel(0, opt_gap, candidatejourneys, currentdatetime);
 		basisarcs = []

@@ -793,3 +793,337 @@ if DIVIDEINTOREGIONS
     println("Target global 2 = $target_gi2, actual = $gb2")
 end
 
+
+
+
+#--------------------------------------------------------------------------------------------------#
+
+function spatialnetwork_downsampled(drawingname, drawingname2, lhdataisbfilename, xdim, ydim, loclist, tripson, ordersbetween, group1tripson, group2tripson)
+
+    #Get correct scale
+    maxlat, minlat = 0, 100
+    for l in 1:numlocs
+        maxlat = max(hubCoords[l, 1], maxlat)
+        minlat = min(hubCoords[l, 1], minlat)
+    end
+
+    latmult = -(xdim - 200) / (maxlat - minlat)
+    latshift = -(xdim - 200) / 2 + (xdim - 200) * maxlat / (maxlat - minlat)
+    longmult = -1 * latmult * 24 / 29
+    maxlongcoord, minlongcoord = -100000, 100000
+    for l in 1:numlocs
+        maxlongcoord = max(longmult * hubCoords[l, 2], maxlongcoord)
+        minlongcoord = min(longmult * hubCoords[l, 2], minlongcoord)
+    end
+    longshift = -(maxlongcoord + minlongcoord) / 2
+
+    #Format and transform latitude and longitude coordinates of each pit stop
+    pointDict = Dict()
+    listofpoints = []
+    listofpoints_labels = []
+    for l in 1:numlocs
+        longitude, latitude = hubCoords[l, 2], hubCoords[l, 1]
+        transformedcoords = (longmult * longitude + longshift, latmult * latitude + latshift)
+        pointDict[l] = Point(transformedcoords)
+        push!(listofpoints, transformedcoords)
+        push!(listofpoints_labels, [transformedcoords, string(l)])
+    end
+    locationPoints = Point.(listofpoints)
+
+    #--------------------------------------------------------#
+
+    #Calculate thickness of each arc
+    arcList = []
+    totalorders = Dict()
+    for (orig, dest) in unique([(originloc[i], destloc[i]) for i in currstate.orders])
+        totalorders[orig, dest] = length([(originloc[i], destloc[i]) for i in currstate.orders if (originloc[i] == orig) & (destloc[i] == dest)])
+    end
+    mintrips, maxtrips = 1, maximum(values(totalorders))
+
+    for i in 1:numlocs, j in setdiff(1:numlocs, i)
+        if totalorders[orig, dest] >= 1
+            if orig in group1 
+                startPoint = locationPoints[i]
+                endPoint = locationPoints[j]
+                thickness = round(thinnest + (totalorders[i, j] - mintrips) / (maxtrips - mintrips) * (thickest - thinnest))
+                if ORIENTATION[1:2] in ["NS", "al"]
+                    push!(arcList, (startPoint + Point(10, 0), endPoint + Point(10, 0), (200, 0, 0), thickness, "solid"))
+                elseif ORIENTATION[1:2] == "EW"
+                    push!(arcList, (startPoint + Point(0, 10), endPoint + Point(0, 10), (200, 0, 0), thickness, "solid"))
+                end
+            end
+            if orig in group2
+                startPoint = locationPoints[i]
+                endPoint = locationPoints[j]
+                thickness = round(thinnest + (totalorders[i, j] - mintrips) / (maxtrips - mintrips) * (thickest - thinnest))
+                if ORIENTATION[1:2] in ["NS", "al"]
+                    push!(arcList, (startPoint - Point(10, 0), endPoint - Point(10, 0), (0, 0, 200), thickness, "solid"))
+                elseif ORIENTATION[1:2] == "EW"
+                    push!(arcList, (startPoint - Point(0, 10), endPoint - Point(0, 10), (0, 0, 200), thickness, "solid"))
+                end
+            end
+        end
+    end
+
+    #=mintrips, maxtrips = 1, maximum(values(ordersbetween))
+    arcList = []	
+    for i in 1:numlocs, j in setdiff(1:numlocs, i)
+        if (i in group1) & (ordersbetween[i,j] >= 1)
+            startPoint = locationPoints[i]
+            endPoint = locationPoints[j]
+            thickness = round(thinnest + (ordersbetween[i,j] - mintrips)/(maxtrips - mintrips) * (thickest - thinnest) )
+            push!(arcList, (startPoint + Point(10,0), endPoint + Point(10,0), (200,0,0), thickness, "solid"))
+        end
+        if (i in group2) & (ordersbetween[i,j] >= 1)
+            startPoint = locationPoints[i]
+            endPoint = locationPoints[j]
+            thickness = round(thinnest + (ordersbetween[i,j] - mintrips)/(maxtrips - mintrips) * (thickest - thinnest) )
+            push!(arcList, (startPoint - Point(10,0), endPoint - Point(10,0), (0,0,200), thickness, "solid"))
+        end
+    end=#
+
+    #--------------------------------------------------------#
+
+    #Create new drawing
+    Drawing(xdim, ydim, drawingname)
+    origin()
+    background("white")
+
+    #Draw the arcs
+    for i in arcList
+        #Set arc attributes
+        setline(i[4])
+        setcolor(i[3])
+        setdash(i[5])
+
+        #Draw the arc line
+        line(i[1], i[2], :stroke)
+
+        #Calculate the rotation and placement of the arrowhead
+        theta = atan((i[2][2] - i[1][2]) / (i[2][1] - i[1][1]))
+        dist = distance(i[1], i[2])
+        arrowhead = (1 - pixelshift / dist) * i[2] + (pixelshift / dist) * i[1] #center of arrowhead positioned 8 pixels from the end node
+
+        #Rotate the arrowhead appropriately
+        if i[1][1] >= i[2][1]
+            local p = ngon(arrowhead, min(pixelshift, i[4] * 2), 3, theta - pi, vertices=true)
+        else
+            local p = ngon(arrowhead, min(pixelshift, i[4] * 2), 3, theta, vertices=true)
+        end
+
+        #Draw the arrowhead
+        poly(p, :fill, close=true)
+    end
+
+    #Draw the pit stop nodes
+    #setcolor("black")
+    #circle.(locationPoints, 32, :fill)
+    for pt in 1:length(locationPoints)
+        if driversat[pt] == 0
+            setcolor((1,1,1))
+        else
+            drivernum = round(1 - (5+driversat[pt]) / (5+28), digits=2)
+            setcolor((drivernum, drivernum, drivernum))
+        end
+        circle(locationPoints[pt], 32, :fill)
+    end
+    setcolor("black")
+    setline(3)
+    circle.(locationPoints, 32, :stroke)
+
+    #Add pit stop labels
+    fontsize(40)
+    setcolor("white")
+    for item in listofpoints_labels
+        #label(item[2], :0, Point(item[1]))
+        Luxor.text(item[2], Point(item[1]), halign=:center, valign=:middle)
+    end
+    setcolor("black")
+
+    #Legend box
+    #=setline(4)
+    legendstartx = 0.5*xdim - 0.43*xdim
+    legendstarty = 0.5*ydim - 0.3*ydim
+    rect(legendstartx, legendstarty, 0.4*xdim, 0.25*ydim, :stroke)
+
+    #Arcs for the legend
+    fontsize(70)
+    numlegendarcs = 4
+    meantrips = convert(Int,round(mean([k for k in values(tripson) if k > 0]), digits=0))
+    trips90 = convert(Int,round(percentile([k for k in values(tripson) if k > 0], 90), digits=0))
+    legendthicknesses = [mintrips, meantrips, trips90, maxtrips]
+    legendlabels = ["$mintrips trip (min)", "$meantrips trips (mean)", "$trips90 trips (p90)", "$maxtrips trips (max)"]
+    for legendarc in 1:numlegendarcs
+        startPoint = Point(legendstartx + 0.03*xdim, legendstarty + (legendarc-0.5)/numlegendarcs * 0.25*ydim)
+        endPoint = startPoint + Point(xdim/20, 0)
+        thickness = round(thinnest + (legendthicknesses[legendarc] - mintrips)/(maxtrips - mintrips) * (thickest - thinnest) )
+
+        #Draw the arc line
+        setline(thickness)
+    line(startPoint, endPoint , :stroke)
+
+    #Calculate the rotation and placement of the arrowhead
+    theta = atan((endPoint[2] - startPoint[2])/(endPoint[1] - startPoint[1]))
+    dist = distance(startPoint, endPoint)
+    arrowhead = (1-0/dist)*endPoint + (0/dist)*startPoint #center of arrowhead positioned 8 pixels from the end node
+
+    #Rotate the arrowhead appropriately
+    if startPoint[1] >= endPoint[1]
+    local p = ngon(arrowhead, min(pixelshift, thickness*2), 3, theta - pi , vertices=true)
+    else
+    local p = ngon(arrowhead, min(pixelshift, thickness*2), 3, theta , vertices=true)
+    end
+
+    #Draw the arrowhead
+    poly(p, :fill,  close=true)
+
+        #Add the label
+        label(legendlabels[legendarc], :E , endPoint + Point(xdim/40, 0))
+    end=#
+
+    #--------------------------------------------------------#
+
+    finish()
+    preview()
+
+    #--------------------------------------------------------#
+
+    #Calculate thickness of each arc
+    #=mintrips, maxtrips = 1, maximum(values(tripson))
+    arcList = []	
+    for i in 1:numlocs, j in setdiff(1:numlocs, i)
+        if group1tripson[i,j] >= 1
+            startPoint = locationPoints[i]
+            endPoint = locationPoints[j]
+            thickness = round(thinnest + (tripson[i,j] - mintrips)/(maxtrips - mintrips) * (thickest - thinnest) )
+            push!(arcList, (startPoint + Point(10,0), endPoint + Point(10,0), (200,0,0), thickness, "solid"))
+        end
+        if group2tripson[i,j] >= 1
+            startPoint = locationPoints[i]
+            endPoint = locationPoints[j]
+            thickness = round(thinnest + (tripson[i,j] - mintrips)/(maxtrips - mintrips) * (thickest - thinnest) )
+            push!(arcList, (startPoint - Point(10,0), endPoint - Point(10,0), (0,0,200), thickness, "solid"))
+        end
+    end=#
+
+    mintrips, maxtrips = 1, maximum(values(ordersbetween))
+    arcList = []
+    for i in 1:numlocs, j in setdiff(1:numlocs, i)
+        if (i in group1) & (ordersbetween[i, j] >= 1)
+            startPoint = locationPoints[i]
+            endPoint = locationPoints[j]
+            thickness = round(thinnest + (ordersbetween[i, j] - mintrips) / (maxtrips - mintrips) * (thickest - thinnest))
+            if ORIENTATION[1:2] in ["NS", "al"]
+                push!(arcList, (startPoint + Point(10, 0), endPoint + Point(10, 0), (200, 0, 0), thickness, "solid"))
+            elseif ORIENTATION[1:2] == "EW"
+                push!(arcList, (startPoint + Point(0, 10), endPoint + Point(0, 10), (200, 0, 0), thickness, "solid"))
+            end
+        end
+        if (i in group2) & (ordersbetween[i, j] >= 1)
+            startPoint = locationPoints[i]
+            endPoint = locationPoints[j]
+            thickness = round(thinnest + (ordersbetween[i, j] - mintrips) / (maxtrips - mintrips) * (thickest - thinnest))
+            if ORIENTATION[1:2] in ["NS", "al"]
+                push!(arcList, (startPoint - Point(10, 0), endPoint - Point(10, 0), (0, 0, 200), thickness, "solid"))
+            elseif ORIENTATION[1:2] == "EW"
+                push!(arcList, (startPoint - Point(0, 10), endPoint - Point(0, 10), (0, 0, 200), thickness, "solid"))
+            end
+        end
+    end
+
+    #--------------------------------------------------------#
+
+    #Create new drawing
+    Drawing(xdim, ydim, drawingname2)
+    origin()
+    background("white")
+
+    #Draw the arcs
+    for i in arcList
+        #Set arc attributes
+        setline(i[4])
+        setcolor(i[3])
+        setdash(i[5])
+
+        #Draw the arc line
+        line(i[1], i[2], :stroke)
+
+        #Calculate the rotation and placement of the arrowhead
+        theta = atan((i[2][2] - i[1][2]) / (i[2][1] - i[1][1]))
+        dist = distance(i[1], i[2])
+        arrowhead = (1 - pixelshift / dist) * i[2] + (pixelshift / dist) * i[1] #center of arrowhead positioned 8 pixels from the end node
+
+        #Rotate the arrowhead appropriately
+        if i[1][1] >= i[2][1]
+            local p = ngon(arrowhead, min(pixelshift, i[4] * 2), 3, theta - pi, vertices=true)
+        else
+            local p = ngon(arrowhead, min(pixelshift, i[4] * 2), 3, theta, vertices=true)
+        end
+
+        #Draw the arrowhead
+        poly(p, :fill, close=true)
+    end
+
+    #Draw the pit stop nodes
+    setcolor("black")
+    circle.(locationPoints, 16, :fill)
+    setcolor("black")
+    setline(3)
+    circle.(locationPoints, 16, :stroke)
+
+    #Add pit stop labels
+    fontsize(22)
+    setcolor("white")
+    for item in listofpoints_labels
+        #label(item[2], :0, Point(item[1]))
+        Luxor.text(item[2], Point(item[1]), halign=:center, valign=:middle)
+    end
+    setcolor("black")
+
+    #Legend box
+    #=setline(4)
+    legendstartx = 0.5*xdim - 0.43*xdim
+    legendstarty = 0.5*ydim - 0.3*ydim
+    rect(legendstartx, legendstarty, 0.4*xdim, 0.25*ydim, :stroke)
+
+    #Arcs for the legend
+    fontsize(70)
+    numlegendarcs = 4
+    meantrips = convert(Int,round(mean([k for k in values(tripson) if k > 0]), digits=0))
+    trips90 = convert(Int,round(percentile([k for k in values(tripson) if k > 0], 90), digits=0))
+    legendthicknesses = [mintrips, meantrips, trips90, maxtrips]
+    legendlabels = ["$mintrips trip (min)", "$meantrips trips (mean)", "$trips90 trips (p90)", "$maxtrips trips (max)"]
+    for legendarc in 1:numlegendarcs
+        startPoint = Point(legendstartx + 0.03*xdim, legendstarty + (legendarc-0.5)/numlegendarcs * 0.25*ydim)
+        endPoint = startPoint + Point(xdim/20, 0)
+        thickness = round(thinnest + (legendthicknesses[legendarc] - mintrips)/(maxtrips - mintrips) * (thickest - thinnest) )
+
+        #Draw the arc line
+        setline(thickness)
+    line(startPoint, endPoint , :stroke)
+
+    #Calculate the rotation and placement of the arrowhead
+    theta = atan((endPoint[2] - startPoint[2])/(endPoint[1] - startPoint[1]))
+    dist = distance(startPoint, endPoint)
+    arrowhead = (1-0/dist)*endPoint + (0/dist)*startPoint #center of arrowhead positioned 8 pixels from the end node
+
+    #Rotate the arrowhead appropriately
+    if startPoint[1] >= endPoint[1]
+    local p = ngon(arrowhead, min(pixelshift, thickness*2), 3, theta - pi , vertices=true)
+    else
+    local p = ngon(arrowhead, min(pixelshift, thickness*2), 3, theta , vertices=true)
+    end
+
+    #Draw the arrowhead
+    poly(p, :fill,  close=true)
+
+        #Add the label
+        label(legendlabels[legendarc], :E , endPoint + Point(xdim/40, 0))
+    end=#
+
+    #--------------------------------------------------------#
+
+    finish()
+    preview()
+
+end
