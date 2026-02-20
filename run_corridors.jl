@@ -5,16 +5,16 @@ include("scripts/instancegeneration/readrivigodata.jl")
 
 #--------------------------------------------------------------------------------------------------#
 
-experiment_id += 1
-ORIENTATION = "NS"
+experiment_id = 11
+ORIENTATION = "NS2"
 rundata = CSV.read("data/runs.csv", DataFrame)
 target_ei, target_ni, target_gi = rundata[experiment_id,2], rundata[experiment_id,3], rundata[experiment_id,4]
-#target_gi1, target_gi2 = rundata[experiment_id,5], rundata[experiment_id,6]
+target_gi1, target_gi2 = rundata[experiment_id,5], rundata[experiment_id,6]
 weeks = 4
 N = 800 * weeks
 n = N
-#outputfilename = "multiregion_orders_$(target_ei)_$(target_ni)_$(target_gi).csv"
-outputfilename = "singleregion_orders_$(target_ei)_$(target_ni)_$(target_gi).csv"
+outputfilename = "data/orderbalance/multiregion_orders_$(target_ei)_$(target_ni)_$(target_gi).csv"
+#outputfilename = "data/orderbalance/singleregion_orders_$(target_ei)_$(target_ni)_$(target_gi).csv"
 
 if ORIENTATION == "EW"
     #East/West
@@ -270,6 +270,11 @@ function restorebalance_changedemand(N, target_ei, target_ni, target_gi, ordersb
     @constraint(model, 2 * N * target_ni == sum(diff_ni[i] for i in loclist))
 
     if DIVIDEINTOREGIONS
+        @variable(model, diff_gi1 >= 0)
+        @variable(model, diff_gi2 >= 0)
+        @variable(model, z_gi1, Bin)
+        @variable(model, z_gi2, Bin)
+
         #Force inter-region demand to zero
         @constraint(model, [i in region1, j in region2], x[i,j] == 0)
         @constraint(model, [i in region2, j in region1], x[i,j] == 0)
@@ -277,6 +282,21 @@ function restorebalance_changedemand(N, target_ei, target_ni, target_gi, ordersb
         #Sufficient demand in each region
         @constraint(model, sum(sum(x[i, j] + x[j, i] for j in region1) for i in region1) >= N * 0.3)
         @constraint(model, sum(sum(x[i, j] + x[j, i] for j in region2) for i in region2) >= N * 0.3)
+
+        #Intra-region global balance
+        @constraint(model, regiondiff1, diff_gi1 >= sum(sum(x[i, j] - x[j, i] for j in intersect(region1, group2)) for i in intersect(region1, group1)))
+        @constraint(model, regiondiff2, diff_gi1 >= sum(sum(x[j, i] - x[i, j] for j in intersect(region1, group2)) for i in intersect(region1, group1)))
+        @constraint(model, regiondiff3, diff_gi1 <= sum(sum(x[i, j] - x[j, i] for j in intersect(region1, group2)) for i in intersect(region1, group1)) + N * z_gi1)
+        @constraint(model, regiondiff4, diff_gi1 <= sum(sum(x[j, i] - x[i, j] for j in intersect(region1, group2)) for i in intersect(region1, group1)) + N * (1 - z_gi1))
+        @constraint(model, regiondiff5, diff_gi2 >= sum(sum(x[i, j] - x[j, i] for j in intersect(region2, group2)) for i in intersect(region2, group1)))
+        @constraint(model, regiondiff6, diff_gi2 >= sum(sum(x[j, i] - x[i, j] for j in intersect(region2, group2)) for i in intersect(region2, group1)))
+        @constraint(model, regiondiff7, diff_gi2 <= sum(sum(x[i, j] - x[j, i] for j in intersect(region2, group2)) for i in intersect(region2, group1)) + N * z_gi2)
+        @constraint(model, regiondiff8, diff_gi2 <= sum(sum(x[j, i] - x[i, j] for j in intersect(region2, group2)) for i in intersect(region2, group1)) + N * (1 - z_gi2))
+
+        #Enforce target intra-region balance
+        @constraint(model, sum(sum(x[i, j] + x[j, i] for j in region1) for i in region1) * target_gi1 == diff_gi1)
+        @constraint(model, sum(sum(x[i, j] + x[j, i] for j in region2) for i in region2) * target_gi2 == diff_gi2)
+
     end
 
     optimize!(model)
