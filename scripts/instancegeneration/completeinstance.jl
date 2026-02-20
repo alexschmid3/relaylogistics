@@ -55,7 +55,7 @@ function extendtimespacenetwork(nodesLookup, arcLookup, A_minus, A_plus, c, u, d
 			push!(A_plus[n1], extendednumarcs + 1)
 			extendednumarcs += 1
 		end
-	elseif operations == "relay"
+	elseif operations in ["relay", "relay_noconsol"]
 		for l1 in 1:numlocs, l2 in 1:numlocs
 			n1, n2 = extendednodes[l1, horizon], extendednodes[l2, dummyendtime]
 			extendedarcs[n1,n2] = extendednumarcs + 1

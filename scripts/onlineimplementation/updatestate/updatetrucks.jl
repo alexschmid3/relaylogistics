@@ -6,9 +6,9 @@ function updatetrucks(timedelta, currentdatetime, weekstart, x, y, basisarcs)
 
 	#====================================================#
 
-	if (operations == "relay") & (solutionmethod == "mag")
+	if (operations in ["relay", "relay_noconsol"]) & (solutionmethod == "mag")
 		orderarcs = currarcs.magarcs
-	elseif (operations == "relay") & (solutionmethod == "basisip")
+	elseif (operations in ["relay", "relay_noconsol"]) & (solutionmethod == "basisip")
 		orderarcs = basisarcs
 	else	
 		orderarcs = currarcs.orderarcs

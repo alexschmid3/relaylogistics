@@ -60,7 +60,7 @@ lambda = expparms[experiment_id, 10]
 runtype = expparms[experiment_id, 12]
 operations = expparms[experiment_id, 13]
 ptpvsrelay = expparms[experiment_id, 14]
-lhdataisbfilename = paramsfilename == "data/orderbalance.csv" ? "data/orderbalance/singleregion_"*expparms[experiment_id, 20]*".csv" : "data/lh_data_isb_connect_clean.csv"
+lhdataisbfilename = paramsfilename == "data/orderbalance.csv" ? "data/orderbalance/"*expparms[experiment_id, 20]*".csv" : "data/lh_data_isb_connect_clean.csv"
 println("Experiment = ", experiment_id)
 
 #Online parameters
@@ -153,6 +153,12 @@ resultsfilename = string(csvfoldername, runid, "_output.csv")
 deliverytimefilename = string(csvfoldername, "deliverytimes/", runid, "_deliverytimes.csv")
 convergencedatafilename = string(csvfoldername, "convergence_exp", runid, ".csv")
 
+#Operations for theory+practice section
+region1 = [26, 22, 18, 15, 12, 21, 54, 36, 47, 44, 43] #West
+region2 = [1, 7, 9, 10, 45, 60, 5, 53, 55, 56] #East
+corridor1 = [26, 22, 18, 15, 12, 21, 54, 36, 47, 44, 43, 31, 27, 28, 23, 40, 39, 35, 32, 29]
+corridor2 = [1, 7, 9, 10, 45, 60, 5, 53, 55, 56, 37, 30, 25, 19, 20, 17, 16, 11, 13, 8, 2, 3, 4, 6] 
+
 #---------------------------------IMPORT FINAL SCRIPTS----------------------------------# 
 
 #Import algorithm functions
@@ -209,19 +215,19 @@ for currtime in 0:timedelta:timedelta*(numiterations_online-1)
 	currentdatetime = weekstart + Dates.Hour(currtime)
 
     #Solve current instance
-    if (operations == "relay") & ((solutionmethod == "mag") || (solutionmethod == "sag"))
+    if (operations in ["relay", "relay_noconsol"]) & ((solutionmethod == "mag") || (solutionmethod == "sag"))
         mag_obj, smp, x_smp, y_smp, z_smp, w_smp, magarcs, smptime, pptime, pptime_par, totalmagarcs = multiarcgeneration!(currstate, currfragments, currarcs)    
         ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel(0, opt_gap, -1, currentdatetime);
 		candidatejourneys, basisarcs = -1, []
-	elseif (operations == "relay") & (solutionmethod == "ip") 
+	elseif (operations in ["relay", "relay_noconsol"]) & (solutionmethod == "ip") 
 		ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel(0, opt_gap, -1, currentdatetime);
 		candidatejourneys, basisarcs = -1, []
-	elseif (operations == "relay") & (solutionmethod == "basisip") 
+	elseif (operations in ["relay", "relay_noconsol"]) & (solutionmethod == "basisip") 
 		lptimelimit, iptimelimit = 3600*24, 3600*48
 		lp_obj, x_lp, z_lp, w_lp, y_lp, solvetime_lp, bound_lp, basisarcs = solvejourneymodel_relayred(1, opt_gap, -1, currentdatetime, currarcs.orderarcs, lptimelimit);
 		ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel_relayred(0, opt_gap, -1, currentdatetime, basisarcs, iptimelimit);
 		candidatejourneys = -1
-	elseif (operations == "ptp") & (solutionmethod == "basisip") 
+	elseif (operations == "ptp") & (solutionmethsod == "basisip") 
 		lp_obj, x_lp, z_lp, w_lp, y_lp, solvetime_lp, bound_lp, candidatejourneys = solvejourneymodel(1, opt_gap, -1, currentdatetime);
 		ip_obj, x_ip, z_ip, w_ip, y_ip, solvetime_ip, bound_ip = solvejourneymodel(0, opt_gap, candidatejourneys, currentdatetime);
 		basisarcs = []

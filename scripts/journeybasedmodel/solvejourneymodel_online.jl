@@ -239,6 +239,7 @@ function solvejourneymodel_relayred(lprelax_flag, opt_gap, arcspassed, currentda
 	#	A_space_all = union(A_space_all, goodones)
 	#end
 
+
 	#Variables
 	if lprelax_flag == 0
 		println("Building IP...")
@@ -308,6 +309,27 @@ function solvejourneymodel_relayred(lprelax_flag, opt_gap, arcspassed, currentda
 	@constraint(ip, driverStartingLocs[(i1,i2,i3,i4) in currfragments.driversets], sum(sum(z[(i1,i2,i3,i4),f] for f in intersect(currfragments.F_plus_g[i1,i2,i3,i4,n], journeysfor[i1,i2,i3,i4])) for n in [i3]) == length(currfragments.driversingroup[i1,i2,i3,i4]))
 	@constraint(ip, driverFlowBalance[(i1,i2,i3,i4) in currfragments.driversets, n in currfragments.N_flow_g[i1,i2,i3,i4]], sum(z[(i1,i2,i3,i4),f] for f in intersect(currfragments.F_minus_g[i1,i2,i3,i4,n], journeysfor[i1,i2,i3,i4])) - sum(z[(i1,i2,i3,i4),f] for f in intersect(currfragments.F_plus_g[i1,i2,i3,i4,n], journeysfor[i1,i2,i3,i4])) == 0)
 
+	#If consolidation is not allowed (for theory + practice runs), then disallow orders moving along unassigned corridor
+	if operations == "relay_noconsol"
+		for i in currstate.orders
+			if (currstate.Destination[i] in region1)
+				for a in orderarcs.A[i]
+					if (arcLookup[a][1][1] in corridor2) || (arcLookup[a][2][1] in corridor2)
+						#Region 1 order cannot travel on region 2's corridor
+						@constraint(ip, x[i,a] == 0)
+					end
+				end
+			elseif (currstate.Destination[i] in region2)
+				for a in orderarcs.A[i]
+					if (arcLookup[a][1][1] in corridor1) || (arcLookup[a][2][1] in corridor1)
+						#Region 2 order cannot travel on region 1's corridor
+						@constraint(ip, x[i,a] == 0)
+					end
+				end
+			end
+		end
+	end
+	
 	#--------------------------------------------#
 
 	optimize!(ip)

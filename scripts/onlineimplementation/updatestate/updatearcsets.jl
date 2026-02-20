@@ -74,7 +74,7 @@ end
 
 function updateorderarcs()
 
-	if operations == "relay"
+	if operations in ["relay", "relay_noconsol"]
 		@time orderarcset_full, orderarcset_space_full, A_plus_i_full, A_minus_i_full = orderarcreduction(currstate.orders, currstate.Origin, currstate.Destination)
 	elseif operations == "ptp"
 		@time orderarcset_full, orderarcset_space_full, A_plus_i_full, A_minus_i_full = pointotpointarcs(currstate.orders, currstate.Origin, currstate.Destination)
@@ -82,7 +82,7 @@ function updateorderarcs()
 
 	orderarcs = (A=orderarcset_full, A_space=orderarcset_space_full, A_minus=A_minus_i_full, A_plus=A_plus_i_full, available=[], closelocs=[]);
 
-	if operations == "relay"
+	if operations in ["relay", "relay_noconsol"]
 		@time magarcs = initializeorderarcsets(k, currstate.orders, originloc, destloc, currstate.Origin, currstate.Destination, currstate.shortesttriptimes)
 	elseif operations == "ptp"
 		@time magarcs = orderarcs

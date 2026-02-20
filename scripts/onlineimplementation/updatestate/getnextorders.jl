@@ -107,12 +107,12 @@ function getnextorders(timedelta, currentdatetime, lh_data_file, vnt_data_file)
         #====================================================#
      
         #Find new order arcs and MAG arcs
-        if operations == "relay"
+        if operations in ["relay", "relay_noconsol"]
             @time orderarcset_full, orderarcset_space_full, A_plus_i_full, A_minus_i_full = orderarcreduction(neworders, currstate.Origin, currstate.Destination)
         elseif operations == "ptp"
             @time orderarcset_full, orderarcset_space_full, A_plus_i_full, A_minus_i_full = pointotpointarcs(neworders, currstate.Origin, currstate.Destination)
         end
-        if operations == "relay"
+        if operations in ["relay", "relay_noconsol"]
             @time magarcs = initializeorderarcsets(k, neworders, originloc, destloc, currstate.Origin, currstate.Destination, currstate.shortesttriptimes)
         elseif operations == "ptp"
             @time magarcs = (A=orderarcset_full, A_space=orderarcset_space_full, A_minus=A_minus_i_full, A_plus=A_plus_i_full, available=[])

@@ -822,7 +822,7 @@ function findmatchablepointtopointtrips(odpairs)
 		matchabletrips[o1,d1] = []
 	end
 
-	if operations == "relay"
+	if operations in ["relay", "relay_noconsol"]
 		return matchabletrips
 	end
 
@@ -976,7 +976,7 @@ function initializecurrentstatearcs(currstate, enumeratestandardjourneys_flag)
 	@time primaryarcs, extendedtimearcs, orderarcs, driverarcs, hasdriverarcs, ghostdriverarcs = initializearcsets(A_space, A_plus, A_minus, currstate.orders, currstate.Origin, currstate.Destination, currstate.driverStartNodes, currstate.T_off)
 	#R_off = findreturnhomearcsets(driverarcs, currstate.T_off_constr)
 	println("MAG")
-	if operations == "relay"
+	if operations in ["relay", "relay_noconsol"]
 	    @time magarcs = initializeorderarcsets(k, currstate.orders, originloc, destloc, currstate.Origin, currstate.Destination, currstate.shortesttriptimes)
     elseif operations == "ptp"
 		@time magarcs = orderarcs

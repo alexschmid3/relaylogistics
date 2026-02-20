@@ -5,15 +5,16 @@ include("scripts/instancegeneration/readrivigodata.jl")
 
 #--------------------------------------------------------------------------------------------------#
 
-experiment_id = 11
-ORIENTATION = "NS2"
+experiment_id += 1
 rundata = CSV.read("data/runs.csv", DataFrame)
 target_ei, target_ni, target_gi = rundata[experiment_id,2], rundata[experiment_id,3], rundata[experiment_id,4]
 target_gi1, target_gi2 = rundata[experiment_id,5], rundata[experiment_id,6]
 weeks = 4
 N = 800 * weeks
 n = N
-outputfilename = "data/orderbalance/multiregion_orders_$(target_ei)_$(target_ni)_$(target_gi).csv"
+
+ORIENTATION = "NS2"
+outputfilename = "data/orderbalance/multiregion_orders_$(target_ei)_$(target_ni)_$(target_gi)_$(target_gi1)_$(target_gi2).csv"
 #outputfilename = "data/orderbalance/singleregion_orders_$(target_ei)_$(target_ni)_$(target_gi).csv"
 
 if ORIENTATION == "EW"
@@ -36,11 +37,13 @@ elseif ORIENTATION == "NS"
 
 elseif ORIENTATION == "NS2"
     #North/South
-    group1 = [60, 45, 54, 36,   47,44] #North
-    group2 = [26, 27, 15, 1, 10, 7, 9] #South
-    region1 = [26,27,15,  54,36,   47,44] #West
-    region2 = [1,7,9,10,  45,60] #East
+    group1 = [60, 45, 54, 36, 47, 44, 53, 55, 56, 43] #North
+    group2 = [26, 22, 18, 15, 12, 21, 1, 10, 7, 9, 5] #South
+    region1 = [26, 22, 18, 15, 12, 21, 54, 36, 47, 44, 43] #West
+    region2 = [1, 7, 9, 10, 45, 60, 5, 53, 55, 56] #East
     loclist = union(group1, group2)
+    g1r1, g2r1, g1r2, g2r2 = intersect(group1, region1), intersect(group2, region1), intersect(group1, region2), intersect(group2, region2)
+
     DIVIDEINTOREGIONS = true
 
 elseif ORIENTATION == "all"
@@ -152,13 +155,28 @@ function calculatebalance(ordersbetween)
         nodeimbalance += abs(sum(ordersbetween[i, j] for j in group1) - sum(ordersbetween[j, i] for j in group1))
     end
     globalimbalance = abs(sum(sum(ordersbetween[i, j] for j in group2) for i in group1) - sum(sum(ordersbetween[j, i] for j in group2) for i in group1))
-    println("Edge imbalance = ", edgeimbalance / totalflow)
-    println("Node imbalance = ", nodeimbalance / totalflow / 2)
-    println("Global imbalance = ", globalimbalance / totalflow)
-    println("Total flow = ", totalflow)
+    #println("Edge imbalance = ", edgeimbalance / totalflow)
+    #println("Node imbalance = ", nodeimbalance / totalflow / 2)
+    #println("Global imbalance = ", globalimbalance / totalflow)
+    #println("Total flow = ", totalflow)
 
-    return edgeimbalance / totalflow, nodeimbalance / totalflow / 2, globalimbalance / totalflow
+    if DIVIDEINTOREGIONS
+        region1imbalance = abs(sum(sum(ordersbetween[i, j] for j in intersect(region1,group2)) for i in intersect(region1,group1)) - sum(sum(ordersbetween[j, i] for j in intersect(region1,group2)) for i in intersect(region1,group1)))
+        region1flow = sum(sum(ordersbetween[i, j] for j in intersect(region1,group2)) for i in intersect(region1,group1)) + sum(sum(ordersbetween[j, i] for j in intersect(region1,group2)) for i in intersect(region1,group1))
+        region2flow = sum(sum(ordersbetween[i, j] for j in intersect(region2,group2)) for i in intersect(region2,group1)) + sum(sum(ordersbetween[j, i] for j in intersect(region2,group2)) for i in intersect(region2,group1))
+        region2imbalance = abs(sum(sum(ordersbetween[i, j] for j in intersect(region2,group2)) for i in intersect(region2,group1)) - sum(sum(ordersbetween[j, i] for j in intersect(region2,group2)) for i in intersect(region2,group1)))
 
+        println("Flow 1 = $region1flow")
+        println("Flow 2 = $region2flow")
+        
+        return edgeimbalance / totalflow, nodeimbalance / totalflow / 2, globalimbalance / totalflow, region1imbalance / region1flow, region2imbalance / region2flow
+
+    else
+
+        return edgeimbalance / totalflow, nodeimbalance / totalflow / 2, globalimbalance / totalflow, 0, 0
+
+    end
+    
 end
 
 #--------------------------------------------------------------------------------------------------#
@@ -187,13 +205,13 @@ function restorebalance(N, target_ei, target_ni, target_gi, ordersbetween_temp)
     @constraint(model, edgediff3[i in group1, j in group2], diff_ei[i, j] <= x[i, j] - x[j, i] + N * z_ei[i, j])
     @constraint(model, edgediff4[i in group1, j in group2], diff_ei[i, j] <= x[j, i] - x[i, j] + N * (1 - z_ei[i, j]))
     @constraint(model, nodediff1[i in group1], diff_ni[i] >= sum(x[i, j] - x[j, i] for j in group2))
-    @constraint(model, ndoediff2[i in group1], diff_ni[i] >= sum(x[j, i] - x[i, j] for j in group2))
+    @constraint(model, nodediff2[i in group1], diff_ni[i] >= sum(x[j, i] - x[i, j] for j in group2))
     @constraint(model, nodediff3[i in group2], diff_ni[i] >= sum(x[i, j] - x[j, i] for j in group1))
-    @constraint(model, ndoediff4[i in group2], diff_ni[i] >= sum(x[j, i] - x[i, j] for j in group1))
+    @constraint(model, nodediff4[i in group2], diff_ni[i] >= sum(x[j, i] - x[i, j] for j in group1))
     @constraint(model, nodediff5[i in group1], diff_ni[i] <= sum(x[i, j] - x[j, i] for j in group2) + N * z_ni[i])
-    @constraint(model, ndoediff6[i in group1], diff_ni[i] <= sum(x[j, i] - x[i, j] for j in group2) + N * (1 - z_ni[i]))
+    @constraint(model, nodediff6[i in group1], diff_ni[i] <= sum(x[j, i] - x[i, j] for j in group2) + N * (1 - z_ni[i]))
     @constraint(model, nodediff7[i in group2], diff_ni[i] <= sum(x[i, j] - x[j, i] for j in group1) + N * z_ni[i])
-    @constraint(model, ndoediff8[i in group2], diff_ni[i] <= sum(x[j, i] - x[i, j] for j in group1) + N * (1 - z_ni[i]))
+    @constraint(model, nodediff8[i in group2], diff_ni[i] <= sum(x[j, i] - x[i, j] for j in group1) + N * (1 - z_ni[i]))
     @constraint(model, globaldiff1, diff_gi >= sum(sum(x[i, j] - x[j, i] for j in group2) for i in group1))
     @constraint(model, globaldiff2, diff_gi >= sum(sum(x[j, i] - x[i, j] for j in group2) for i in group1))
     @constraint(model, globaldiff3, diff_gi <= sum(sum(x[i, j] - x[j, i] for j in group2) for i in group1) + N * z_gi)
@@ -254,13 +272,13 @@ function restorebalance_changedemand(N, target_ei, target_ni, target_gi, ordersb
     @constraint(model, edgediff3[i in group1, j in group2], diff_ei[i, j] <= x[i, j] - x[j, i] + N * z_ei[i, j])
     @constraint(model, edgediff4[i in group1, j in group2], diff_ei[i, j] <= x[j, i] - x[i, j] + N * (1 - z_ei[i, j]))
     @constraint(model, nodediff1[i in group1], diff_ni[i] >= sum(x[i, j] - x[j, i] for j in group2))
-    @constraint(model, ndoediff2[i in group1], diff_ni[i] >= sum(x[j, i] - x[i, j] for j in group2))
+    @constraint(model, nodediff2[i in group1], diff_ni[i] >= sum(x[j, i] - x[i, j] for j in group2))
     @constraint(model, nodediff3[i in group2], diff_ni[i] >= sum(x[i, j] - x[j, i] for j in group1))
-    @constraint(model, ndoediff4[i in group2], diff_ni[i] >= sum(x[j, i] - x[i, j] for j in group1))
+    @constraint(model, nodediff4[i in group2], diff_ni[i] >= sum(x[j, i] - x[i, j] for j in group1))
     @constraint(model, nodediff5[i in group1], diff_ni[i] <= sum(x[i, j] - x[j, i] for j in group2) + N * z_ni[i])
-    @constraint(model, ndoediff6[i in group1], diff_ni[i] <= sum(x[j, i] - x[i, j] for j in group2) + N * (1 - z_ni[i]))
+    @constraint(model, nodediff6[i in group1], diff_ni[i] <= sum(x[j, i] - x[i, j] for j in group2) + N * (1 - z_ni[i]))
     @constraint(model, nodediff7[i in group2], diff_ni[i] <= sum(x[i, j] - x[j, i] for j in group1) + N * z_ni[i])
-    @constraint(model, ndoediff8[i in group2], diff_ni[i] <= sum(x[j, i] - x[i, j] for j in group1) + N * (1 - z_ni[i]))
+    @constraint(model, nodediff8[i in group2], diff_ni[i] <= sum(x[j, i] - x[i, j] for j in group1) + N * (1 - z_ni[i]))
     @constraint(model, globaldiff1, diff_gi >= sum(sum(x[i, j] - x[j, i] for j in group2) for i in group1))
     @constraint(model, globaldiff2, diff_gi >= sum(sum(x[j, i] - x[i, j] for j in group2) for i in group1))
     @constraint(model, globaldiff3, diff_gi <= sum(sum(x[i, j] - x[j, i] for j in group2) for i in group1) + N * z_gi)
@@ -270,6 +288,7 @@ function restorebalance_changedemand(N, target_ei, target_ni, target_gi, ordersb
     @constraint(model, 2 * N * target_ni == sum(diff_ni[i] for i in loclist))
 
     if DIVIDEINTOREGIONS
+
         @variable(model, diff_gi1 >= 0)
         @variable(model, diff_gi2 >= 0)
         @variable(model, z_gi1, Bin)
@@ -280,37 +299,37 @@ function restorebalance_changedemand(N, target_ei, target_ni, target_gi, ordersb
         @constraint(model, [i in region2, j in region1], x[i,j] == 0)
 
         #Sufficient demand in each region
-        @constraint(model, sum(sum(x[i, j] + x[j, i] for j in region1) for i in region1) >= N * 0.3)
-        @constraint(model, sum(sum(x[i, j] + x[j, i] for j in region2) for i in region2) >= N * 0.3)
+        @constraint(model, sum(sum(x[i, j] + x[j, i] for j in g1r1) for i in g2r1) >= N * 0.3)
+        @constraint(model, sum(sum(x[i, j] + x[j, i] for j in g1r2) for i in g2r2) >= N * 0.3)
 
         #Intra-region global balance
-        @constraint(model, regiondiff1, diff_gi1 >= sum(sum(x[i, j] - x[j, i] for j in intersect(region1, group2)) for i in intersect(region1, group1)))
-        @constraint(model, regiondiff2, diff_gi1 >= sum(sum(x[j, i] - x[i, j] for j in intersect(region1, group2)) for i in intersect(region1, group1)))
-        @constraint(model, regiondiff3, diff_gi1 <= sum(sum(x[i, j] - x[j, i] for j in intersect(region1, group2)) for i in intersect(region1, group1)) + N * z_gi1)
-        @constraint(model, regiondiff4, diff_gi1 <= sum(sum(x[j, i] - x[i, j] for j in intersect(region1, group2)) for i in intersect(region1, group1)) + N * (1 - z_gi1))
-        @constraint(model, regiondiff5, diff_gi2 >= sum(sum(x[i, j] - x[j, i] for j in intersect(region2, group2)) for i in intersect(region2, group1)))
-        @constraint(model, regiondiff6, diff_gi2 >= sum(sum(x[j, i] - x[i, j] for j in intersect(region2, group2)) for i in intersect(region2, group1)))
-        @constraint(model, regiondiff7, diff_gi2 <= sum(sum(x[i, j] - x[j, i] for j in intersect(region2, group2)) for i in intersect(region2, group1)) + N * z_gi2)
-        @constraint(model, regiondiff8, diff_gi2 <= sum(sum(x[j, i] - x[i, j] for j in intersect(region2, group2)) for i in intersect(region2, group1)) + N * (1 - z_gi2))
+        @constraint(model, regiondiff1, diff_gi1 >= sum(sum(x[i, j] - x[j, i] for j in g2r1) for i in g1r1))
+        @constraint(model, regiondiff2, diff_gi1 >= sum(sum(x[j, i] - x[i, j] for j in g2r1) for i in g1r1))
+        @constraint(model, regiondiff3, diff_gi1 <= sum(sum(x[i, j] - x[j, i] for j in g2r1) for i in g1r1) + N * z_gi1)
+        @constraint(model, regiondiff4, diff_gi1 <= sum(sum(x[j, i] - x[i, j] for j in g2r1) for i in g1r1) + N * (1 - z_gi1))
+        @constraint(model, regiondiff5, diff_gi2 >= sum(sum(x[i, j] - x[j, i] for j in g2r2) for i in g1r2))
+        @constraint(model, regiondiff6, diff_gi2 >= sum(sum(x[j, i] - x[i, j] for j in g2r2) for i in g1r2))
+        @constraint(model, regiondiff7, diff_gi2 <= sum(sum(x[i, j] - x[j, i] for j in g2r2) for i in g1r2) + N * z_gi2)
+        @constraint(model, regiondiff8, diff_gi2 <= sum(sum(x[j, i] - x[i, j] for j in g2r2) for i in g1r2) + N * (1 - z_gi2))
 
         #Enforce target intra-region balance
-        @constraint(model, sum(sum(x[i, j] + x[j, i] for j in region1) for i in region1) * target_gi1 == diff_gi1)
-        @constraint(model, sum(sum(x[i, j] + x[j, i] for j in region2) for i in region2) * target_gi2 == diff_gi2)
+        @constraint(model, sum(sum(x[i, j] + x[j, i] for j in g2r1) for i in g1r1) * target_gi1 == diff_gi1)
+        @constraint(model, sum(sum(x[i, j] + x[j, i] for j in g2r2) for i in g1r2) * target_gi2 == diff_gi2)
 
     end
 
     optimize!(model)
 
-    println("Achieved edge imbalance = ", sum(sum(value(diff_ei[i, j]) for j in group2) for i in group1) / N)
-    println("Achieved node imbalance = ", sum(value(diff_ni[i]) for i in loclist) / (2 * N))
-    println("Achieved global imbalance = ", value(diff_gi) / N)
+    #println("Achieved edge imbalance = ", sum(sum(value(diff_ei[i, j]) for j in group2) for i in group1) / N)
+    #println("Achieved node imbalance = ", sum(value(diff_ni[i]) for i in loclist) / (2 * N))
+    #println("Achieved global imbalance = ", value(diff_gi) / N)
 
     additionaltrips, checkbalance = Dict(), Dict()
     for i in group1, j in group2
         additionaltrips[i, j] = convert(Int64, value(x[i, j]) - ordersbetween_temp[i, j])
         additionaltrips[j, i] = convert(Int64, value(x[j, i]) - ordersbetween_temp[j, i])
     end
-    println("Targets = $target_ei, $target_ni, $target_gi")
+    #println("Targets = $target_ei, $target_ni, $target_gi")
 
     return additionaltrips
 
@@ -414,9 +433,9 @@ function pullrivigosample(lhdataisbfilename, loclist, target_ei, target_ni, targ
         push!(tripdists, tripdist)
     end
 
-    eb, nb, gb = calculatebalance(ordersbetween)
+    eb, nb, gb, gb1, gb2 = calculatebalance(ordersbetween)
 
-    return sampleddata, tripson, origincount, destinationcount, ordersbetween, group1tripson, group2tripson, eb, nb, gb
+    return sampleddata, tripson, origincount, destinationcount, ordersbetween, group1tripson, group2tripson, eb, nb, gb, gb1, gb2
 
 end
 
@@ -762,11 +781,15 @@ function writeorderfile(filename, orderdata)
 
 end
 
-sampleddata, tripson, origincount, destinationcount, ordersbetween, group1tripson, group2tripson, eb, nb, gb = pullrivigosample(lhdataisbfilename, loclist, target_ei, target_ni, target_gi)
+sampleddata, tripson, origincount, destinationcount, ordersbetween, group1tripson, group2tripson, eb, nb, gb, gb1, gb2 = pullrivigosample(lhdataisbfilename, loclist, target_ei, target_ni, target_gi)
 #spatialnetwork_downsampled("figures/alex/multiregion_ordermap_$(target_ei)_$(target_ni)_$(target_gi)_flow.png", "figures/alex/multiregion_ordermap_$(target_ei)_$(target_ni)_$(target_gi)_OD.png", lhdataisbfilename, 2000, 1900, loclist, tripson, ordersbetween, group1tripson, group2tripson)
 writeorderfile(outputfilename, sampleddata)
 
 println("Target global = $target_gi, actual = $gb")
 println("Target node = $target_ni, actual = $nb")
 println("Target edge = $target_ei, actual = $eb")
+if DIVIDEINTOREGIONS
+    println("Target global 1 = $target_gi1, actual = $gb1")
+    println("Target global 2 = $target_gi2, actual = $gb2")
+end
 

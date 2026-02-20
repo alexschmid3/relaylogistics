@@ -789,7 +789,7 @@ function readdrivers(filename, maxdrivers1, maxdrivers2, numlocs, nodes, horizon
 
 	if (paramsfilename == "data/orderbalance.csv") & (operations == "ptp")
 		pilotscolumn = 15
-	elseif (paramsfilename == "data/orderbalance.csv") & (operations == "relay")
+	elseif (paramsfilename == "data/orderbalance.csv") & (operations in ["relay", "relay_noconsol"])
 		pilotscolumn = 14
 	elseif basedriverfactor != -1
 		pilotscolumn = 4

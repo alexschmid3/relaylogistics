@@ -6,9 +6,9 @@ function updateorders(x, timedelta, currentdatetime, basisarcs, currtime)
 
 	#====================================================#
 
-	if (operations == "relay") & (solutionmethod == "mag")
+	if (operations in ["relay", "relay_noconsol"]) & (solutionmethod == "mag")
 		orderarcs = currarcs.magarcs
-	elseif (operations == "relay") & (solutionmethod == "basisip")
+	elseif (operations in ["relay", "relay_noconsol"]) & (solutionmethod == "basisip")
 		orderarcs = basisarcs
 	else	
 		orderarcs = currarcs.orderarcs
@@ -111,7 +111,7 @@ function updateorders(x, timedelta, currentdatetime, basisarcs, currtime)
                 shortestpossible_delivtime[totaldelta-timedelta] += currstate.shortesttriptimes[i]
 
 				if writedeliverytimes_flag == 1
-					if operations == "relay"
+					if operations in ["relay", "relay_noconsol"]
 						writedeliverytimetofile(deliverytimefilename, currtime, i, orddeliverytime, currstate.shortesttriptimes[i])
 					elseif operations == "ptp"
 						writedeliverytimetofile(deliverytimefilename, currtime, i, orddeliverytime, arcLength_raw[originloc[i], destloc[i]])

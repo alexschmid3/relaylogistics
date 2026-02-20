@@ -299,7 +299,7 @@ function initializearcsets(A_space, A_plus, A_minus, orders, Origin, Destination
 
 	println("Initialize arc sets...")
     #Order arc sets - viable paths from origin to destination
-	if operations == "relay"
+	if operations in ["relay", "relay_noconsol"]
 	    @time orderarcset_full, orderarcset_space_full, A_plus_i_full, A_minus_i_full = orderarcreduction(orders, Origin, Destination)
 	elseif operations == "ptp"
 		@time orderarcset_full, orderarcset_space_full, A_plus_i_full, A_minus_i_full = pointotpointarcs(orders, Origin, Destination)
