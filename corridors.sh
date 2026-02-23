@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH -a 2,3,4,5,6,8,9,10,11,12,14,15,17,18,19,20,21,23,24,26,27,29,30
+#SBATCH -a 51-110
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G
 #SBATCH --partition=sched_mit_sloan_batch
-#SBATCH --time=2-00:00
+#SBATCH --time=4-00:00
 #SBATCH -o /home/aschmid/relaylogistics/outerr/corridors_\%a.out
 #SBATCH -e /home/aschmid/relaylogistics/outerr/corridors_\%a.err
 #SBATCH --mail-type=BEGIN,END,FAIL
