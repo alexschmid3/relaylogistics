@@ -312,16 +312,16 @@ function solvejourneymodel_relayred(lprelax_flag, opt_gap, arcspassed, currentda
 	#If consolidation is not allowed (for theory + practice runs), then disallow orders moving along unassigned corridor
 	if operations == "relay_noconsol"
 		for i in currstate.orders
-			if (currstate.Destination[i] in region1)
+			if (originloc[i] in region1)
 				for a in orderarcs.A[i]
-					if (arcLookup[a][1][1] in corridor2) || (arcLookup[a][2][1] in corridor2)
+					if (nodesLookup[arcLookup[a][1]][1] in corridor2) || (nodesLookup[arcLookup[a][2]][1] in corridor2)
 						#Region 1 order cannot travel on region 2's corridor
 						@constraint(ip, x[i,a] == 0)
 					end
 				end
-			elseif (currstate.Destination[i] in region2)
+			elseif (originloc[i] in region2)
 				for a in orderarcs.A[i]
-					if (arcLookup[a][1][1] in corridor1) || (arcLookup[a][2][1] in corridor1)
+					if (nodesLookup[arcLookup[a][2]][1] in corridor1) || (nodesLookup[arcLookup[a][2]][1] in corridor1)
 						#Region 2 order cannot travel on region 1's corridor
 						@constraint(ip, x[i,a] == 0)
 					end
@@ -329,7 +329,7 @@ function solvejourneymodel_relayred(lprelax_flag, opt_gap, arcspassed, currentda
 			end
 		end
 	end
-	
+
 	#--------------------------------------------#
 
 	optimize!(ip)
