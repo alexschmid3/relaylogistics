@@ -34,8 +34,8 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters from file
-experiment_id = 113 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/static_sensitivity.csv"
+experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+paramsfilename = "data/table2_rpdppers_noequity.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
 ex = expparms[experiment_id, 2]		
@@ -67,9 +67,9 @@ elseif formulation == "homogeneous"
 	finallegdistancepenalty = 0.40 			    # Distance penalty assessed for orders that finish beyond the planning horizon
 	finallegtimepenalty = 0.30					# Time/delay penalty assessed for orders that finish beyond the planning horizon
 	deadlineasmultipleofshortestpath = 2
-elseif formulation == "homogeneousdeadlines"
-	csvfoldername = string("outputs/ordersensitivity/")
-	#csvfoldername = string("outputs/laborandshiftsensitivity/")
+elseif formulation == "homogeneousdeadlines" 
+	csvfoldername = string("outputs/table2/")
+	#csvfoldername = string("outputs/ordersensitivity/")
 	deadlines_flag = 1
 	finallegdistancepenalty = 0.40 			    # Distance penalty assessed for orders that finish beyond the planning horizon
 	finallegtimepenalty = 0.30	
@@ -79,7 +79,7 @@ else
 end	
 
 #Read algorithm control parameters from file
-solutionmethod = expparms[expeFriment_id, 3]		
+solutionmethod = expparms[experiment_id, 3]		
 variablefixing_ub = expparms[experiment_id, 18]
 variablefixing_lb = expparms[experiment_id, 17]
 variablefixingthreshold = (variablefixing_lb, variablefixing_ub)
@@ -127,6 +127,7 @@ vizflag = 0
 saveconvergencedata_flag = 1
 timedeltaexp_flag = 0
 ordergenerationtstep = 48
+syntheticdata_flag = false
 
 #Travel time calculation parameters
 excludeoutliers_flag = 1							# 0 = include outliers in travel time calculation, 1 = exclude outliers
@@ -216,7 +217,7 @@ orderOriginalStartTime, orderintransit_flag = findorderstartsandtransits(orders,
 loctruckcounter, trucksintransit = findtrucksintransit(ordersinprogress, originloc, available)
 m_0 = adjust_m_0(m_0, loctruckcounter)
 driversintransit, drivers, driverStartNodes, driverEndNodes, driverHomeLocs, assignedDrivers, N_flow_t, N_flow_d, alltimeswithinview, T_off_Monday8am, T_off, drivershift, T_off_0, T_off_constr, numshifts, T_on_0 = getdriverandshiftinfo()
-distbetweenlocs, shortesttriptimes, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr = ƒprear(orders, Origin, Destination)
+distbetweenlocs, shortesttriptimes, shortestpatharclists, traveltimebetweenlocs_rdd, traveltimebetweenlocs_raw, traveltimebetweenlocs_llr = findtraveltimesanddistances(orders, Origin, Destination)
 #println(weekstart)
 #println(sum(distbetweenlocs[originloc[i], destloc[i]] for i in orders))
 orderdeadline = calcorderdeadlines(shortesttriptimes)
@@ -395,7 +396,7 @@ elseif solutionmethod == "arcip"
 	timeslist = (mp=0, pp=0, pppar=0, ip=arcip_time, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 0, "ArcIP", arcip_obj, timeslist, sum(length(orderarcs.A[i]) for i in orders), x_arcip, z_arcip)
 		
-elseif (solutionmethod == "basisip") & (formulation == "homogeneous")
+elseif (solutionmethod == "basisip") & ((formulation == "homogeneous") || (formulation == "homogeneousdeadlines"))
 
 	lp_obj, x_lp, z_lp, lp_time, lp_bound, lpbasisarcs = solvejourneymodel(1, opt_gap, orderarcs, numeffshifts, nocuts)
 	bip_obj, x_bip, z_bip, bip_time, bip_bound = solvejourneymodel(0, opt_gap, lpbasisarcs, numeffshifts, nocuts)
@@ -520,7 +521,7 @@ elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 	end
 	=#
 
-elseif (solutionmethod == "cg") & (formulation == "homogeneous")
+elseif (solutionmethod == "cg") & ((formulation == "homogeneous") || (formulation == "homogeneousdeadlines"))
 
 	dummypath = 1
 	cg_obj, rmp, x_rmp, y_rmp, z_rmp, w_rmp, cgpaths, delta, rmptime, pptime, pptime_par, totalcgpaths, cg_iter, fullcg_time = columngeneration!(orderarcs, hasdriverarcs, nocuts)

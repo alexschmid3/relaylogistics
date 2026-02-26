@@ -5,10 +5,12 @@ include("scripts/instancegeneration/readrivigodata.jl")
 
 #--------------------------------------------------------------------------------------------------#
 
-experiment_id += 1
-rundata = CSV.read("data/runs.csv", DataFrame)
-target_ei, target_ni, target_gi = rundata[experiment_id,2], rundata[experiment_id,3], rundata[experiment_id,4]
-target_gi1, target_gi2 = rundata[experiment_id,5], rundata[experiment_id,6]
+#experiment_id = 12
+#rundata = CSV.read("data/runs.csv", DataFrame)
+#target_ei, target_ni, target_gi = rundata[experiment_id,2], rundata[experiment_id,3], rundata[experiment_id,4]
+#target_gi1, target_gi2 = rundata[experiment_id,5], rundata[experiment_id,6]
+target_ei, target_ni, target_gi = 0.5, 0.3, 0.0
+target_gi1, target_gi2 = 0.1, 0.1
 weeks = 4
 N = 800 * weeks
 n = N
@@ -782,8 +784,8 @@ function writeorderfile(filename, orderdata)
 end
 
 sampleddata, tripson, origincount, destinationcount, ordersbetween, group1tripson, group2tripson, eb, nb, gb, gb1, gb2 = pullrivigosample(lhdataisbfilename, loclist, target_ei, target_ni, target_gi)
-#spatialnetwork_downsampled("figures/alex/multiregion_ordermap_$(target_ei)_$(target_ni)_$(target_gi)_flow.png", "figures/alex/multiregion_ordermap_$(target_ei)_$(target_ni)_$(target_gi)_OD.png", lhdataisbfilename, 2000, 1900, loclist, tripson, ordersbetween, group1tripson, group2tripson)
-writeorderfile(outputfilename, sampleddata)
+spatialnetwork_downsampled("figures/alex/multiregion_ordermap_$(target_ei)_$(target_ni)_$(target_gi)_flow.png", "figures/alex/multiregion_ordermap_$(target_ei)_$(target_ni)_$(target_gi)_OD.png", lhdataisbfilename, 2000, 1900, loclist, tripson, ordersbetween, group1tripson, group2tripson)
+#writeorderfile(outputfilename, sampleddata)
 
 println("Target global = $target_gi, actual = $gb")
 println("Target node = $target_ni, actual = $nb")
@@ -794,10 +796,8 @@ if DIVIDEINTOREGIONS
 end
 
 
-
-
 #--------------------------------------------------------------------------------------------------#
-
+#=
 function spatialnetwork_downsampled(drawingname, drawingname2, lhdataisbfilename, xdim, ydim, loclist, tripson, ordersbetween, group1tripson, group2tripson)
 
     #Get correct scale
@@ -835,33 +835,35 @@ function spatialnetwork_downsampled(drawingname, drawingname2, lhdataisbfilename
     #Calculate thickness of each arc
     arcList = []
     totalorders = Dict()
-    for (orig, dest) in unique([(originloc[i], destloc[i]) for i in currstate.orders])
-        totalorders[orig, dest] = length([(originloc[i], destloc[i]) for i in currstate.orders if (originloc[i] == orig) & (destloc[i] == dest)])
+    #for (orig, dest) in unique([(originloc[i], destloc[i]) for i in currstate.orders])
+    #    totalorders[orig, dest] = length([(originloc[i], destloc[i]) for i in currstate.orders if (originloc[i] == orig) & (destloc[i] == dest)])
+    #end
+    for i in 1:numlocs, j in 1:numlocs
+        totalorders[i,j] = 0
     end
+    #for (ord, t1, t2, l1, l2) in pastordersegments
+    #    if t2 <= horizon
+    #        totalorders[l1, l2] += 1
+    #    end
+    #end
+    data = CSV.read("outputs/online_corridors/online/orders/ex4_exp31_relay_rundate2026-02-24_orders.csv", DataFrame)
+
     mintrips, maxtrips = 1, maximum(values(totalorders))
 
-    for i in 1:numlocs, j in setdiff(1:numlocs, i)
-        if totalorders[orig, dest] >= 1
-            if orig in group1 
+    for (i,j) in keys(totalorders)
+        if totalorders[i,j] >= 1
+            #if i in group1 
                 startPoint = locationPoints[i]
                 endPoint = locationPoints[j]
                 thickness = round(thinnest + (totalorders[i, j] - mintrips) / (maxtrips - mintrips) * (thickest - thinnest))
-                if ORIENTATION[1:2] in ["NS", "al"]
-                    push!(arcList, (startPoint + Point(10, 0), endPoint + Point(10, 0), (200, 0, 0), thickness, "solid"))
-                elseif ORIENTATION[1:2] == "EW"
-                    push!(arcList, (startPoint + Point(0, 10), endPoint + Point(0, 10), (200, 0, 0), thickness, "solid"))
-                end
-            end
-            if orig in group2
-                startPoint = locationPoints[i]
-                endPoint = locationPoints[j]
-                thickness = round(thinnest + (totalorders[i, j] - mintrips) / (maxtrips - mintrips) * (thickest - thinnest))
-                if ORIENTATION[1:2] in ["NS", "al"]
-                    push!(arcList, (startPoint - Point(10, 0), endPoint - Point(10, 0), (0, 0, 200), thickness, "solid"))
-                elseif ORIENTATION[1:2] == "EW"
-                    push!(arcList, (startPoint - Point(0, 10), endPoint - Point(0, 10), (0, 0, 200), thickness, "solid"))
-                end
-            end
+                push!(arcList, (startPoint + Point(10, 0), endPoint + Point(10, 0), (200, 0, 0), thickness, "solid"))
+            #end
+            #if i in group2
+                #startPoint = locationPoints[i]
+                #endPoint = locationPoints[j]
+                #thickness = round(thinnest + (totalorders[i, j] - mintrips) / (maxtrips - mintrips) * (thickest - thinnest))
+                #push!(arcList, (startPoint - Point(10, 0), endPoint - Point(10, 0), (0, 0, 200), thickness, "solid"))
+            #end
         end
     end
 
@@ -918,12 +920,22 @@ function spatialnetwork_downsampled(drawingname, drawingname2, lhdataisbfilename
     #Draw the pit stop nodes
     #setcolor("black")
     #circle.(locationPoints, 32, :fill)
-    for pt in 1:length(locationPoints)
+    #=for pt in 1:length(locationPoints)
         if driversat[pt] == 0
             setcolor((1,1,1))
         else
             drivernum = round(1 - (5+driversat[pt]) / (5+28), digits=2)
             setcolor((drivernum, drivernum, drivernum))
+        end
+        circle(locationPoints[pt], 32, :fill)
+    end=#
+    for pt in 1:length(locationPoints)
+        if pt in union(region1, corridor1)
+            setcolor((1,0,0))
+        elseif pt in union(region2, corridor2)
+            setcolor((0,0,1))
+        else
+            setcolor((0,0,0))
         end
         circle(locationPoints[pt], 32, :fill)
     end
@@ -1127,3 +1139,5 @@ function spatialnetwork_downsampled(drawingname, drawingname2, lhdataisbfilename
     preview()
 
 end
+
+=#

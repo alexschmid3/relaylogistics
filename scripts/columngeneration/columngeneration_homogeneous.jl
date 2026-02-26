@@ -135,8 +135,20 @@ function columngeneration!(orderarcs, hasdriverarcs, cuts)
 	@variable(rmp, ordtime[orders])
 
 	#Objective
-	@objective(rmp, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) + sum(sum(sum(c[a]*delta[i,a,p]*x[i,p] for a in orderarcs.A[i]) for p in paths[i]) for i in orders) + sum(c[a]*y[a] for a in hasdriverarcs.A) + sum(u[a]*w[a] for a in primaryarcs.A_space) )
-	
+	if deadlines_flag == 0
+		@objective(rmp, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) + sum(sum(sum(c[a]*delta[i,a,p]*x[i,p] for a in orderarcs.A[i]) for p in paths[i]) for i in orders) + sum(c[a]*y[a] for a in hasdriverarcs.A) + sum(u[a]*w[a] for a in primaryarcs.A_space) )
+    elseif (laborcost_delta + driverinventorycost_theta > 1e-4) & (deadlines_flag == 1)
+		println("Using new obj f")
+		@objective(smp, Min, lambda * sum(orderdelay[i] for i in orders) + sum(sum(sum(c[a]*delta[i,a,p]*x[i,p] for a in orderarcs.A[i]) for p in paths[i]) for i in orders) + sum(c[a]*y[a] for a in hasdriverarcs.A) + sum(u[a]*w[a] for a in primaryarcs.A_space)
+			+ laborcost_delta * sum(sum(sum(journeylaborcost[l,s,f] * z[l,s,f] for f in 1:numfragments[l,s]) for s in 1:numshifts) for l in 1:numlocs)
+            + driverinventorycost_theta * sum(sum(sum(journeyinventorycost[l,s,f] * z[l,s,f] for f in 1:numfragments[l,s]) for s in 1:numshifts) for l in 1:numlocs)
+        )
+        @constraint(smp, absolutedelay[i in orders], orderdelay[i] >= ordtime[i] - orderdeadline[i])
+    elseif deadlines_flag == 1
+		@objective(smp, Min, lambda * sum(orderdelay[i] for i in orders) + sum(sum(sum(c[a]*delta[i,a,p]*x[i,p] for a in orderarcs.A[i]) for p in paths[i]) for i in orders) + sum(c[a]*y[a] for a in hasdriverarcs.A) + sum(u[a]*w[a] for a in primaryarcs.A_space))
+        @constraint(smp, absolutedelay[i in orders], orderdelay[i] >= ordtime[i] - orderdeadline[i])
+    end
+
 	#Order constraints
 	@constraint(rmp, orderpath[i in orders], sum(x[i,p] for p in paths[i]) == 1)
 	

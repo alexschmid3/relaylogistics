@@ -514,6 +514,8 @@ end
 
 #---------------------------------------------------------------------------------------#
 
+# lh_filename, vnt_filename, maxorders, orderwindowstart, orderwindowend, tstep, horizon, prearcs, numlocs, timedelta, includelist =  lhdataisbfilename, vntdataisbfilename, 10000, orderwindowstart, orderwindowend, tstep, horizon, prearcs, numlocs, tstepforordercreation, includeorderidlist
+
 function pullorders_initrivigoroutes(lh_filename, vnt_filename, maxorders, orderwindowstart, orderwindowend, tstep, horizon, prearcs, numlocs, timedelta, includelist)
 
 	#println("--------------------------------")
@@ -548,7 +550,7 @@ function pullorders_initrivigoroutes(lh_filename, vnt_filename, maxorders, order
 		end
 	end
 
-	#Filter to find the orders 
+	#Filter to find the orders 	
 	for i in 1:size(data_agg)[1]
 		orig, dest = data_agg[!,"Origin_PS"][i], data_agg[!,"Destination_PS"][i]
 		psseq_raw = data_agg[i,"ps_seq"]
