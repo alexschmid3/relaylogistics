@@ -5,19 +5,30 @@ include("scripts/instancegeneration/readrivigodata.jl")
 
 #--------------------------------------------------------------------------------------------------#
 
-#experiment_id = 12
-#rundata = CSV.read("data/runs.csv", DataFrame)
-#target_ei, target_ni, target_gi = rundata[experiment_id,2], rundata[experiment_id,3], rundata[experiment_id,4]
-#target_gi1, target_gi2 = rundata[experiment_id,5], rundata[experiment_id,6]
-target_ei, target_ni, target_gi = 0.5, 0.3, 0.0
-target_gi1, target_gi2 = 0.1, 0.1
-weeks = 4
+experiment_id += 1
+rundata = CSV.read("data/runs.csv", DataFrame)
+target_ei, target_ni, target_gi = rundata[experiment_id,2], rundata[experiment_id,3], rundata[experiment_id,4]
+target_gi1, target_gi2 = rundata[experiment_id,5], rundata[experiment_id,6]
+#target_ei, target_ni, target_gi = 0.5, 0.3, 0.0
+#target_gi1, target_gi2 = 0.1, 0.1
+weeks = 2
 N = 800 * weeks
 n = N
+horizonstartdate = Date(rundata[experiment_id,9], rundata[experiment_id,7], rundata[experiment_id,8])
+runtype = "singleregion" # "multiregion",  "singleregion"
+basefilename = rundata[experiment_id,10]
 
-ORIENTATION = "NS2"
-outputfilename = "data/orderbalance/multiregion_orders_$(target_ei)_$(target_ni)_$(target_gi)_$(target_gi1)_$(target_gi2).csv"
-#outputfilename = "data/orderbalance/singleregion_orders_$(target_ei)_$(target_ni)_$(target_gi).csv"
+if runtype == "singleregion"
+    ORIENTATION = "NS"
+    outputfilename = "data/orderbalance/"*basefilename*".csv"
+    flowpngname = "figures/alex/"*basefilename*"_flow.png"
+    ODpngname = "figures/alex/"*basefilename*"_OD.png"
+elseif runtype == "multiregion"
+    ORIENTATION = "NS2"
+    outputfilename = "data/orderbalance/multiregion_orders_$(target_ei)_$(target_ni)_$(target_gi)_$(target_gi1)_$(target_gi2).csv"
+    flowpngname = "figures/alex/multiregion_ordermap_$(target_ei)_$(target_ni)_$(target_gi)_flow.png"
+    ODpngname = "figures/alex/multiregion_ordermap_$(target_ei)_$(target_ni)_$(target_gi)_OD.png"
+end
 
 if ORIENTATION == "EW"
     #East/West
@@ -769,8 +780,8 @@ function writeorderfile(filename, orderdata)
     currindex = 1
     for row in 1:size(orderdata)[1]
         push!(df, [currindex,
-            Date(2026, 1, 4) + Day(orderdata[row, "dayofweek"] + 7*rand(0:weeks-1)) + orderdata[row, "timeofday"],
-            Date(2026, 1, 4) + Day(orderdata[row, "dayofweek"] + 7*rand(0:weeks-1)) + orderdata[row, "timeofday"] + Millisecond(round(1000 * 3600 * 24 * 1.5 * distbetweenlocs[48, 61] / 500, digits=0)),
+            horizonstartdate + Day(orderdata[row, "dayofweek"] + 7*rand(0:weeks-1)) + orderdata[row, "timeofday"],
+            horizonstartdate + Day(orderdata[row, "dayofweek"] + 7*rand(0:weeks-1)) + orderdata[row, "timeofday"] + Millisecond(round(1000 * 3600 * 24 * 1.5 * distbetweenlocs[48, 61] / 500, digits=0)),
             orderdata[row, "stopsequence"],
             orderdata[row, "origin"],
             orderdata[row, "destination"]])
@@ -784,8 +795,8 @@ function writeorderfile(filename, orderdata)
 end
 
 sampleddata, tripson, origincount, destinationcount, ordersbetween, group1tripson, group2tripson, eb, nb, gb, gb1, gb2 = pullrivigosample(lhdataisbfilename, loclist, target_ei, target_ni, target_gi)
-spatialnetwork_downsampled("figures/alex/multiregion_ordermap_$(target_ei)_$(target_ni)_$(target_gi)_flow.png", "figures/alex/multiregion_ordermap_$(target_ei)_$(target_ni)_$(target_gi)_OD.png", lhdataisbfilename, 2000, 1900, loclist, tripson, ordersbetween, group1tripson, group2tripson)
-#writeorderfile(outputfilename, sampleddata)
+#spatialnetwork_downsampled(flowpngname, ODpngname, lhdataisbfilename, 2000, 1900, loclist, tripson, ordersbetween, group1tripson, group2tripson)
+writeorderfile(outputfilename, sampleddata)
 
 println("Target global = $target_gi, actual = $gb")
 println("Target node = $target_ni, actual = $nb")
