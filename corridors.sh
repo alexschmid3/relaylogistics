@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -a 111-170
+#SBATCH -a 112,114,117,123,124,127,128,133,134,142,144,147,153,154,157,158,163,164
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G
 #SBATCH --partition=sched_mit_sloan_batch
