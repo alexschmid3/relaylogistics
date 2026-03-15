@@ -34,8 +34,8 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 #----------------------------------INSTANCE PARAMETERS----------------------------------#  	
 
 #Read experiment parameters from file
-experiment_id = 10 #ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/table2_rpdppers_noequity.csv"
+experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
+paramsfilename = "data/driverequity.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
 ex = expparms[experiment_id, 2]		
@@ -56,24 +56,29 @@ println("Experiment = ", experiment_id)
 #Manual parameters for response/appendix experiments
 roundeddrivinghours_flag = 0
 if formulation == "heterogeneous"
-	csvfoldername = string("outputs/laborandshiftsensitivity/")
+	csvfoldername = string("outputs/driverequity/")
+	#csvfoldername = string("outputs/laborandshiftsensitivity/")
 	deadlines_flag = 1
 	finallegdistancepenalty = 0.80				# Distance penalty assessed for orders that finish beyond the planning horizon
 	finallegtimepenalty = 0.70					# Time/delay penalty assessed for orders that finish beyond the planning horizon
 	deadlineasmultipleofshortestpath = 2
+	driverstohire = expparms[experiment_id, 24]  
 elseif formulation == "homogeneous"
-	csvfoldername = string("outputs/driverhiring/")
+	csvfoldername = string("outputs/table2/")
+	#csvfoldername = string("outputs/driverhiring/")
 	deadlines_flag = 0
 	finallegdistancepenalty = 0.40 			    # Distance penalty assessed for orders that finish beyond the planning horizon
 	finallegtimepenalty = 0.30					# Time/delay penalty assessed for orders that finish beyond the planning horizon
 	deadlineasmultipleofshortestpath = 2
+	driverstohire = 0 
 elseif formulation == "homogeneousdeadlines" 
-	csvfoldername = string("outputs/table2/")
+	csvfoldername = string("outputs/driverequity/")
 	#csvfoldername = string("outputs/ordersensitivity/")
 	deadlines_flag = 1
 	finallegdistancepenalty = 0.40 			    # Distance penalty assessed for orders that finish beyond the planning horizon
 	finallegtimepenalty = 0.30	
 	deadlineasmultipleofshortestpath = expparms[experiment_id, 24]
+	driverstohire = 0 
 else
 	throw(DomainError(formulation, "formulation not recognized: must be 'homogeneous' or 'heterogenous'"))
 end	
@@ -97,7 +102,7 @@ else
 	knapsackcuts_flag = 0
 end
 mip_focus = expparms[experiment_id, 23]  
-driverstohire = expparms[experiment_id, 24]  
+
 
 #Transform date
 weekstart = DateTime(weekstart) + Dates.Hour(8)
@@ -124,7 +129,7 @@ dummyendtime = 1000									# Dummy time assigned to the "beyond the horizon" no
 maxnightsaway = 1
 driveroffdays_flag = 0
 vizflag = 0
-saveconvergencedata_flag = 1
+saveconvergencedata_flag = 0
 timedeltaexp_flag = 0
 ordergenerationtstep = 48
 syntheticdata_flag = false
@@ -155,6 +160,8 @@ runid = string("ex", ex, "_exp", experiment_id, "_", solutionmethod, "_rundate",
 vizfoldername = string("visualizations/static/run ", runid)
 resultsfilename = string(csvfoldername, runid, "_output.csv")
 convergencedatafilename = string(csvfoldername, "convergence_exp", runid, ".csv")
+driverhourshistogram_flag = 1
+driverhourshistogramfilename = string(csvfoldername, "driverhours_exp", runid, ".csv")
 
 #---------------------------------IMPORT FINAL SCRIPTS----------------------------------# 
 
@@ -438,7 +445,7 @@ elseif ((solutionmethod == "mag") || (solutionmethod == "sag")) & ((formulation 
 	writeresultsforrun_deadlines(resultsfilename, 0, mag_iter, mag_obj, timeslist1, totalmagarcs, x_smp, z_smp, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 	timeslist2 = (mp=0, pp=0, pppar=0, ip=magip_time, cut=0, full=0)
 	writeresultsforrun_deadlines(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs, x_magip, z_magip, totalmiles, totaldelay, totalordertime, totalemptymiles, totalrepomiles, totalshortestpathmiles, totalordermiles, totalpenaltymiles, timelaboring, timeasinventory)
-	
+
 elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 
 	variableusecount, startercuts, starterfixedvars = initmagsets(magarcs)	
@@ -453,7 +460,7 @@ elseif (solutionmethod == "mag") || (solutionmethod == "sag")
 	timeslist2 = (mp=0, pp=0, pppar=0, ip=magip_time, cut=0, full=0)
 	writeresultsforrun(resultsfilename, 1, "IP", magip_obj, timeslist2, totalmagarcs, x_magip, z_magip)
 	
-	writedriverstats(string("outputs/bigtable_new/driverstats_exp", experiment_id,".csv"), z_magip)
+	writedriverstats(string("outputs/table2/driverstats_exp", experiment_id,".csv"), z_magip)
 	
 	#=
 	include("scripts/visualizations/timespacenetwork.jl")
