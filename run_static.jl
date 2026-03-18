@@ -25,7 +25,7 @@ seedlist = [202481, 155702, 731761, 963189, 731762]
 ordercapslist = [3, 6, 18, 10000, 18]  #Cap on the number of orders introduced in each 6 hour increment in the online problem (6 hrs doesn't depend on tstep or timedelta to ensure consistent instance when these parameters are adjusted)
 								       #Order caps is technically an online parameter, but we use it in the static version as well to ensure the orders included in the instance are the same in the static and online version
 
-hubdistancesfilename = "data/hubdistances.csv"
+hubdistancesfilename = "data/hubdistances.csv" #in kilometers
 traveltimesfilename = "data/traveltimes_outliers.csv"
 hubdataisbfilename = "data/hub_data_isb_connect.csv"
 vntdataisbfilename = "data/vnt_data_isb_connect_clean.csv"
@@ -35,7 +35,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 
 #Read experiment parameters from file
 experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/driverequity.csv"
+paramsfilename = "data/table2_rpdppers_noequity.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
 ex = expparms[experiment_id, 2]		
@@ -72,7 +72,7 @@ elseif formulation == "homogeneous"
 	deadlineasmultipleofshortestpath = 2
 	driverstohire = 0 
 elseif formulation == "homogeneousdeadlines" 
-	csvfoldername = string("outputs/driverequity/")
+	csvfoldername = string("outputs/table2_noequity/")
 	#csvfoldername = string("outputs/ordersensitivity/")
 	deadlines_flag = 1
 	finallegdistancepenalty = 0.40 			    # Distance penalty assessed for orders that finish beyond the planning horizon
