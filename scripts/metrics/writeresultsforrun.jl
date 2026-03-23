@@ -46,7 +46,7 @@ function calcdrivermetrics_homogeneous(z)
 			@constraint(ip, z_new[d,f] == 0)
 		end
 		#@constraint(ip, maxhours <= maxweeklydriverhours)
-		@constraint(ip, coverallfragments[f in 1:numfragments[l,s]], sum(z_new[d,f] for d in driversets[l,s]) == round(value(z_magip[l,s,f]), digits = 0))
+		@constraint(ip, coverallfragments[f in 1:numfragments[l,s]], sum(z_new[d,f] for d in driversets[l,s]) == round(value(z[l,s,f]), digits = 0))
 
 		#Solve to assign drivers to fragments
 		optimize!(ip)
