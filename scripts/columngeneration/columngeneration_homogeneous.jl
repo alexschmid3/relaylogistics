@@ -133,6 +133,7 @@ function columngeneration!(orderarcs, hasdriverarcs, cuts)
     @variable(rmp, z[l = 1:numlocs, s = 1:numeffshifts, f = 1:numfragments[l,s]] >= 0)	
 	@variable(rmp, w[a in primaryarcs.A_space] >= 0)
 	@variable(rmp, ordtime[orders])
+	@variable(rmp, orderdelay[orders] >= 0)
 
 	#Objective
 	if deadlines_flag == 0
