@@ -5,7 +5,14 @@ include("scripts/instancegeneration/readrivigodata.jl")
 
 #--------------------------------------------------------------------------------------------------#
 
-experiment_id += 1
+#w = mean([distbetweenlocs[53,45], distbetweenlocs[45,37], distbetweenlocs[37,30], distbetweenlocs[30,25], distbetweenlocs[25,19]])
+#detour_54 = mean([distbetweenlocs[54,53], distbetweenlocs[54,55], distbetweenlocs[54,56]])
+#h = maximum([distbetweenlocs[20,19], distbetweenlocs[12,10], distbetweenlocs[62,61], detour_54])
+#n = 18
+#m = 7
+#thm2_threshold = 2*n*pi*(sqrt(1 + (h/w)^2) - 1) / (n*m - sqrt(n)*sqrt(1 + (h/w)^2) - (m-2))
+
+experiment_id = 1
 rundata = CSV.read("data/runs.csv", DataFrame)
 target_ei, target_ni, target_gi = rundata[experiment_id,2], rundata[experiment_id,3], rundata[experiment_id,4]
 target_gi1, target_gi2 = rundata[experiment_id,5], rundata[experiment_id,6]
@@ -43,8 +50,8 @@ if ORIENTATION == "EW"
 
 elseif ORIENTATION == "NS"
     #North/South
-    group1 = [64, 61, 60, 62, 56, 55, 53, 54, 45]
-    group2 = [25, 19, 20, 17, 16, 13, 14, 8, 7, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12]
+    group1 = [64, 61, 60, 62, 56, 55, 53, 54, 45] #n=9
+    group2 = [25, 19, 20, 17, 16, 13, 14, 8, 7, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12] #n=18
     loclist = [64, 61, 60, 62, 56, 55, 53, 54, 45, 37, 30, 25, 19, 20, 17, 16, 13, 14, 8, 7, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12]
     DIVIDEINTOREGIONS = false
 
@@ -70,8 +77,8 @@ end
 
 #--------------------------------------------------------------------------------------------------#
 
-thickest, thinnest = 20, 3
-pixelshift = 22
+thickest, thinnest = 40, 3
+pixelshift = 40
 maxlocs = 66
 tstep = 6
 roundup_flag = 1
@@ -128,7 +135,11 @@ function readrivigoorders(lhdataisbfilename, loclist)
         #if (orig != dest) & (orig in loclist) & (dest in loclist) & (intermedlocs_flag == 0) #& (orderwindowstart <= start_avail_ts <= orderwindowend) 
         #    push!(rivigodata,[data_agg[!,1][i], orderdayofweek, ordertimeofday, orig, dest, stopsequence])
         #end
-        if !DIVIDEINTOREGIONS
+        if ORIENTATION == "all" 
+            if (orig != dest) & (intermedlocs_flag == 0) 
+                push!(rivigodata, [data_agg[!, 1][i], orderdayofweek, ordertimeofday, orig, dest, stopsequence])
+            end
+        elseif !DIVIDEINTOREGIONS
             if (orig != dest) & (orig in group1) & (dest in group2) & (intermedlocs_flag == 0) #& (orderwindowstart <= start_avail_ts <= orderwindowend) 
                 push!(rivigodata, [data_agg[!, 1][i], orderdayofweek, ordertimeofday, orig, dest, stopsequence])
             elseif (orig != dest) & (orig in group2) & (dest in group1) & (intermedlocs_flag == 0) #& (orderwindowstart <= start_avail_ts <= orderwindowend) 
@@ -808,8 +819,12 @@ end
 
 
 #--------------------------------------------------------------------------------------------------#
-#=
-function spatialnetwork_downsampled(drawingname, drawingname2, lhdataisbfilename, xdim, ydim, loclist, tripson, ordersbetween, group1tripson, group2tripson)
+
+drawingname, xdim, ydim = "fulltraffic.png", 3000, 3000
+loclist, tripson, ordersbetween, 
+group1tripson, group2tripson
+
+function spatialnetwork_adapted(drawingname, drawingname2, lhdataisbfilename, xdim, ydim, loclist, tripson, ordersbetween, group1tripson, group2tripson)
 
     #Get correct scale
     maxlat, minlat = 0, 100
@@ -857,24 +872,35 @@ function spatialnetwork_downsampled(drawingname, drawingname2, lhdataisbfilename
     #        totalorders[l1, l2] += 1
     #    end
     #end
-    data = CSV.read("outputs/online_corridors/online/orders/ex4_exp31_relay_rundate2026-02-24_orders.csv", DataFrame)
+    #data = CSV.read("outputs/online_corridors/online/orders/ex4_exp31_relay_rundate2026-02-24_orders.csv", DataFrame)
+    data = CSV.read(lhdataisbfilename, DataFrame)
+    
+    tripson[12, 16] = 5
+    tripson[16, 12] = 5
+    tripson[45, 54] = 5
+    tripson[54, 45] = 5
 
-    mintrips, maxtrips = 1, maximum(values(totalorders))
-
-    for (i,j) in keys(totalorders)
-        if totalorders[i,j] >= 1
-            #if i in group1 
+    goodlocs = union(group1, group2, [30,37])
+    mintrips, maxtrips = 1, maximum(values(tripson))
+    arcList = []
+    for (i,j) in keys(tripson)
+        if tripson[i,j] >= 1
+            if ORIENTATION == "all"
                 startPoint = locationPoints[i]
                 endPoint = locationPoints[j]
-                thickness = round(thinnest + (totalorders[i, j] - mintrips) / (maxtrips - mintrips) * (thickest - thinnest))
-                push!(arcList, (startPoint + Point(10, 0), endPoint + Point(10, 0), (200, 0, 0), thickness, "solid"))
-            #end
-            #if i in group2
-                #startPoint = locationPoints[i]
-                #endPoint = locationPoints[j]
-                #thickness = round(thinnest + (totalorders[i, j] - mintrips) / (maxtrips - mintrips) * (thickest - thinnest))
-                #push!(arcList, (startPoint - Point(10, 0), endPoint - Point(10, 0), (0, 0, 200), thickness, "solid"))
-            #end
+                thickness = round(thinnest + (tripson[i, j] - mintrips) / (maxtrips - mintrips) * (thickest - thinnest))
+                push!(arcList, (startPoint, endPoint, (220/255,38/255,127/255), thickness, "solid"))
+            elseif (i in goodlocs) & (j in goodlocs) & (i <= j)
+                startPoint = locationPoints[i]
+                endPoint = locationPoints[j]
+                thickness = round(thinnest + (tripson[i, j] - mintrips) / (maxtrips - mintrips) * (thickest - thinnest))
+                push!(arcList, (startPoint + Point(20, 0), endPoint + Point(20, 0), (100/255,143/255,255/255), thickness, "solid"))
+            elseif (i in goodlocs) & (j in goodlocs) & (i > j)
+                startPoint = locationPoints[i]
+                endPoint = locationPoints[j]
+                thickness = round(thinnest + (tripson[i, j] - mintrips) / (maxtrips - mintrips) * (thickest - thinnest))
+                push!(arcList, (startPoint - Point(20, 0), endPoint - Point(20, 0), (254/255, 97/255, 0/255), thickness, "solid"))
+            end
         end
     end
 
@@ -915,13 +941,14 @@ function spatialnetwork_downsampled(drawingname, drawingname2, lhdataisbfilename
         #Calculate the rotation and placement of the arrowhead
         theta = atan((i[2][2] - i[1][2]) / (i[2][1] - i[1][1]))
         dist = distance(i[1], i[2])
-        arrowhead = (1 - pixelshift / dist) * i[2] + (pixelshift / dist) * i[1] #center of arrowhead positioned 8 pixels from the end node
+        pixelshift_scaled = pixelshift
+        arrowhead = (1 - pixelshift_scaled / dist) * i[2] + (pixelshift_scaled / dist) * i[1] #center of arrowhead positioned "pixelshift_scaled" pixels from the end node
 
         #Rotate the arrowhead appropriately
         if i[1][1] >= i[2][1]
-            local p = ngon(arrowhead, min(pixelshift, i[4] * 2), 3, theta - pi, vertices=true)
+            local p = ngon(arrowhead, min(pixelshift_scaled, i[4] * 2), 3, theta - pi, vertices=true)
         else
-            local p = ngon(arrowhead, min(pixelshift, i[4] * 2), 3, theta, vertices=true)
+            local p = ngon(arrowhead, min(pixelshift_scaled, i[4] * 2), 3, theta, vertices=true)
         end
 
         #Draw the arrowhead
@@ -941,12 +968,10 @@ function spatialnetwork_downsampled(drawingname, drawingname2, lhdataisbfilename
         circle(locationPoints[pt], 32, :fill)
     end=#
     for pt in 1:length(locationPoints)
-        if pt in union(region1, corridor1)
-            setcolor((1,0,0))
-        elseif pt in union(region2, corridor2)
-            setcolor((0,0,1))
+        if pt in union(group1, group2, [37,30])
+            setcolor("black")
         else
-            setcolor((0,0,0))
+            setcolor((0.7,0.7,0.7))
         end
         circle(locationPoints[pt], 32, :fill)
     end
@@ -963,192 +988,11 @@ function spatialnetwork_downsampled(drawingname, drawingname2, lhdataisbfilename
     end
     setcolor("black")
 
-    #Legend box
-    #=setline(4)
-    legendstartx = 0.5*xdim - 0.43*xdim
-    legendstarty = 0.5*ydim - 0.3*ydim
-    rect(legendstartx, legendstarty, 0.4*xdim, 0.25*ydim, :stroke)
-
-    #Arcs for the legend
-    fontsize(70)
-    numlegendarcs = 4
-    meantrips = convert(Int,round(mean([k for k in values(tripson) if k > 0]), digits=0))
-    trips90 = convert(Int,round(percentile([k for k in values(tripson) if k > 0], 90), digits=0))
-    legendthicknesses = [mintrips, meantrips, trips90, maxtrips]
-    legendlabels = ["$mintrips trip (min)", "$meantrips trips (mean)", "$trips90 trips (p90)", "$maxtrips trips (max)"]
-    for legendarc in 1:numlegendarcs
-        startPoint = Point(legendstartx + 0.03*xdim, legendstarty + (legendarc-0.5)/numlegendarcs * 0.25*ydim)
-        endPoint = startPoint + Point(xdim/20, 0)
-        thickness = round(thinnest + (legendthicknesses[legendarc] - mintrips)/(maxtrips - mintrips) * (thickest - thinnest) )
-
-        #Draw the arc line
-        setline(thickness)
-    line(startPoint, endPoint , :stroke)
-
-    #Calculate the rotation and placement of the arrowhead
-    theta = atan((endPoint[2] - startPoint[2])/(endPoint[1] - startPoint[1]))
-    dist = distance(startPoint, endPoint)
-    arrowhead = (1-0/dist)*endPoint + (0/dist)*startPoint #center of arrowhead positioned 8 pixels from the end node
-
-    #Rotate the arrowhead appropriately
-    if startPoint[1] >= endPoint[1]
-    local p = ngon(arrowhead, min(pixelshift, thickness*2), 3, theta - pi , vertices=true)
-    else
-    local p = ngon(arrowhead, min(pixelshift, thickness*2), 3, theta , vertices=true)
-    end
-
-    #Draw the arrowhead
-    poly(p, :fill,  close=true)
-
-        #Add the label
-        label(legendlabels[legendarc], :E , endPoint + Point(xdim/40, 0))
-    end=#
-
     #--------------------------------------------------------#
 
     finish()
     preview()
 
-    #--------------------------------------------------------#
-
-    #Calculate thickness of each arc
-    #=mintrips, maxtrips = 1, maximum(values(tripson))
-    arcList = []	
-    for i in 1:numlocs, j in setdiff(1:numlocs, i)
-        if group1tripson[i,j] >= 1
-            startPoint = locationPoints[i]
-            endPoint = locationPoints[j]
-            thickness = round(thinnest + (tripson[i,j] - mintrips)/(maxtrips - mintrips) * (thickest - thinnest) )
-            push!(arcList, (startPoint + Point(10,0), endPoint + Point(10,0), (200,0,0), thickness, "solid"))
-        end
-        if group2tripson[i,j] >= 1
-            startPoint = locationPoints[i]
-            endPoint = locationPoints[j]
-            thickness = round(thinnest + (tripson[i,j] - mintrips)/(maxtrips - mintrips) * (thickest - thinnest) )
-            push!(arcList, (startPoint - Point(10,0), endPoint - Point(10,0), (0,0,200), thickness, "solid"))
-        end
-    end=#
-
-    mintrips, maxtrips = 1, maximum(values(ordersbetween))
-    arcList = []
-    for i in 1:numlocs, j in setdiff(1:numlocs, i)
-        if (i in group1) & (ordersbetween[i, j] >= 1)
-            startPoint = locationPoints[i]
-            endPoint = locationPoints[j]
-            thickness = round(thinnest + (ordersbetween[i, j] - mintrips) / (maxtrips - mintrips) * (thickest - thinnest))
-            if ORIENTATION[1:2] in ["NS", "al"]
-                push!(arcList, (startPoint + Point(10, 0), endPoint + Point(10, 0), (200, 0, 0), thickness, "solid"))
-            elseif ORIENTATION[1:2] == "EW"
-                push!(arcList, (startPoint + Point(0, 10), endPoint + Point(0, 10), (200, 0, 0), thickness, "solid"))
-            end
-        end
-        if (i in group2) & (ordersbetween[i, j] >= 1)
-            startPoint = locationPoints[i]
-            endPoint = locationPoints[j]
-            thickness = round(thinnest + (ordersbetween[i, j] - mintrips) / (maxtrips - mintrips) * (thickest - thinnest))
-            if ORIENTATION[1:2] in ["NS", "al"]
-                push!(arcList, (startPoint - Point(10, 0), endPoint - Point(10, 0), (0, 0, 200), thickness, "solid"))
-            elseif ORIENTATION[1:2] == "EW"
-                push!(arcList, (startPoint - Point(0, 10), endPoint - Point(0, 10), (0, 0, 200), thickness, "solid"))
-            end
-        end
-    end
-
-    #--------------------------------------------------------#
-
-    #Create new drawing
-    Drawing(xdim, ydim, drawingname2)
-    origin()
-    background("white")
-
-    #Draw the arcs
-    for i in arcList
-        #Set arc attributes
-        setline(i[4])
-        setcolor(i[3])
-        setdash(i[5])
-
-        #Draw the arc line
-        line(i[1], i[2], :stroke)
-
-        #Calculate the rotation and placement of the arrowhead
-        theta = atan((i[2][2] - i[1][2]) / (i[2][1] - i[1][1]))
-        dist = distance(i[1], i[2])
-        arrowhead = (1 - pixelshift / dist) * i[2] + (pixelshift / dist) * i[1] #center of arrowhead positioned 8 pixels from the end node
-
-        #Rotate the arrowhead appropriately
-        if i[1][1] >= i[2][1]
-            local p = ngon(arrowhead, min(pixelshift, i[4] * 2), 3, theta - pi, vertices=true)
-        else
-            local p = ngon(arrowhead, min(pixelshift, i[4] * 2), 3, theta, vertices=true)
-        end
-
-        #Draw the arrowhead
-        poly(p, :fill, close=true)
-    end
-
-    #Draw the pit stop nodes
-    setcolor("black")
-    circle.(locationPoints, 16, :fill)
-    setcolor("black")
-    setline(3)
-    circle.(locationPoints, 16, :stroke)
-
-    #Add pit stop labels
-    fontsize(22)
-    setcolor("white")
-    for item in listofpoints_labels
-        #label(item[2], :0, Point(item[1]))
-        Luxor.text(item[2], Point(item[1]), halign=:center, valign=:middle)
-    end
-    setcolor("black")
-
-    #Legend box
-    #=setline(4)
-    legendstartx = 0.5*xdim - 0.43*xdim
-    legendstarty = 0.5*ydim - 0.3*ydim
-    rect(legendstartx, legendstarty, 0.4*xdim, 0.25*ydim, :stroke)
-
-    #Arcs for the legend
-    fontsize(70)
-    numlegendarcs = 4
-    meantrips = convert(Int,round(mean([k for k in values(tripson) if k > 0]), digits=0))
-    trips90 = convert(Int,round(percentile([k for k in values(tripson) if k > 0], 90), digits=0))
-    legendthicknesses = [mintrips, meantrips, trips90, maxtrips]
-    legendlabels = ["$mintrips trip (min)", "$meantrips trips (mean)", "$trips90 trips (p90)", "$maxtrips trips (max)"]
-    for legendarc in 1:numlegendarcs
-        startPoint = Point(legendstartx + 0.03*xdim, legendstarty + (legendarc-0.5)/numlegendarcs * 0.25*ydim)
-        endPoint = startPoint + Point(xdim/20, 0)
-        thickness = round(thinnest + (legendthicknesses[legendarc] - mintrips)/(maxtrips - mintrips) * (thickest - thinnest) )
-
-        #Draw the arc line
-        setline(thickness)
-    line(startPoint, endPoint , :stroke)
-
-    #Calculate the rotation and placement of the arrowhead
-    theta = atan((endPoint[2] - startPoint[2])/(endPoint[1] - startPoint[1]))
-    dist = distance(startPoint, endPoint)
-    arrowhead = (1-0/dist)*endPoint + (0/dist)*startPoint #center of arrowhead positioned 8 pixels from the end node
-
-    #Rotate the arrowhead appropriately
-    if startPoint[1] >= endPoint[1]
-    local p = ngon(arrowhead, min(pixelshift, thickness*2), 3, theta - pi , vertices=true)
-    else
-    local p = ngon(arrowhead, min(pixelshift, thickness*2), 3, theta , vertices=true)
-    end
-
-    #Draw the arrowhead
-    poly(p, :fill,  close=true)
-
-        #Add the label
-        label(legendlabels[legendarc], :E , endPoint + Point(xdim/40, 0))
-    end=#
-
-    #--------------------------------------------------------#
-
-    finish()
-    preview()
 
 end
 
-=#
