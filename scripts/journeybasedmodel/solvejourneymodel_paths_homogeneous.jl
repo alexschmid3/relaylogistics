@@ -18,11 +18,15 @@ function solvejourneymodel_paths(lprelax_flag, opt_gap, paths, delta, numeffshif
     end
     @variable(ip, w[a in primaryarcs.A_space] >= 0)
 	@variable(ip, ordtime[orders])
+	@variable(ip, orderdelay[orders] >= 0)
 
 	#Objective
-	@objective(ip, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) 
-	+ sum(sum(sum(c[a]*delta[i,a,p]*x[i,p] for a in orderarcs.A[i] ) for p in paths[i]) for i in orders) + sum(c[a]*(y[a] ) for a in hasdriverarcs.A) + sum(u[a]*(w[a] ) for a in primaryarcs.A_space) )
-
+	if deadlines_flag == 0
+		@objective(ip, Min, lambda * sum((ordtime[i] - shortesttriptimes[i])/shortesttriptimes[i] for i in orders) + sum(sum(sum(c[a]*delta[i,a,p]*x[i,p] for a in orderarcs.A[i] ) for p in paths[i]) for i in orders) + sum(c[a]*(y[a] ) for a in hasdriverarcs.A) + sum(u[a]*(w[a] ) for a in primaryarcs.A_space) )
+	elseif deadlines_flag == 1
+		@objective(ip, Min, lambda * sum(orderdelay[i] for i in orders) + sum(sum(sum(c[a]*delta[i,a,p]*x[i,p] for a in orderarcs.A[i]) for p in paths[i]) for i in orders) + sum(c[a]*y[a] for a in hasdriverarcs.A) + sum(u[a]*w[a] for a in primaryarcs.A_space))
+        @constraint(ip, absolutedelay[i in orders], orderdelay[i] >= ordtime[i] - orderdeadline[i])
+    end
 	#Order constraints
 	@constraint(ip, orderpath[i in orders], sum(x[i,p] for p in paths[i]) == 1)
 
