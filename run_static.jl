@@ -35,7 +35,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 
 #Read experiment parameters from file
 experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/table2_rpdppers_noequity.csv"
+paramsfilename = "data/driverequity.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
 ex = expparms[experiment_id, 2]		
@@ -64,7 +64,7 @@ if formulation == "heterogeneous"
 	deadlineasmultipleofshortestpath = 2
 	driverstohire = expparms[experiment_id, 24]  
 elseif formulation == "homogeneous"
-	csvfoldername = string("outputs/table2/")
+	csvfoldername = string("outputs/driverequity/")
 	#csvfoldername = string("outputs/driverhiring/")
 	deadlines_flag = 0
 	finallegdistancepenalty = 0.40 			    # Distance penalty assessed for orders that finish beyond the planning horizon
@@ -72,7 +72,7 @@ elseif formulation == "homogeneous"
 	deadlineasmultipleofshortestpath = 2
 	driverstohire = 0 
 elseif formulation == "homogeneousdeadlines" 
-	csvfoldername = string("outputs/table2_noequity/")
+	csvfoldername = string("outputs/driverequity/")
 	#csvfoldername = string("outputs/ordersensitivity/")
 	deadlines_flag = 1
 	finallegdistancepenalty = 0.40 			    # Distance penalty assessed for orders that finish beyond the planning horizon

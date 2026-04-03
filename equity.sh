@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH -a 1-32
+#SBATCH -a 17-32
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G
 #SBATCH --partition=sched_mit_sloan_batch
-#SBATCH --time=1-00:00
+#SBATCH --time=1-12:00
 #SBATCH -o /home/aschmid/relaylogistics/outerr/equity_\%a.out
 #SBATCH -e /home/aschmid/relaylogistics/outerr/equity_\%a.err
 #SBATCH --mail-type=BEGIN,END,FAIL
