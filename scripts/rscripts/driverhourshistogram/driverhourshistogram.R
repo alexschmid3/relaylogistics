@@ -4,13 +4,19 @@ library(DT)
 library(tidyverse)
 library(dplyr)
 
-
 guides(
   fill = guide_legend(
     override.aes = list(color = NA, alpha = 0.8)
   ),
   color = "none"
 )
+
+
+IBMblue = "#648FFF"
+IBMpurple = "#785EDC"
+IBMpink = "#DC267F"
+IBMorange = "#FE6100"
+IBMyellow = "#FFB000"
 
 #---------------------------------------------------------------#
 
@@ -22,8 +28,9 @@ alldata <- read_csv('driverhours_combined.csv')
 maxhours <- alldata %>%
   group_by(legendname) %>%
   summarize(max=max(hours))
-maxhours[1,2] = 36.8
-maxhours[2,2] = 35.9
+avghours <- alldata %>%
+  group_by(legendname) %>%
+  summarize(mean=mean(hours))
 
 #---------------------------------------------------------------#
 
@@ -38,6 +45,7 @@ alldata %>%
   ggplot(aes(x=hours, color=legendname, fill=legendname)) +
   geom_density(alpha=0.3, size=3) + 
   geom_vline(data = maxhours, aes(xintercept = max, color = legendname), size=5)+
+  #geom_vline(data = avghours, aes(xintercept = mean, color = legendname), linetype="dotted", size=5)+
   scale_colour_manual("", breaks = c("With driver equity", "No driver equity"),
                       values = c("#DA853E", "#649BCB"))+
   scale_fill_manual("", breaks = c("With driver equity", "No driver equity"),
@@ -45,7 +53,7 @@ alldata %>%
   #xlim(0, 0.00000001)+
   #ylim(0, 100)+
   labs(x="Delivery time (hours)", y="Density") +
-  scale_x_continuous(limits=c(0,40)) +
+  scale_x_continuous(limits=c(0,48)) +
   #theme(legend.position="none") +
   theme(legend.position="bottom", legend.text = element_text(size = 70)) +
   theme(axis.text = element_text(size = 60)) +

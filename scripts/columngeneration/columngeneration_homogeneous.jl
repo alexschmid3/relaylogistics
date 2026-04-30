@@ -10,6 +10,7 @@ function initialfeasiblepaths(orderarcs)
 
 	#Create delta[i,a,p] = 1 if path p for order i contains arc a, 0 otherwise
 	delta = Dict()
+	delta_counter = [Set([]) for i in orders]
 
 	#Create paths[i] = list of path indices for order i (indices added with column generation)
 	paths = Dict()
@@ -28,7 +29,7 @@ function initialfeasiblepaths(orderarcs)
 		delta[i, extendedarcs[nodes[originloc[i], horizon], extendednodes[destloc[i], dummyendtime]], 2] = 1
 	end
 	
-	return delta, paths
+	return delta, paths, delta_counter
 
 end
 
@@ -113,7 +114,7 @@ end
 function columngeneration!(orderarcs, hasdriverarcs, cuts)
 	
 	#Initialize paths
-	delta, paths = initialfeasiblepaths(orderarcs)
+	delta, paths, delta_counter = initialfeasiblepaths(orderarcs)
 
     #------------------------------------------------------#
 	
@@ -223,8 +224,8 @@ function columngeneration!(orderarcs, hasdriverarcs, cuts)
 
 		#Count number of arcs and paths
 		if saveconvergencedata_flag >= 0
-			totalorderarcs = 0 #sum(sum(min(1, sum(delta[i,a,p] for p in paths[i])) for a in orderarcs.A[i]) for i in orders)
-			totalorderpaths = 0 #sum(length(paths[i]) for i in orders)
+			totalorderarcs = sum(length(delta_counter[i]) for i in orders)
+			totalorderpaths = sum(length(paths[i]) for i in orders)
 			totalusedpaths = sum(sum(value(x[i,p]) for p in paths[i]) for i in orders)
 		end
 		println("Checkpoint 1 = ", time()-lasttime)
@@ -258,6 +259,9 @@ function columngeneration!(orderarcs, hasdriverarcs, cuts)
 				for a in sparcs
 					delta[i,a,newpathindex] = 1
 					pathobjcost += c[a]
+					if a <= numarcs
+						push!(delta_counter[i], a)
+					end
 				end
 				push!(paths[i], newpathindex)
 				push!(newpaths, (i, newpathindex, pathobjcost))

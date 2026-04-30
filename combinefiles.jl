@@ -1,7 +1,7 @@
 
 using CSV, DataFrames
 
-figuredirectory = string("outputs/ordersensitivity/run3/")
+figuredirectory = string("outputs/table2_noequity/table2_noequity")
 
 #Get list of files
 filelist = readdir(figuredirectory)
@@ -20,7 +20,7 @@ for file in filelist
 end
 
 #Combine each file type to one csv
-for t in filetypes
+for t in ["ex"] #filetypes
 	
 	#Name of combo file
 	combofile = string(figuredirectory, "/", t,"_combined.csv")

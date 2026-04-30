@@ -22,7 +22,7 @@ weeks = 2
 N = 800 * weeks
 n = N
 horizonstartdate = Date(rundata[experiment_id,9], rundata[experiment_id,7], rundata[experiment_id,8])
-runtype = "singleregion" # "multiregion",  "singleregion"
+runtype = "all" # "multiregion",  "singleregion"
 basefilename = rundata[experiment_id,10]
 
 if runtype == "singleregion"
@@ -35,6 +35,11 @@ elseif runtype == "multiregion"
     outputfilename = "data/orderbalance/multiregion_orders_$(target_ei)_$(target_ni)_$(target_gi)_$(target_gi1)_$(target_gi2).csv"
     flowpngname = "figures/alex/multiregion_ordermap_$(target_ei)_$(target_ni)_$(target_gi)_flow.png"
     ODpngname = "figures/alex/multiregion_ordermap_$(target_ei)_$(target_ni)_$(target_gi)_OD.png"
+elseif runtype == "all"
+    ORIENTATION = "all"
+    outputfilename = "none.csv"
+    flowpngname = "figures/alex/"*basefilename*"_flow.png"
+    ODpngname = "figures/alex/"*basefilename*"_OD.png"
 end
 
 if ORIENTATION == "EW"
