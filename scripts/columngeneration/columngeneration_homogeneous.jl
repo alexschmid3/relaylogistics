@@ -290,7 +290,7 @@ function columngeneration!(orderarcs, hasdriverarcs, cuts)
 		#------COUNT ARCS AND PATHS-----#
 
 		if saveconvergencedata_flag >= 0
-			maximprove = minimum(minreducedcosts) * totalusedpaths
+			maximprove = sum(minreducedcosts)
 			write_cg_conv(convergencedatafilename, cg_iter, maximprove, totalorderarcs, totalorderpaths, rmpobj)
 		end
 		println("Checkpoint 5 = ", time()-lasttime)

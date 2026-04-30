@@ -6,18 +6,30 @@ library(dplyr)
 
 #---------------------------------------------------------------#
 
-IBMblue = "#648FFF"
+myblue = "#395B83"
 IBMpurple = "#785EDC"
-IBMpink = "#DC267F"
-IBMorange = "#FE6100"
+mypink = "#CA3A7E"
+myorange = "#D47B42"
 IBMyellow = "#FFB000"
 
 #---------------------------------------------------------------#
 
 #Read in data
-magdata <- read_csv('convergence_expex4_exp5_mag_rundate2026-03-23.csv')
-sagdata <- read_csv('convergence_expex4_exp29_sag_rundate2026-03-23.csv')
-pbcgdata <- read_csv('convergence_expex4_exp21_cg_rundate2026-04-29.csv')
+magdata <- read_csv('convergence_expex4_exp5_mag_rundate2026-04-29.csv')
+sagdata <- read_csv('convergence_expex4_exp29_sag_rundate2026-04-29.csv')
+pbcgdata <- read_csv('convergence_expex4_exp21_cg_rundate2026-04-30.csv')
+
+magdata <- read_csv('convergence_expex4_exp42_mag_rundate2026-03-23.csv')
+sagdata <- read_csv('convergence_expex4_exp66_sag_rundate2026-03-23.csv')
+pbcgdata <- read_csv('convergence_expex4_exp58_cg_rundate2026-03-29.csv')
+
+magdata <- read_csv('convergence_expex4_exp45_mag_rundate2026-03-23.csv')
+sagdata <- read_csv('convergence_expex4_exp69_sag_rundate2026-03-23.csv')
+pbcgdata <- read_csv('convergence_expex4_exp61_cg_rundate2026-03-29.csv')
+
+magdata <- read_csv('convergence_expex4_exp983_mag_rundate2024-05-06.csv')
+pbcgdata <- read_csv('convergence_expex4_exp1454_cg_rundate2024-05-05.csv')
+sagdata <- read_csv('convergence_expex4_exp1478_sag_rundate2024-05-05.csv')
 
 #---------------------------------------------------------------#
 
@@ -48,17 +60,37 @@ df <- df_long %>%
 
 #---------------------------------------------------------------#
 
+#Ensure MAG is last so it will be drawn on top
+df$method <- factor(
+  df$method,
+  levels = c(setdiff(unique(df$method), "MAG"), "MAG")
+)
+
+#---------------------------------------------------------------#
+
+update_geom_defaults("text", list(size = 24))
+
+dev.new(width=8, height=4)
+
+png(file="convergence_mag.png",
+    width=2600, height=1800)
+
 ggplot(df, aes(x = iteration, y = value,
                color = method,
-               linetype = bound)) +
-  geom_line(size = 1) +
+               linetype = bound, alpha = bound)) +
+  geom_line(size = 7) +
   
   scale_x_log10() +
   
   scale_color_manual(values = c(
-    "MAG" = IBMorange,   # orange
-    "PBCG" = IBMblue,  # dark blue
-    "SAG" = IBMpink    # pink
+    "SAG" = mypink,    # pink
+    "PBCG" = myblue,  # dark blue
+    "MAG" = myorange   # orange
+  )) +
+  
+  scale_alpha_manual(values = c(
+    "upper" = 1.0,   
+    "lower" = 0.7
   )) +
   
   scale_linetype_manual(values = c(
@@ -73,13 +105,30 @@ ggplot(df, aes(x = iteration, y = value,
     linetype = NULL
   ) +
   
-  theme_minimal(base_size = 14) +
+  theme_gray(base_size = 70) +
   theme(
-    legend.position = "bottom",
+    legend.position = "none",
     panel.grid.minor = element_blank()
   )
 
+dev.off()
+
 #---------------------------------------------------------------#
+
+#Ensure MAG is last so it will be drawn on top
+df_all$method <- factor(
+  df_all$method,
+  levels = c(setdiff(unique(df_all$method), "MAG"), "MAG")
+)
+
+#---------------------------------------------------------------#
+
+update_geom_defaults("text", list(size = 24))
+
+dev.new(width=8, height=4)
+
+png(file="pathsandarcs_mag.png",
+    width=2600, height=1800)
 
 ggplot(df_all, aes(x = iteration)) +
   
@@ -89,22 +138,22 @@ ggplot(df_all, aes(x = iteration)) +
   
   # --- ARCS (lines) ---
   geom_line(aes(y = arc_count, color = method),
-            size = 1.2) +
+            size = 10) +
   
   # log scale on x-axis
   scale_x_log10() +
   
   # colors (match your figure)
   scale_color_manual(values = c(
-    "MAG"  = IBMorange,
-    "PBCG" = IBMblue,
-    "SAG"  = IBMpink
+    "MAG"  = myorange,
+    "PBCG" = myblue,
+    "SAG"  = mypink
   )) +
   
   scale_fill_manual(values = c(
-    "MAG"  = IBMorange,
-    "PBCG" = IBMblue,
-    "SAG"  = IBMpink
+    "MAG"  = myorange,
+    "PBCG" = myblue,
+    "SAG"  = mypink
   )) +
   
   labs(
@@ -114,9 +163,11 @@ ggplot(df_all, aes(x = iteration)) +
     fill = NULL
   ) +
   
-  theme_minimal(base_size = 14) +
+  theme_gray(base_size = 70) +
   theme(
-    legend.position = "bottom",
+    legend.position = "none",
     panel.grid.minor = element_blank()
   )
+
+dev.off()
 

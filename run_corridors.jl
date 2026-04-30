@@ -10,7 +10,15 @@ include("scripts/instancegeneration/readrivigodata.jl")
 #h = maximum([distbetweenlocs[20,19], distbetweenlocs[12,10], distbetweenlocs[62,61], detour_54])
 #n = 18
 #m = 7
-#thm2_threshold = 2*n*pi*(sqrt(1 + (h/w)^2) - 1) / (n*m - sqrt(n)*sqrt(1 + (h/w)^2) - (m-2))
+#thm2_threshold = 2*n*sqrt(pi)*(sqrt(1 + (h/w)^2) - 1) / (n*m - sqrt(n)*sqrt(1 + (h/w)^2) - (m-2))
+
+#New threshold
+n = 9
+K = 1 
+m = 7 
+w = 209
+h = 422 
+thm2_threshold = 4*n*sqrt(pi)*(sqrt(1 + (h/w)^2) - 1) / (2*n*m - 2*sqrt(n/K)*sqrt(1 + (h/w)^2)*(K-1+sqrt(K+3)) - (m-2)*sqrt(2*K+2))
 
 experiment_id = 1
 rundata = CSV.read("data/runs.csv", DataFrame)

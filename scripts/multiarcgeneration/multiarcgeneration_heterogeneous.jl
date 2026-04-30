@@ -708,7 +708,7 @@ function multiarcgeneration_heterogeneous!(magarcs, hasdriverarcs, startercuts, 
 			if solutionmethod == "mag"	
 				minreducedcost, shortestpathnodes, shortestpatharcs, sptime = magsubproblem(i, arcredcosts, subproblemsets)
 			elseif solutionmethod == "sag"	
-				minreducedcost, shortestpathnodes, shortestpatharcs, sptime = sagsubproblem(i, arcredcosts, 2)
+				minreducedcost, shortestpathnodes, shortestpatharcs, sptime = sagsubproblem(i, arcredcosts, 1)
 			end
 
 			push!(dptimelist, sptime)

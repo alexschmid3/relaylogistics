@@ -360,7 +360,7 @@ function multiarcgeneration!(magarcs, hasdriverarcs)
 		
         #Update the lowerbound 
         try
-			push!(lowerbounds, smpobj + sum(minreducedcosts[k] for k in 1:length(minreducedcosts) if minreducedcosts[k] <= -0.000001))
+			push!(lowerbounds, smpobj + sum(minreducedcosts[k] for k in 1:length(minreducedcosts) if minreducedcosts[k] < -0.0001))
 		catch
 			push!(lowerbounds, smpobj)
 		end
@@ -370,7 +370,7 @@ function multiarcgeneration!(magarcs, hasdriverarcs)
 		if saveconvergencedata_flag >= 0
 			totalorderarcs = sum(length(magarcs.A[i]) for i in orders)
 			totalorderpaths = sum([findallpaths(magarcs.A_plus, i) for i in orders])
-			maximprove = minimum(minreducedcosts) * sum(sum(value(x[i,a]) for a in magarcs.A[i]) for i in orders)
+			maximprove = sum(minreducedcosts) # minimum(minreducedcosts) * sum(sum(value(x[i,a]) for a in magarcs.A[i]) for i in orders)
 			write_cg_conv(convergencedatafilename, cg_iter, maximprove, totalorderarcs, totalorderpaths, smpobj)
 		end
 		println("Filler = ", time()-lasttime)

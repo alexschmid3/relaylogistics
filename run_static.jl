@@ -35,7 +35,7 @@ lhdataisbfilename = "data/lh_data_isb_connect_clean.csv"
 
 #Read experiment parameters from file
 experiment_id = ifelse(length(ARGS) > 0, parse(Int, ARGS[1]), 1)
-paramsfilename = "data/table2_rpdppers_noequity.csv"
+paramsfilename = "data/table2.csv" # "data/table2_rpdppers_noequity.csv"
 expparms = CSV.read(paramsfilename, DataFrame)
 formulation = expparms[experiment_id, 15]  # Drivers = homogeneous, heterogeneous
 ex = expparms[experiment_id, 2]		
@@ -51,18 +51,18 @@ lambda2 = expparms[experiment_id, 12]
 runtype = "static"
 operations = "relay" 					   # "ptp" or "relay"
 ptpvsrelay = 1
-println("Experiment = ", experiment_id)ß
+println("Experiment = ", experiment_id)
 
 #Manual parameters for response/appendix experiments
 roundeddrivinghours_flag = 0
 if formulation == "heterogeneous"
-	csvfoldername = string("outputs/driverequity/")
+	csvfoldername = string("outputs/table2_msomrev/")
 	#csvfoldername = string("outputs/laborandshiftsensitivity/")
 	deadlines_flag = 1
 	finallegdistancepenalty = 0.80				# Distance penalty assessed for orders that finish beyond the planning horizon
 	finallegtimepenalty = 0.70					# Time/delay penalty assessed for orders that finish beyond the planning horizon
 	deadlineasmultipleofshortestpath = 2
-	driverstohire = expparms[experiment_id, 24]  
+	driverstohire = 0 #expparms[experiment_id, 24]  
 elseif formulation == "homogeneous"
 	csvfoldername = string("outputs/driverequity/")
 	#csvfoldername = string("outputs/driverhiring/")
